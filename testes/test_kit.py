@@ -19,9 +19,6 @@ DO_KIT = (
     "scripts/gerar_pagina_sdd.py",
     "scripts/pagina_sdd_modelo.html",
     ".gitignore",
-    "curso/CLAUDE-curso.md",
-    "curso/docs/processo-desenvolvimento-assistido.md",
-    "curso/docs/resumo-do-processo.md",
 )
 ESQUELETO_DO_CLAUDE = RAIZ / "CLAUDE.md"  # o deste repositório não é o esqueleto; o esqueleto é copiado abaixo
 
@@ -39,19 +36,17 @@ class Kit(unittest.TestCase):
         faltam = [n for n in DO_KIT if n != "CLAUDE.md" and not (RAIZ / n).is_file()]
         self.assertEqual(faltam, [])
 
-    def test_versao_no_comum_e_no_curso(self) -> None:
-        for arquivo in ("CLAUDE-comum.md", "curso/CLAUDE-curso.md"):
+    def test_versao_no_comum(self) -> None:
+        for arquivo in ("CLAUDE-comum.md",):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
             self.assertIsNotNone(re.search(r"^Versão \d+\.\d+, de \d{4}-\d\d-\d\d\.", texto, re.M), arquivo)
 
-    def test_comum_e_curso_nao_se_citam(self) -> None:
+    def test_comum_nao_cita_curso(self) -> None:
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
-        curso = (RAIZ / "curso/CLAUDE-curso.md").read_text(encoding="utf-8")
         self.assertNotIn("curso", comum.lower().replace("em curso", ""))
-        self.assertNotIn("comum", curso.lower())
 
     def test_regras_falam_do_usuario(self) -> None:
-        for arquivo in ("CLAUDE-comum.md", "curso/CLAUDE-curso.md", "esqueleto-CLAUDE.md"):
+        for arquivo in ("CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
             self.assertNotRegex(texto, r"\b[àa] pessoa\b", arquivo)
 

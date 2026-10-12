@@ -2,7 +2,7 @@
 
 Trilha AI é um método de desenvolvimento assistido por IA: PRD → TDD → OpenSpec, com o usuário aprovando em gates e cada cenário virando um teste. Este repositório é a fonte do padrão que todo repositório do método copia.
 
-Este repositório é a **fonte** dos arquivos que todo repositório novo copia. O `CLAUDE-comum.md` daqui é a versão vigente do padrão (a linha "Versão" no topo dele diz qual). Os outros arquivos são esqueletos, com o que preencher entre `<` e `>`. O padrão é de **engenharia**; o que serve só a um repositório de curso está na pasta `curso/`.
+Este repositório é a **fonte** dos arquivos que todo repositório novo copia. O `CLAUDE-comum.md` daqui é a versão vigente do padrão (a linha "Versão" no topo dele diz qual). Os outros arquivos são esqueletos, com o que preencher entre `<` e `>`.
 
 Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do aluno, no repositório do curso (https://github.com/paulosrl/consulta-publica, pasta `docs/curso/`). A ordem, resumida:
 
@@ -27,18 +27,6 @@ Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do
 6. **Primeiro commit,** com a linha de coautoria da IA.
 7. **Siga para a etapa 1 do guia:** o PRD.
 
-## Modo curso
-
-Só para um repositório que será material de curso, onde a prova de como o processo aconteceu importa tanto quanto o código. Copie também o que está na pasta `curso/`:
-
-| Arquivo | O que fazer |
-|---|---|
-| `curso/CLAUDE-curso.md` | copiar para a raiz, sem mudar nada; importar no `CLAUDE.md` com uma linha `@CLAUDE-curso.md` abaixo de `@CLAUDE-comum.md`, e citar em "Documentos" o registro e o resumo |
-| `curso/docs/processo-desenvolvimento-assistido.md` | copiar para `docs/` e preencher a seção 3.1 com o prompt literal |
-| `curso/docs/resumo-do-processo.md` | copiar para `docs/` e preencher a primeira linha |
-
-Com ele, cada etapa (inclusive perguntas e pausas) é registrada no mesmo turno, com o prompt literal. Sem ele, cada decisão fica só no artefato dono dela (PRD, TDD, `design.md`, tabela "Ciclo"), como manda o comum.
-
 ## Ao mudar o padrão
 
-O `CLAUDE-comum.md` (e o `CLAUDE-curso.md`) mudam **aqui**, com a versão e a data novas e o teste verde (`python3 -m unittest discover -s testes`), e só depois são copiados para cada repositório, cada um sob ordem do usuário. Um repositório nunca edita a própria cópia: o que é dele vai no `CLAUDE.md`, em "Exceções ao comum" se contrariar o comum. O `confere_regras.py --fonte` acusa a cópia divergente.
+O `CLAUDE-comum.md` muda **aqui**, com a versão e a data novas e o teste verde (`python3 -m unittest discover -s testes`), e só depois são copiados para cada repositório, cada um sob ordem do usuário. Um repositório nunca edita a própria cópia: o que é dele vai no `CLAUDE.md`, em "Exceções ao comum" se contrariar o comum. O `confere_regras.py --fonte` acusa a cópia divergente.
