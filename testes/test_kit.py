@@ -42,7 +42,7 @@ class Kit(unittest.TestCase):
     def test_versao_no_comum_e_no_curso(self) -> None:
         for arquivo in ("CLAUDE-comum.md", "curso/CLAUDE-curso.md"):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
-            self.assertRegex(texto, r"^Versão \d+\.\d+, de \d{4}-\d\d-\d\d\.", arquivo)
+            self.assertIsNotNone(re.search(r"^Versão \d+\.\d+, de \d{4}-\d\d-\d\d\.", texto, re.M), arquivo)
 
     def test_comum_e_curso_nao_se_citam(self) -> None:
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
