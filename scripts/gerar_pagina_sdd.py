@@ -35,9 +35,11 @@ def _ler(arquivo: Path | None) -> str:
 
 
 def _titulo(texto: str, padrao: str) -> str:
-    for linha in texto.splitlines():
-        if linha.startswith("# "):
-            return linha[2:].strip()
+    """O primeiro título de nível 1; sem ele, o primeiro de nível 2 (PRDs antigos começam assim)."""
+    for nivel in ("# ", "## "):
+        for linha in texto.splitlines():
+            if linha.startswith(nivel):
+                return linha[len(nivel) :].strip()
     return padrao
 
 
