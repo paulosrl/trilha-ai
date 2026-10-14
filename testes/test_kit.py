@@ -79,6 +79,13 @@ class Kit(unittest.TestCase):
         self.assertNotIn("commit por tarefa", config)
         self.assertNotIn("  apply:", config)
 
+    def test_specs_com_o_nome_do_openspec(self) -> None:
+        """v1.11: só as changes levam número e data; os specs seguem o nome que o OpenSpec dá."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("Os specs seguem o nome que o OpenSpec dá", comum)
+        self.assertNotIn("changes e specs seguem `AAAA-MM-DD-NN-nome`", comum)
+        self.assertNotIn("spec novo recebe o próximo número e a data do dia", comum)
+
     def test_regras_falam_do_usuario(self) -> None:
         for arquivo in ("CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")

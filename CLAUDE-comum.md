@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.10, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.11, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -31,7 +31,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 6. `/opsx:archive`; em seguida, `openspec validate`, o diff de `openspec/specs/` conferido e a tabela "Ciclo" atualizada.
 
 - Não edite `openspec/specs/` à mão, exceto typo ou link: os specs mudam por delta e archive. Se editou, registre uma change retroativa.
-- Nome das pastas: changes e specs seguem `AAAA-MM-DD-NN-nome`. A change ativa nasce como `NN-nome` e o archive acrescenta a data; o delta de um spec existente usa exatamente o nome da pasta principal; spec novo recebe o próximo número e a data do dia. O número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Confira com `ls` antes de criar e depois de arquivar.
+- Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
 - Cada cenário de spec vira um teste com o código do critério de aceite no nome, ou o do requisito quando o cenário não tem critério.
 - Espere a escolha do usuário antes de ampliar o escopo de uma change aprovada. Achado fora do escopo vira outra change ou revisão do PRD ou do TDD; achado que o spec já cobre é correção dentro da change, com o teste que falha escrito antes.
 
