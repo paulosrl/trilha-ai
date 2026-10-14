@@ -4,10 +4,11 @@ Uso: python3 -I scripts/confere_regras.py <raiz do repositório> [--fonte <pasta
 
 Confere, na raiz indicada:
 - CLAUDE-comum.md existe, tem a linha de versão e não cita o projeto (as regras são de todos);
-- CLAUDE.md importa o comum (linha "@CLAUDE-comum.md"), não repete regra dele e segue o
+- CLAUDE.md importa o comum (linha "@CLAUDE-comum.md"), não repete regra dele, tem o nome do
+  produto no título, cita ANDAMENTO.md e openspec/config.yaml em "Documentos" e segue o
   esqueleto das sete seções, na ordem;
 - os dois somados têm no máximo 200 linhas;
-- ANDAMENTO.md existe, tem as seis linhas pedidas e cabe em dez linhas;
+- ANDAMENTO.md existe, tem as seis linhas pedidas, com a data e a hora, e cabe em dez linhas;
 - com --fonte, o CLAUDE-comum.md é cópia idêntica do que está no kit.
 
 Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema; "ok" se nada falhar.
@@ -40,8 +41,23 @@ CHAVES_DO_ANDAMENTO = (
 )
 
 
+# A hora real, ou o espaço reservado do kit recém-copiado.
+DATA_E_HORA = re.compile(r"\*\*Atualizado em:\*\* (\d{4}-\d\d-\d\d \d\d:\d\d|<AAAA-MM-DD HH:MM>)")
+
+
 def _linhas(arquivo: Path) -> list[str]:
     return arquivo.read_text(encoding="utf-8").splitlines()
+
+
+def _secao(linhas: list[str], titulo: str) -> str:
+    """O texto de uma seção de nível 2, até a próxima."""
+    dentro, texto = False, []
+    for linha in linhas:
+        if linha.startswith("## "):
+            dentro = linha == titulo
+        elif dentro:
+            texto.append(linha)
+    return "\n".join(texto)
 
 
 def conferir(raiz: Path, fonte: Path | None) -> list[str]:
@@ -66,6 +82,12 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
     titulos = tuple(linha for linha in linhas_proprio if linha.startswith("## "))
     if titulos != ESQUELETO:
         falhas.append(f"CLAUDE.md fora do esqueleto: {' · '.join(titulos) or '(sem seções)'}")
+    if not (linhas_proprio and re.match(r"^# CLAUDE\.md — \S", linhas_proprio[0])):
+        falhas.append("CLAUDE.md sem o nome do produto no título ('# CLAUDE.md — <nome do produto>')")
+    documentos = _secao(linhas_proprio, "## Documentos")
+    for citado in ("ANDAMENTO.md", "openspec/config.yaml"):
+        if citado not in documentos:
+            falhas.append(f"CLAUDE.md não cita {citado} na seção Documentos")
     total = len(linhas_comum) + len(linhas_proprio)
     if total > LIMITE_DE_LINHAS:
         falhas.append(
@@ -80,6 +102,8 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
     for chave in CHAVES_DO_ANDAMENTO:
         if chave not in texto_andamento:
             falhas.append(f"ANDAMENTO.md sem a linha {chave}")
+    if not DATA_E_HORA.search(texto_andamento):
+        falhas.append("ANDAMENTO.md sem a hora em 'Atualizado em' (AAAA-MM-DD HH:MM)")
 
     if fonte is not None:
         original = fonte / "CLAUDE-comum.md"

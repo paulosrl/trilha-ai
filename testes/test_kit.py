@@ -77,6 +77,39 @@ class Kit(unittest.TestCase):
             )
             self.assertEqual(saida.returncode, 0, saida.stderr)
 
+    def _verifica_com_defeito(self, arquivo: str, de: str, para: str) -> str:
+        """Copia o kit, troca um trecho de um arquivo e devolve o stderr do verificador, que deve reprovar."""
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp)
+            _copia_do_kit(destino)
+            alvo = destino / arquivo
+            texto = alvo.read_text(encoding="utf-8")
+            self.assertIn(de, texto, f"{arquivo} do kit sem o trecho {de!r}")
+            alvo.write_text(texto.replace(de, para), encoding="utf-8")
+            saida = subprocess.run(
+                [sys.executable, "-I", str(destino / "scripts/confere_regras.py"), tmp],
+                capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
+            return saida.stderr
+
+    def test_verificador_reprova_andamento_sem_hora(self) -> None:
+        erro = self._verifica_com_defeito("ANDAMENTO.md", "<AAAA-MM-DD HH:MM>", "2026-10-14")
+        self.assertIn("sem a hora", erro)
+
+    def test_verificador_reprova_claude_sem_o_nome_do_produto(self) -> None:
+        erro = self._verifica_com_defeito("CLAUDE.md", "# CLAUDE.md — <nome do produto>", "# CLAUDE.md")
+        self.assertIn("título", erro)
+
+    def test_verificador_reprova_documentos_sem_andamento_e_config(self) -> None:
+        erro = self._verifica_com_defeito(
+            "CLAUDE.md",
+            "- Contexto e regras por artefato do OpenSpec: `openspec/config.yaml`. Onde o trabalho parou: `ANDAMENTO.md`.\n",
+            "",
+        )
+        self.assertIn("ANDAMENTO.md", erro)
+        self.assertIn("openspec/config.yaml", erro)
+
     def test_gerador_da_pagina_nao_inventa_etapas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             destino = Path(tmp)
