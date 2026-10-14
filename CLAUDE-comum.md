@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.7, de 2026-10-13. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.8, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -10,14 +10,15 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 1. `sdd/prd-<nome>.md`: o quê e o porquê. Nenhuma palavra de tecnologia. Escrito com a skill `sdd:prd` e aprovado seção por seção pelo usuário (gate 1).
 2. `sdd/tdd-<nome>.md`: as decisões técnicas, como ADRs. Escrito com a skill `sdd:tdd` e aprovado seção por seção pelo usuário (gate 2). Não se redecidem numa change.
-3. `sdd/decomposicao-<nome>.md`: as changes, a ordem de execução com a razão, as regras de convivência e a tabela "Ciclo". Vem da skill `sdd:openspec-propose`, que também escreve cada briefing e audita o gate 3.
+3. `sdd/decomposicao-<nome>.md`: as changes, a ordem de execução com a razão, as regras de convivência e a tabela "Ciclo". Vem da skill `sdd:briefing`, que também escreve cada briefing e audita o gate 3.
 4. `sdd/briefing-openspec/briefing-change-NN-<nome>.md`: a entrada de cada change, autossuficiente: requisitos, regras, critérios de aceite e ADRs na íntegra, mais "o que já existe".
 5. `openspec/specs/`: o comportamento já entregue. O `openspec/config.yaml` traz o contexto do projeto e as regras por artefato (a língua, a origem citada de cada requisito e cenário, um teste por cenário); o OpenSpec o lê ao gerar cada artefato, e o briefing não repete o que está nele.
 
 - `sdd/documentacao.html` é a página do método, gerada por `python3 scripts/gerar_pagina_sdd.py` ao fechar cada etapa (PRD, TDD, decomposição, change arquivada); não se edita à mão.
+- Um registro de processo (o que foi pedido e feito em cada etapa) é opcional; quem o mantém declara no `CLAUDE.md` onde ele fica e quando é atualizado.
 - Faltou requisito: a pendência volta ao PRD. Faltou decisão técnica: volta ao TDD. Não improvise.
 - Para contrariar ou estender um ADR, pare e pergunte. Mudança de decisão técnica é uma nova versão do TDD, aprovada antes do código.
-- Projeto que nasceu sem PRD ou TDD escreve o que falta antes da próxima change que toque requisito ou tecnologia. Até lá, uma correção de comportamento que um spec já descreve nasce de um briefing curto, escrito a partir desse spec (o requisito e o cenário corrigidos, o defeito, o esperado, o que já existe), sem requisito novo nem decisão técnica, aprovado pelo usuário; o resto do ciclo é o mesmo.
+- Projeto que nasceu sem PRD ou TDD escreve o que falta antes da próxima change que toque requisito ou tecnologia. Até lá, uma correção de comportamento que um spec já descreve nasce de um briefing curto, escrito a partir desse spec (o requisito e o cenário corrigidos, o defeito, o esperado, o que já existe), sem requisito novo nem decisão técnica, aprovado pelo usuário; o resto do ciclo é o mesmo. Nesse caso, o passo do ciclo de cada change fica no `ANDAMENTO.md`, e a change arquivada entra na tabela "Ciclo" quando a decomposição nascer. Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.
 - Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito e ajuste de teste dispensam change.
 
 ## O ciclo de cada change (OpenSpec), sem pular etapa

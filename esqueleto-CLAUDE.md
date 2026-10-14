@@ -12,6 +12,7 @@ Regras só deste repositório. As comuns a todo projeto (o método SDD, o ciclo 
 
 - Em `sdd/`: PRD `prd-<nome>.md` · TDD `tdd-<nome>.md` · decomposição `decomposicao-<nome>.md` · briefings `briefing-openspec/briefing-change-NN-*.md` · a página `documentacao.html`.
 - Contexto e regras por artefato do OpenSpec: `openspec/config.yaml`. Onde o trabalho parou: `ANDAMENTO.md`.
+- Registro de processo (opcional; apague se não houver): `<caminho>`, atualizado `<quando>`.
 
 ## Comandos
 

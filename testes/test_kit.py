@@ -45,6 +45,23 @@ class Kit(unittest.TestCase):
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("curso", comum.lower().replace("em curso", ""))
 
+    def test_comum_fecha_a_porta_do_briefing_curto(self) -> None:
+        """v1.8: sem decomposição, o passo do ciclo fica no ANDAMENTO.md; com PRD e TDD, a decomposição vem antes."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("o passo do ciclo de cada change fica no `ANDAMENTO.md`", comum)
+        self.assertIn("Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.", comum)
+
+    def test_comum_preve_o_registro_de_processo_opcional(self) -> None:
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("registro de processo", comum)
+        self.assertIn("é opcional; quem o mantém declara no `CLAUDE.md`", comum)
+
+    def test_comum_cita_a_skill_briefing(self) -> None:
+        """A skill do plugin chama-se sdd:briefing, para não colidir com a openspec-propose nativa do OpenSpec."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("`sdd:briefing`", comum)
+        self.assertNotIn("openspec-propose", comum)
+
     def test_regras_falam_do_usuario(self) -> None:
         for arquivo in ("CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
