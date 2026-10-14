@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.6, de 2026-10-12. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.7, de 2026-10-13. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -59,6 +59,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - Ao fechar trabalho seu, releia o diff inteiro e corrija antes de entregar.
 - Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração.
 - Não escreva em outro repositório nem troque de projeto sem ordem explícita nomeando-o.
+- Sugira `/clear` em uma linha no fim da mensagem em todo corte natural (etapa fechada, change arquivada, conferência longa terminada, antes de outra frente), só com tudo em disco e commitado, nunca no meio de uma tarefa; diga o que o usuário recupera ao voltar.
 
 ## Convenções
 
