@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.8, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.9, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -25,7 +25,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 1. briefing aprovado pelo usuário;
 2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código;
-3. auditoria do gate 3, antes de qualquer código, com os 8 itens: todo requisito virou spec; todo critério virou cenário; nada sem origem no PRD; ADRs citados, não redecididos; decisões locais que não contrariam ADR; nada fora do escopo; tarefas com teste; pendências contornadas, sem improviso. O que reprovar se corrige com `/opsx:update`, depois da escolha do usuário;
+3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, com os 8 itens: todo requisito virou spec; todo critério virou cenário; nada sem origem no PRD; ADRs citados, não redecididos; decisões locais que não contrariam ADR; nada fora do escopo; tarefas com teste; pendências contornadas, sem improviso. O que reprovar se corrige com `/opsx:update`, depois da escolha do usuário; a revisão termina com a auditoria aprovada;
 4. `/opsx:apply`: tarefa a tarefa; a última tarefa é a execução manual, em dado descartável, com o usuário olhando, e o apply para nela;
 5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito, com o motivo;
 6. `/opsx:archive`; em seguida, `openspec validate`, o diff de `openspec/specs/` conferido e a tabela "Ciclo" atualizada.

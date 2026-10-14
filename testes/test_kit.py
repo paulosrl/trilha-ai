@@ -62,6 +62,12 @@ class Kit(unittest.TestCase):
         self.assertIn("`sdd:briefing`", comum)
         self.assertNotIn("openspec-propose", comum)
 
+    def test_comum_poe_a_auditoria_na_revisao_do_openspec(self) -> None:
+        """v1.9: a auditoria do gate 3 é a revisão que o OpenSpec pede ao fim do propose, não um passo à parte."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3", comum)
+        self.assertNotIn("3. auditoria do gate 3, antes de qualquer código", comum)
+
     def test_regras_falam_do_usuario(self) -> None:
         for arquivo in ("CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
