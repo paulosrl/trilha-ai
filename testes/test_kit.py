@@ -67,6 +67,17 @@ class Kit(unittest.TestCase):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
             self.assertNotRegex(texto, r"\b[àa] pessoa\b", arquivo)
 
+    def test_scripts_cabem_no_lint_de_quem_copia(self) -> None:
+        # Os scripts são copiados sem mudança; um projeto Python com o ruff (limite de 100) os reprovaria.
+        longas = [
+            f"{nome}:{numero}"
+            for nome in DO_KIT
+            if nome.endswith(".py")
+            for numero, linha in enumerate((RAIZ / nome).read_text(encoding="utf-8").splitlines(), 1)
+            if len(linha) > 100
+        ]
+        self.assertEqual(longas, [])
+
     def test_verificador_aprova_um_repositorio_feito_do_kit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             destino = Path(tmp)

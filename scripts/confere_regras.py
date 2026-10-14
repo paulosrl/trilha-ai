@@ -83,7 +83,9 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
     if titulos != ESQUELETO:
         falhas.append(f"CLAUDE.md fora do esqueleto: {' · '.join(titulos) or '(sem seções)'}")
     if not (linhas_proprio and re.match(r"^# CLAUDE\.md — \S", linhas_proprio[0])):
-        falhas.append("CLAUDE.md sem o nome do produto no título ('# CLAUDE.md — <nome do produto>')")
+        falhas.append(
+            "CLAUDE.md sem o nome do produto no título ('# CLAUDE.md — <nome do produto>')"
+        )
     documentos = _secao(linhas_proprio, "## Documentos")
     for citado in ("ANDAMENTO.md", "openspec/config.yaml"):
         if citado not in documentos:
