@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.9, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.10, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -26,7 +26,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 1. briefing aprovado pelo usuário;
 2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código;
 3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, com os 8 itens: todo requisito virou spec; todo critério virou cenário; nada sem origem no PRD; ADRs citados, não redecididos; decisões locais que não contrariam ADR; nada fora do escopo; tarefas com teste; pendências contornadas, sem improviso. O que reprovar se corrige com `/opsx:update`, depois da escolha do usuário; a revisão termina com a auditoria aprovada;
-4. `/opsx:apply`: tarefa a tarefa; a última tarefa é a execução manual, em dado descartável, com o usuário olhando, e o apply para nela;
+4. `/opsx:apply`, no fluxo do OpenSpec; a última tarefa do `tasks.md` é a execução manual, em dado descartável, com o usuário olhando (regra das tarefas no `openspec/config.yaml`);
 5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito, com o motivo;
 6. `/opsx:archive`; em seguida, `openspec validate`, o diff de `openspec/specs/` conferido e a tabela "Ciclo" atualizada.
 
@@ -43,8 +43,8 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não está em disco se perde, e o que não está anotado precisa ser adivinhado. Por isso:
 
-- `ANDAMENTO.md`, na raiz, existe sempre e diz, em até dez linhas: o estado ("em andamento" ou "nada em andamento"), a etapa (PRD, TDD, decomposição, ou a change e o passo do ciclo), a unidade em curso (o artefato ou a tarefa), o que já está feito nela, o próximo passo exato e a hora. Escreva-o **antes** de começar cada unidade de trabalho e reescreva-o ao terminá-la; ao fechar a etapa, volte a "nada em andamento". É versionado e vai no commit de cada unidade.
-- Marque cada tarefa do `tasks.md` como feita assim que terminar. Faça um commit ao fim do propose, outro depois da auditoria do gate 3 e um por tarefa concluída do apply, nunca um só commit no fim: o commit é o ponto de retomada que sobrevive a qualquer queda.
+- `ANDAMENTO.md`, na raiz, existe sempre e diz, em até dez linhas: o estado ("em andamento" ou "nada em andamento"), a etapa (PRD, TDD, decomposição, ou a change e o passo do ciclo), a unidade em curso (o artefato, ou o apply, cujo progresso é o `tasks.md`), o que já está feito nela, o próximo passo exato e a hora. Escreva-o **antes** de começar cada unidade de trabalho e reescreva-o ao terminá-la; ao fechar a etapa, volte a "nada em andamento". É versionado e vai no commit de cada unidade.
+- Durante o apply, o ponto de retomada é o `tasks.md`, que o OpenSpec marca tarefa a tarefa. Faça um commit ao fim do propose, outro depois da auditoria do gate 3 e outro a cada parada do apply, nunca um só commit no fim: o commit é o ponto de retomada que sobrevive a qualquer queda.
 - Ao fechar uma etapa, diga ao usuário quantos commits estão por enviar ao remoto; envie só com "sim".
 - Ao começar qualquer sessão, antes de agir: leia `ANDAMENTO.md`, `git status`, `git log -3` e, se houver change ativa, `openspec list`; diga onde parou, o que está por commitar e qual é o próximo passo. Trabalho não commitado que você encontrar só é continuado ou descartado com a escolha do usuário.
 

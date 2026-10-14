@@ -45,10 +45,6 @@ rules:
     - A última tarefa antes do verify é a execução manual, em dado descartável, com o usuário olhando.
 
 operations:
-  apply:
-    guidance:
-      - Marcar cada tarefa como feita assim que terminar e fazer commit por tarefa; reescrever ANDAMENTO.md antes e depois de cada tarefa.
-      - Parar antes do verify para a execução manual.
   archive:
     guidance:
       - Depois do archive, validar as specs e conferir o diff de openspec/specs/; atualizar a tabela "Ciclo" da decomposição.

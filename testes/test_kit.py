@@ -68,6 +68,17 @@ class Kit(unittest.TestCase):
         self.assertIn("a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3", comum)
         self.assertNotIn("3. auditoria do gate 3, antes de qualquer código", comum)
 
+    def test_metodo_nao_forca_o_apply(self) -> None:
+        """v1.10: o apply segue o fluxo do OpenSpec; nem commit por tarefa nem parada forçada."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        self.assertIn("4. `/opsx:apply`, no fluxo do OpenSpec;", comum)
+        self.assertIn("Durante o apply, o ponto de retomada é o `tasks.md`", comum)
+        self.assertNotIn("um por tarefa concluída", comum)
+        self.assertNotIn("o apply para nela", comum)
+        self.assertNotIn("commit por tarefa", config)
+        self.assertNotIn("  apply:", config)
+
     def test_regras_falam_do_usuario(self) -> None:
         for arquivo in ("CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
