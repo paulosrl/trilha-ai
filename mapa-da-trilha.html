@@ -196,7 +196,7 @@ a { color: var(--pinho); }
   </section>
 
   <section class="secao">
-    <h2>O que mudou da versão 1.20 à 1.25</h2>
+    <h2>O que mudou da versão 1.20 à 1.28</h2>
     <p>Cada item foi uma decisão do usuário e já está no kit.</p>
     <ol class="lista">
       <li><div><strong>GitHub obrigatório, com repositório privado criado na etapa 0.</strong><p>O trabalho deixa de viver só no disco. É a regra do trabalho interrompível levada até o fim: o commit sobrevive à queda da sessão, o envio sobrevive à queda da máquina.</p></div></li>
@@ -205,6 +205,8 @@ a { color: var(--pinho); }
       <li><div><strong>Verificação automática (CI) a cada envio, e o merge só com ela verde.</strong><p>O <code>scripts/check.sh</code> e o <code>openspec validate --all --strict</code> rodam no GitHub. O Claude confere com <code>gh pr checks</code> antes de pedir o merge. A proteção da main pelo próprio GitHub é opcional, porque exige o GitHub Pro ou um repositório público.</p></div></li>
       <li><div><strong>Merge com merge commit, nunca squash.</strong><p>Os commits de retomada (propose, gate 3, cada parada do apply) continuam na história. O squash os juntaria num só.</p></div></li>
       <li><div><strong>A change fecha no merge, não no archive.</strong><p>Depois do archive, a change some do <code>openspec list</code>; só o PR diz se falta o merge. Por isso a retomada de uma sessão olha o PR, e o <code>ANDAMENTO.md</code> só volta a "nada em andamento" depois do merge.</p></div></li>
+      <li><div><strong>Travas automáticas (1.27).</strong><p>Antes de cada commit, o git confere as regras e o método. Antes de cada comando, o Claude Code barra o envio forçado, o <code>--no-verify</code>, o <code>pkill -f</code> e o merge fora do passo 7. O que era lembrado passa a ser cobrado.</p></div></li>
+      <li><div><strong>Uma revisão independente (1.28).</strong><p>No passo do verify, um agente sem o contexto da sessão revisa a branch com o <code>/code-review</code>. Quem escreveu o código não é o único a revisá-lo.</p></div></li>
     </ol>
   </section>
 
@@ -293,10 +295,11 @@ a { color: var(--pinho); }
     { id: "verify", nome: "Verify", titulo: "A conferência (verify)", gate: "", ciclo: true,
       voce: "Decide cada sugestão: aplicar ou recusar.",
       claude: "Roda /opsx:verify e registra cada sugestão no design.md, aplicada ou recusada, com o motivo.",
+      claudep: "Roda /opsx:verify e o /code-review, uma revisão por um agente sem o contexto da sessão. Cada sugestão dos dois vai ao design.md, aplicada ou recusada, com o motivo.",
       git: "Commit.", gitp: "Commit, na branch.",
       gh: "Nada até o fim da etapa.", ghp: "Envio da branch. CI verde.",
       cmd: "/opsx:verify\ngit commit -m \"fix(...): sugestões do verify\"",
-      cmdp: "/opsx:verify\ngit commit -m \"fix(...): sugestões do verify\"\ngit push" },
+      cmdp: "/opsx:verify\n/code-review\ngit commit -m \"fix(...): sugestões do verify e da revisão\"\ngit push" },
     { id: "archive", nome: "Archive", titulo: "O arquivamento (archive)", gate: "", ciclo: true,
       voce: "Confirma o archive.",
       claude: "Roda /opsx:archive: o delta entra em openspec/specs/ e a change vai para archive/. Depois valida os specs, atualiza o Ciclo e gera de novo sdd/documentacao.html.",

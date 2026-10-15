@@ -147,6 +147,12 @@ class Kit(unittest.TestCase):
         kit = (RAIZ / ".github/workflows/testes.yml").read_text(encoding="utf-8")
         self.assertIn("run: python3 -m unittest discover -s testes", kit)
 
+    def test_revisao_independente_no_verify(self) -> None:
+        """v1.28: no passo 5, o /code-review por um agente sem o contexto da sessão."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("5. `/opsx:verify` e a revisão independente do código, o `/code-review`", comum)
+        self.assertIn("quem escreveu não é o único a revisar", comum)
+
     def test_a_change_fecha_no_merge(self) -> None:
         """v1.25: a change fecha no merge; a retomada olha o PR; um só lugar para a regra dos envios."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
