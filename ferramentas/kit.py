@@ -49,6 +49,14 @@ COM_PARTE_FIXA = (
     ".github/workflows/verificacao.yml",
     ".github/dependabot.yml",
 )
+# A língua dos artefatos, no context do openspec/config.yaml, como o `openspec init --language`
+# a escreve (core/init.js do OpenSpec), mais os acentos: assim o init a reconhece.
+LINGUA = (
+    "Language: pt-BR\n"
+    "All artifacts must be written in pt-BR.\n"
+    "Keep OpenSpec structural headings and SHALL/MUST keywords in English.\n"
+    "Write every Portuguese word with its accents."
+)
 
 
 class Recusa(Exception):
@@ -189,7 +197,8 @@ def _sincronizar_regras(pasta: Path) -> None:
             check=False,
         ).stdout
         if _regras(antigas) and _regras(antigas) == _regras(texto):
-            config.write_text(texto[: texto.find("\nrules:") + 1] + atuais, encoding="utf-8")
+            cabeca = _com_lingua(texto[: texto.find("\nrules:") + 1])
+            config.write_text(cabeca + atuais, encoding="utf-8")
             print(f"regras do openspec/config.yaml atualizadas: eram as do kit em {versao}")
             return
     print("aviso: o openspec/config.yaml tem regras próprias; compare-as com as do kit à mão")
@@ -229,6 +238,18 @@ def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
                 print(f"  + {linha}")
             for linha in sobram:
                 print(f"  - {linha}")
+
+
+def _com_lingua(cabeca: str) -> str:
+    """O context do projeto com a língua, que até a 1.32 vinha repetida nas regras do kit."""
+    if LINGUA.splitlines()[1] in cabeca:
+        return cabeca
+    if "\ncontext: |\n" not in cabeca:
+        print("aviso: o openspec/config.yaml sem 'context: |'; acrescente a língua a ele à mão")
+        return cabeca
+    bloco = "".join(f"  {linha}\n" for linha in LINGUA.splitlines()) + "\n"
+    print("a língua foi acrescentada ao context do openspec/config.yaml, como o OpenSpec pede")
+    return cabeca.replace("\ncontext: |\n", "\ncontext: |\n" + bloco, 1)
 
 
 def _rodar(pasta: Path, comando: list[str]) -> bool:

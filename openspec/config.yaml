@@ -3,6 +3,11 @@ schema: spec-driven
 # Contexto do projeto para os artefatos do OpenSpec. Preencha o que está entre < e >.
 # Só o que um agente não deduz lendo o código; o resto fica no README e no CLAUDE.md.
 context: |
+  Language: pt-BR
+  All artifacts must be written in pt-BR.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  Write every Portuguese word with its accents.
+
   Projeto: <nome>: <uma frase sobre o que é e para quem>.
 
   Stack (decidida no TDD; preencha depois da etapa 2): <linguagem e versão, gerenciador,
@@ -18,21 +23,17 @@ context: |
 # das tarefas) fica nas instruções dele, que o OpenSpec dá junto com estas.
 rules:
   proposal:
-    - Escrever em PT-BR, com acentos, mantendo em inglês os títulos do modelo do OpenSpec.
     - Citar o RF de origem na motivação; no projeto ainda sem PRD, o requisito do spec que a change corrige.
     - Listar o que fica fora da change.
   design:
-    - Escrever em PT-BR, com acentos, mantendo em inglês os títulos do modelo do OpenSpec.
     - Referenciar cada decisão técnica herdada pelo ADR do TDD; nunca redecidir tecnologia.
     - Listar cada teste existente que muda, com o motivo.
     - Terminar com a seção "Verificação", que o apply preenche com a evidência de cada cenário.
   specs:
-    - Manter os títulos estruturais do OpenSpec em inglês (Requirement, Scenario, ADDED, MODIFIED, REMOVED, RENAMED).
-    - "Escrever as cláusulas em PT-BR, com a palavra normativa em inglês (SHALL, MUST, SHALL NOT ou MUST NOT): o `openspec validate` cobra SHALL ou MUST em todo requisito, e um DEVE em português o reprova."
+    - "A palavra normativa é SHALL, MUST, SHALL NOT ou MUST NOT, nunca a tradução: o `openspec validate` cobra SHALL ou MUST em todo requisito, e um DEVE em português o reprova."
     - Todo requisito novo ou alterado cita o RF de origem do PRD; todo cenário novo ou alterado cita o CA de origem, ou "derivado de <RF>, sem CA"; o que o delta repete sem mudança fica como está. No projeto ainda sem PRD, que só corrige requisito já existente, a origem fica só no proposal.
     - No RENAMED, o FROM e o TO trazem o título inteiro do requisito entre crases.
   tasks:
-    - Escrever em PT-BR, com acentos.
     - Para cada cenário ADDED ou MODIFIED, uma tarefa nomeia o teste que o comprova, com o código do critério de aceite no nome do teste, ou o do requisito quando o cenário não tem critério (no projeto ainda sem PRD, o nome do requisito do spec), e dá o arquivo, o caso e o comando que o roda. Cenário sem teste automatizável diz por quê e qual evidência o substitui.
     - O teste confere o efeito observável (o arquivo existe, a resposta chega, a tela mostra), nunca o valor literal que o código já usa.
     - A última tarefa antes do verify é a execução manual, em dado descartável, com o usuário olhando.

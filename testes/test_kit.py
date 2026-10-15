@@ -332,7 +332,20 @@ class Kit(unittest.TestCase):
         # v1.30: o que o modelo do OpenSpec já pede fica nas instruções dele.
         for repetido in ("não o como", "alternativa rejeitada", "cenário com WHEN/THEN", '"- [ ] N.M'):
             self.assertNotIn(repetido, config)
-        self.assertEqual(config.count("mantendo em inglês os títulos do modelo do OpenSpec"), 2)
+        # v1.33: a língua fica no context, no bloco que o openspec init --language escreve.
+        self.assertNotIn("PT-BR", config[config.find("\nrules:"):])
+        self.assertNotIn("títulos", config)
+
+    def test_lingua_no_context_como_o_openspec_escreve(self) -> None:
+        """O bloco de formatLanguageContext (core/init.js do OpenSpec): o init --language o reconhece."""
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        contexto = config[config.find("context: |\n"):config.find("\nrules:")]
+        contexto = "\n".join(linha[2:] for linha in contexto.splitlines()[1:])
+        self.assertIn(FERRAMENTA.LINGUA, contexto)
+        self.assertTrue(FERRAMENTA.LINGUA.startswith(
+            "Language: pt-BR\nAll artifacts must be written in pt-BR.\n"
+            "Keep OpenSpec structural headings and SHALL/MUST keywords in English.\n"))
+        self.assertIn("accents", FERRAMENTA.LINGUA)  # o hubia já perdeu acentos em textos de tela
 
     def test_cenario_mantido_no_delta_fica_como_esta(self) -> None:
         config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
@@ -779,8 +792,15 @@ class Kit(unittest.TestCase):
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertIn("eram as do kit em ", saida.stdout)
             texto = config.read_text(encoding="utf-8")
-            self.assertTrue(texto.startswith(contexto))
+            # O context do projeto fica, e ganha a língua, que saiu das regras (v1.33).
+            self.assertIn("  Projeto: o meu.\n", texto)
+            self.assertIn("  All artifacts must be written in pt-BR.\n", texto)
+            self.assertIn("a língua foi acrescentada ao context", saida.stdout)
             self.assertEqual(texto[texto.find("\nrules:"):], atual[atual.find("\nrules:"):])
+            subprocess.run(["git", "commit", "-qam", "kit"], cwd=pasta, env=env, check=True)
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(config.read_text(encoding="utf-8"), texto)  # uma vez só
+            self.assertNotIn("a língua foi acrescentada", saida.stdout)
             subprocess.run(["git", "checkout", "-q", "."], cwd=pasta, check=True)
             subprocess.run(["git", "clean", "-qfd"], cwd=pasta, check=True)
             config.write_text(contexto + "rules:\n  proposal:\n    - Uma regra própria.\n")
