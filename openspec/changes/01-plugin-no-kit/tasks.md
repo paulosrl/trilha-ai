@@ -35,6 +35,19 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 - [x] 5.1 Com a confirmação do usuário e ele olhando: trocar o plugin da máquina (`claude plugin uninstall sdd@pipeline-prd-tdd-openspec`, `claude plugin marketplace remove pipeline-prd-tdd-openspec`, `claude plugin marketplace add /home/pl/projetos/trilha-ai`, `claude plugin install sdd@trilha-ai`); conferir em `claude plugin list --json` o `sdd@trilha-ai` na `1.35.0`; num projeto descartável no scratchpad (`kit.py novo`), o `confere_metodo` sem aviso do plugin e, com o comum do descartável na "Versão 1.36", com o aviso
 
+## 6. As correções da revisão independente
+
+Cada teste é escrito antes da correção e falha antes dela.
+
+- [ ] 6.1 O aviso de fora do kit vale para qualquer `sdd@` que não seja `sdd@trilha-ai`; o teste `test_plugin_de_outro_marketplace_avisa` comprova o cenário "Plugin de outro marketplace", e o `test_plugin_do_marketplace_antigo_avisa` continua comprovando o do marketplace antigo
+- [ ] 6.2 Os comandos do aviso separados; o teste `test_aviso_do_plugin_com_comandos_separados` comprova o cenário "Comandos separados" (nos avisos de fora do kit e de ausente, nenhum `&&`)
+- [ ] 6.3 O aviso do plugin desligado; o teste `test_plugin_desligado_avisa` comprova o cenário "Plugin do kit desligado"
+- [ ] 6.4 A opção `--sem-plugin` no `confere_metodo.py`, usada pelo `modelo/.githooks/pre-commit`; o teste `test_trava_do_commit_nao_consulta_o_claude` comprova o cenário "Commit sem consultar o Claude Code" (um `claude` falso que deixa uma marca, e o commit sem a marca), e o `test_check_sh_avisa_o_plugin` comprova o cenário "Verificação do repositório com o aviso"
+- [ ] 6.5 A guarda da versão: o teste `test_mudanca_sem_versao_nova_reprova` comprova os cenários "Mudança sem versão nova" e "Versão nova em preparo" (num repositório de teste com tag), e o `test_kit_sem_mudanca_depois_da_tag` aplica a guarda ao próprio kit
+- [ ] 6.6 Os testes de versão usam a leitura do `kit.py` (`_versao`), sem regex própria; o `test_versao_do_plugin_igual_a_do_kit` e o `test_versao_do_plugin_esquecida_reprova` continuam passando
+- [ ] 6.7 O `tearDownModule` devolve o PATH original; conferido pelo conjunto inteiro de testes
+- [ ] 6.8 O conjunto de testes e o ruff do kit, cada um sozinho, sem erro; na máquina do usuário, o `check.sh` de um projeto descartável avisa o plugin de outra versão e um commit nele não consulta o Claude Code
+
 ## Workflow follow-up
 
 - Depois do archive: `openspec validate --all --no-interactive`, os testes e o ruff do kit, e a regra de versão do `CLAUDE.md` (a tag `v1.35` no merge commit da main, enviada com ele).

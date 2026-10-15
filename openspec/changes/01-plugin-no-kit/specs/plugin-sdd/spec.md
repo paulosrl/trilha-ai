@@ -25,7 +25,7 @@ O kit SHALL publicar, na raiz do repositório, um marketplace do Claude Code cha
 - **THEN** nenhum deles cita `pipeline-prd-tdd-openspec`
 
 ### Requirement: Versão do plugin igual à do kit
-A versão declarada no manifesto do plugin MUST ser `X.Y.0` quando a linha de versão do `modelo/CLAUDE-comum.md` for "Versão X.Y", e os testes do kit MUST reprovar qualquer divergência entre as duas.
+A versão declarada no manifesto do plugin MUST ser `X.Y.0` quando a linha de versão do `modelo/CLAUDE-comum.md` for "Versão X.Y", e os testes do kit MUST reprovar qualquer divergência entre as duas e qualquer mudança em `modelo/` ou em `plugins/` depois da tag `vX.Y` da versão atual.
 
 #### Scenario: Versões iguais
 - **WHEN** o comum diz "Versão 1.35" e o manifesto do plugin declara `1.35.0`
@@ -34,3 +34,11 @@ A versão declarada no manifesto do plugin MUST ser `X.Y.0` quando a linha de ve
 #### Scenario: Versão do plugin esquecida
 - **WHEN** o comum sobe para uma versão nova e o manifesto do plugin continua com a anterior
 - **THEN** os testes do kit reprovam, nomeando as duas versões
+
+#### Scenario: Mudança sem versão nova
+- **WHEN** a tag `vX.Y` da versão atual já existe e um arquivo de `modelo/` ou de `plugins/` mudou depois dela
+- **THEN** os testes do kit reprovam, nomeando o arquivo
+
+#### Scenario: Versão nova em preparo
+- **WHEN** a tag `vX.Y` da versão atual ainda não existe
+- **THEN** a mudança em `modelo/` ou em `plugins/` não reprova os testes do kit
