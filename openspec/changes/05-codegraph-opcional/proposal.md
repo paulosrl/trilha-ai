@@ -6,7 +6,8 @@ A auditoria de 2026-10-15 achou o CodeGraph tratado como obrigatório em parte d
 
 ## What Changes
 
-- Nos próximos passos do `kit.py novo`, o `codegraph init` passa a vir como opcional ("se usar o CodeGraph"), separado do `openspec init`, como no passo 4 do README.
+- Nos próximos passos do `kit.py novo`, o `codegraph init` passa a vir como opcional ("se usar o CodeGraph"), num item próprio, separado do `openspec init`, e diz que roda em cada clone, porque o índice fica fora do git.
+- Os próximos passos passam a ter os números do README (3 a 6), e o passo 4, "inicialize as ferramentas", agrupa o OpenSpec, o plugin e o CodeGraph, um item cada, como no passo 4 do README.
 - Um teste confere a saída.
 
 **Fora desta change:** o resto da saída do `novo` (os outros passos, o aviso do perfil do OpenSpec); o `kit.py atualizar`; as conferências; o texto do método (comum, skills, `config.yaml` modelo). O kit não sobe de versão, porque nada em `modelo/` nem em `plugins/` muda.

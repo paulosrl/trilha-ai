@@ -4,8 +4,8 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 1. O CodeGraph opcional no projeto novo
 
-- [x] 1.1 O teste `test_novo_cita_o_codegraph_como_opcional`, em `testes/test_kit.py`, roda o `kit.py novo` numa pasta descartável e confere, nos próximos passos, que a linha do `codegraph init` diz "se usar o CodeGraph" e que o passo do `openspec init` não cita o `codegraph init`; ele falha antes do código (`python3 -m unittest discover -s testes -k test_novo_cita_o_codegraph_como_opcional`)
-- [x] 1.2 Os próximos passos do `kit.py novo` passam a trazer o `codegraph init` num passo próprio, opcional; o teste da 1.1 passa e comprova o cenário "Projeto novo com o CodeGraph opcional" (`-k test_novo_cita_o_codegraph_como_opcional`), e o `test_novo_com_o_verify_no_perfil_nao_avisa` e o `test_novo_imprime_o_comando_de_instalacao` continuam passando
+- [x] 1.1 O teste `test_novo_cita_o_codegraph_como_opcional`, em `testes/test_kit.py`, roda o `kit.py novo` numa pasta descartável, sem o `openspec` no PATH (`_novo_com_openspec(None)`), e confere, nos próximos passos, que a linha do `codegraph init` diz "se usar o CodeGraph" e "em cada clone" e que o item do `openspec init` não cita o `codegraph init`; ele falha antes do código (`python3 -m unittest discover -s testes -k test_novo_cita_o_codegraph_como_opcional`)
+- [x] 1.2 Os próximos passos do `kit.py novo` passam a ter os números do README (3 a 6) e a trazer o `codegraph init` num item próprio do passo 4, opcional e em cada clone; o teste da 1.1 passa e comprova o cenário "Projeto novo com o CodeGraph opcional" (`-k test_novo_cita_o_codegraph_como_opcional`), e o `test_novo_com_o_verify_no_perfil_nao_avisa` e o `test_novo_imprime_o_comando_de_instalacao` continuam passando
 - [x] 1.3 O conjunto de testes, o ruff (check e format), cada um sozinho, e o `openspec validate --all --no-interactive`, sem erro
 
 ## 2. Execução manual
