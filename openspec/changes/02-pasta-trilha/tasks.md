@@ -37,6 +37,19 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 - [x] 5.2 No `README.md` do kit, a tabela e os passos com os caminhos de `modelo/trilha/` e o `verifica.sh` (só o mínimo; a reescrita é o item 9); `git grep -n "scripts/confere_\|scripts/guarda\|\.githooks/pre-commit\|@CLAUDE-comum.md"` fora de `openspec/` e dos testes da migração não acha caminho antigo apresentado como atual
 - [x] 5.3 O conjunto de testes e o ruff, cada um sozinho, sem erro
 
+## 7. As correções da revisão independente
+
+Cada teste é escrito antes da correção e falha antes dela.
+
+- [ ] 7.1 O `check.sh` que ainda chama `scripts/confere_*` reprova a atualização; o teste `test_migracao_avisa_a_parte_fixa_alterada` passa a exigir a saída 1 e a ausência do "commit sugerido" no cenário "Parte fixa alterada pelo projeto"
+- [ ] 7.2 A recusa da `trilha/` sem o comum; o teste `test_atualizar_recusa_a_pasta_trilha_de_outra_coisa` comprova o cenário "Pasta trilha do projeto"
+- [ ] 7.3 A falta do OpenSpec no CI é erro; o teste `test_verifica_sem_openspec_no_ci_falha` comprova o cenário "OpenSpec ausente no CI", e o `test_verifica_sem_openspec_avisa` roda sem a variável `CI`
+- [ ] 7.4 O aviso da parte fixa só aceita a linha igual ou seguida de espaço; o teste `test_aviso_da_parte_fixa_preciso` comprova os cenários "Chamada com os vizinhos" e "Linha curta que falta", e o `test_migracao_troca_a_parte_fixa_com_vizinhos` confere que não sai o falso aviso
+- [ ] 7.5 As trocas da migração rodam sempre e a importação aceita espaço no fim; o teste `test_migracao_parcial_troca_a_importacao` comprova o cenário "Migração parcial"
+- [ ] 7.6 A permissão de execução na conferência da cópia; o teste `test_copia_reprova_a_permissao_perdida` comprova o cenário "Permissão de execução perdida"
+- [ ] 7.7 `SEM_MUDAR` pelos arquivos versionados; o teste `test_lista_do_metodo_pelos_arquivos_versionados` comprova o cenário "Arquivo solto na pasta do kit"
+- [ ] 7.8 O conjunto de testes e o ruff, cada um sozinho, sem erro; o clone do heimdall migrado de novo dá o mesmo resultado da tarefa 6.1
+
 ## 6. Execução manual
 
 - [x] 6.1 Com o usuário olhando: migrar um clone descartável do heimdall com o `kit.py atualizar` e conferir o `bash scripts/check.sh` em `ok` (com o `openspec validate` real), um commit passando pela trava do commit, o aviso do `pre-push` próprio, a trava do Claude Code (`trilha/guarda.py`) barrando um `git push --force` e a página do projeto gerada por `python3 trilha/gerar_pagina_sdd.py`

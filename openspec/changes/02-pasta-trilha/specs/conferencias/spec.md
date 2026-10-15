@@ -14,7 +14,7 @@ A conferência das regras SHALL exigir que o `CLAUDE.md` do projeto importe o co
 - **THEN** a conferência das regras reprova, citando a linha que falta
 
 ### Requirement: Cópia idêntica da pasta do método
-Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `trilha/` do projeto com a `modelo/trilha/` do kit, arquivo a arquivo, e MUST reprovar, nomeando o arquivo, quando um deles estiver diferente, faltar no projeto ou existir só no projeto.
+Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `trilha/` do projeto com a `modelo/trilha/` do kit, arquivo a arquivo, e MUST reprovar, nomeando o arquivo, quando um deles estiver diferente, faltar no projeto, existir só no projeto ou tiver perdido a permissão de execução que tem no kit.
 
 #### Scenario: Pasta igual à do kit
 - **WHEN** a pasta `trilha/` do projeto tem os mesmos arquivos, com o mesmo conteúdo, que a `modelo/trilha/` do kit
@@ -27,6 +27,10 @@ Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `t
 #### Scenario: Arquivo faltando ou a mais
 - **WHEN** falta no projeto um arquivo que a pasta do kit tem, ou o projeto tem em `trilha/` um arquivo que o kit não tem
 - **THEN** a conferência das regras reprova, citando o arquivo
+
+#### Scenario: Permissão de execução perdida
+- **WHEN** o `trilha/hooks/pre-commit` do projeto tem o mesmo conteúdo do kit, mas sem a permissão de execução
+- **THEN** a conferência das regras reprova, citando `trilha/hooks/pre-commit`
 
 ### Requirement: Verificação fixa do projeto
 O `trilha/verifica.sh` SHALL rodar, nesta ordem, a conferência das regras (com a pasta do kit quando ela está ao lado do projeto ou em `TRILHA_AI`, e com aviso quando não está), a conferência do método (repassando os argumentos que receber, como `--vizinho`) e o `openspec validate --all --no-interactive`, e MUST terminar com erro quando qualquer um deles falhar.
@@ -44,5 +48,9 @@ O `trilha/verifica.sh` SHALL rodar, nesta ordem, a conferência das regras (com 
 - **THEN** a verificação termina com erro
 
 #### Scenario: OpenSpec ausente
-- **WHEN** o comando `openspec` não existe no PATH
+- **WHEN** o comando `openspec` não existe no PATH, fora do CI
 - **THEN** a verificação avisa que os specs não foram validados e não falha por isso
+
+#### Scenario: OpenSpec ausente no CI
+- **WHEN** o comando `openspec` não existe no PATH e a variável `CI` está definida, como no GitHub
+- **THEN** a verificação termina com erro, dizendo que o OpenSpec falta
