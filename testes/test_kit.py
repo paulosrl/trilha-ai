@@ -1,5 +1,7 @@
 """O kit é coerente: a versão, o esqueleto, o verificador e o gerador da página (Python 3 puro)."""
 
+import importlib.util
+import os
 import re
 import shutil
 import subprocess
@@ -9,21 +11,14 @@ import unittest
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-DO_KIT = (
-    "CLAUDE-comum.md",
-    "CLAUDE.md",
-    "ANDAMENTO.md",
-    "openspec/config.yaml",
-    "scripts/check.sh",
-    "scripts/confere_regras.py",
-    "scripts/confere_metodo.py",
-    "scripts/gerar_pagina_sdd.py",
-    "scripts/pagina_sdd_modelo.html",
-    ".gitignore",
-    ".github/workflows/verificacao.yml",
-)
-# O que no repositório novo tem outro nome no kit.
-ORIGEM = {"CLAUDE.md": "esqueleto-CLAUDE.md", ".github/workflows/verificacao.yml": "github-verificacao.yml"}
+# A lista dos arquivos do kit vive num lugar só: a ferramenta que cria e atualiza os projetos.
+_spec = importlib.util.spec_from_file_location("kit", RAIZ / "ferramentas" / "kit.py")
+FERRAMENTA = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(FERRAMENTA)
+DO_KIT = (*FERRAMENTA.SEM_MUDAR, *FERRAMENTA.A_PREENCHER)
+ORIGEM = dict(FERRAMENTA.A_PREENCHER)  # destino no projeto → origem no kit
+GIT_TESTE = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
+             "GIT_COMMITTER_EMAIL": "t@t"}
 ESQUELETO_DO_CLAUDE = RAIZ / "CLAUDE.md"  # o deste repositório não é o esqueleto; o esqueleto é copiado abaixo
 
 
@@ -291,7 +286,7 @@ class Kit(unittest.TestCase):
         # Os scripts são copiados sem mudança; um projeto Python com o ruff (limite de 100) os reprovaria.
         longas = [
             f"{nome}:{numero}"
-            for nome in DO_KIT
+            for nome in (*DO_KIT, "ferramentas/kit.py")
             if nome.endswith(".py")
             for numero, linha in enumerate((RAIZ / nome).read_text(encoding="utf-8").splitlines(), 1)
             if len(linha) > 100
@@ -514,6 +509,74 @@ class Kit(unittest.TestCase):
         self.assertIn("article.doc a { overflow-wrap: anywhere; }", modelo)  # URL longa no celular
         self.assertIn("os documentos mudaram por último em", modelo)
         self.assertNotIn('", em " + dados.atualizado', modelo)
+
+
+    def _ferramenta(self, *args: str) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, "-I", str(RAIZ / "ferramentas/kit.py"), *args],
+            capture_output=True, text=True, check=False,
+        )
+
+    def _projeto_velho(self, tmp: str) -> Path:
+        """Um projeto feito pela ferramenta, com dois commits: o kit e o comum voltado à 1.19."""
+        pasta = Path(tmp) / "proj"
+        self.assertEqual(self._ferramenta("novo", str(pasta)).returncode, 0)
+        env = {**os.environ, **GIT_TESTE}
+        comum = pasta / "CLAUDE-comum.md"
+        comum.write_text(re.sub(r"^Versão [\d.]+,", "Versão 1.19,", comum.read_text(encoding="utf-8"),
+                                flags=re.M), encoding="utf-8")
+        (pasta / ".github/workflows/verificacao.yml").write_text("# a parte da stack, preenchida\n")
+        subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
+        subprocess.run(["git", "commit", "-qm", "kit"], cwd=pasta, check=True, env=env)
+        return pasta
+
+    def test_ferramenta_cria_projeto_novo_e_recusa_pasta_cheia(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = Path(tmp) / "novo"
+            saida = self._ferramenta("novo", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            for destino, origem in ORIGEM.items():
+                self.assertEqual((pasta / destino).read_bytes(), (RAIZ / origem).read_bytes())
+            for nome in FERRAMENTA.SEM_MUDAR:
+                self.assertEqual((pasta / nome).read_bytes(), (RAIZ / nome).read_bytes())
+            self.assertTrue((pasta / "sdd").is_dir())
+            self.assertIn("gh repo create", saida.stdout)
+            self.assertEqual(self._ferramenta("novo", str(pasta)).returncode, 1)
+
+    def test_ferramenta_atualiza_so_o_que_se_copia_sem_mudar(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_velho(tmp)
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertEqual((pasta / "CLAUDE-comum.md").read_bytes(),
+                             (RAIZ / "CLAUDE-comum.md").read_bytes())
+            # O que o projeto preencheu fica como está.
+            self.assertEqual((pasta / ".github/workflows/verificacao.yml").read_text(),
+                             "# a parte da stack, preenchida\n")
+            versao = re.search(r"^Versão (\d+\.\d+)", (RAIZ / "CLAUDE-comum.md").read_text(
+                encoding="utf-8"), re.M).group(1)
+            self.assertIn(f"comum 1.19 → {versao}", saida.stdout)
+            # A ferramenta não faz commit.
+            self.assertIn("CLAUDE-comum.md", subprocess.run(
+                ["git", "status", "--short"], cwd=pasta, capture_output=True, text=True).stdout)
+
+    def test_ferramenta_recusa_trabalho_pendente_change_em_curso_e_outra_branch(self) -> None:
+        env = {**os.environ, **GIT_TESTE}
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_velho(tmp)
+            (pasta / "solto.txt").write_text("x")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 1)
+            self.assertIn("trabalho não commitado", saida.stderr)
+            (pasta / "solto.txt").unlink()
+            andamento = pasta / "ANDAMENTO.md"
+            andamento.write_text(andamento.read_text(encoding="utf-8").replace(
+                "nada em andamento", "em andamento"), encoding="utf-8")
+            subprocess.run(["git", "commit", "-qam", "andamento"], cwd=pasta, check=True, env=env)
+            self.assertIn("em andamento", self._ferramenta("atualizar", str(pasta)).stderr)
+            subprocess.run(["git", "switch", "-qc", "change/01-x"], cwd=pasta, check=True)
+            self.assertIn("vai à main", self._ferramenta("atualizar", str(pasta)).stderr)
+            self.assertEqual(self._ferramenta("atualizar", str(RAIZ)).returncode, 1)
 
 
 if __name__ == "__main__":

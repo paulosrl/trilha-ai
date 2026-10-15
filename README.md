@@ -9,8 +9,8 @@ Este repositório é a **fonte** dos arquivos que todo repositório novo copia. 
 Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do aluno, no repositório do curso (https://github.com/paulosrl/consulta-publica, pasta `docs/curso/`). A ordem, resumida:
 
 1. **Instale as ferramentas** (Claude Code, OpenSpec, CodeGraph e o plugin `sdd`), pela subseção "Instalar as ferramentas" da etapa 0, que copia os comandos das documentações oficiais. O kit precisa também do **Python 3** instalado, porque o verificador `scripts/confere_regras.py` é um programa Python sem dependências; no Ubuntu e no WSL ele costuma vir instalado: confira com `python3 --version`. Precisa ainda de uma **conta no GitHub** e do GitHub CLI (`gh`, instalação em https://cli.github.com), autenticado uma vez com `gh auth login`: todo repositório do método tem um remoto privado no GitHub.
-2. **Crie a pasta e o git:** `mkdir <nome> && cd <nome> && git init`.
-3. **Copie os arquivos deste repositório** (menos este README, o `CLAUDE.md`, o `mapa-da-trilha.html` e a pasta `testes/`) para a raiz do repositório novo, mantendo os caminhos:
+2. **Crie o repositório com o kit:** com este repositório em `../trilha-ai`, rode `python3 ../trilha-ai/ferramentas/kit.py novo <nome>`. Ele cria a pasta, o git (na branch `main`), a pasta `sdd/` e copia os arquivos, como na tabela do passo 3.
+3. **Preencha o que é do projeto.** A tabela diz o que cada arquivo é e o que fazer com ele; a cópia à mão, sem a ferramenta, segue a mesma tabela. Não se copiam este README, o `CLAUDE.md`, o `mapa-da-trilha.html` e as pastas `testes/`, `ferramentas/` e `.github/`, que são só do kit:
 
    | Arquivo | O que fazer |
    |---|---|
@@ -43,4 +43,6 @@ O Claude Code lê o `CLAUDE.md` da raiz de cada repositório. No método, as reg
 
 ## Ao mudar o padrão
 
-O `CLAUDE-comum.md` muda **aqui**, com a versão e a data novas e o teste verde (`python3 -m unittest discover -s testes`), e só depois são copiados para cada repositório, cada um sob ordem do usuário. Um repositório nunca edita a própria cópia: o que é dele vai no `CLAUDE.md`, em "Exceções ao comum" se contrariar o comum. O `confere_regras.py --fonte` acusa a cópia divergente.
+O `CLAUDE-comum.md` muda **aqui**, com a versão e a data novas, o teste verde (`python3 -m unittest discover -s testes`) e a tag `vX.Y`, e só depois são copiados para cada repositório, cada um sob ordem do usuário. Um repositório nunca edita a própria cópia: o que é dele vai no `CLAUDE.md`, em "Exceções ao comum" se contrariar o comum. O `confere_regras.py --fonte` acusa a cópia divergente.
+
+Para atualizar um projeto: `python3 ferramentas/kit.py atualizar ../<projeto>`. Ela recusa o projeto com trabalho não commitado, fora da branch principal ou com o `ANDAMENTO.md` "em andamento"; copia o que se copia sem mudar, cria do modelo só o que faltar, gera de novo a página, roda a conferência e sugere a mensagem do commit. Não faz commit nem envia. O que mudou desde a versão do projeto: `git diff v<versão do projeto> v<versão nova>`.
