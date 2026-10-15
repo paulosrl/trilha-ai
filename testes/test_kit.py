@@ -129,7 +129,8 @@ class Kit(unittest.TestCase):
         self.assertIn("Cada change vive numa branch `change/NN-nome`", comum)
         self.assertIn("pull request em rascunho (`gh pr create --draft`)", comum)
         self.assertIn("pedem um só \"sim\", dado no começo da change e válido até o merge", comum)
-        self.assertIn("O merge na main (`gh pr merge`) pede o seu próprio \"sim\"", comum)
+        self.assertIn("O merge na main (`gh pr merge --merge --delete-branch`: merge commit, nunca squash", comum)
+        self.assertIn("pede o seu próprio \"sim\"", comum)
 
     def test_archive_dentro_do_pull_request(self) -> None:
         """v1.22: o archive e os passos seguintes na branch, antes do merge; depois, o PR sai do rascunho."""
