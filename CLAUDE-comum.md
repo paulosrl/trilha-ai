@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.16, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.17, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -8,8 +8,8 @@ Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD →
 
 Os documentos do método vivem na pasta `sdd/`, na raiz.
 
-1. `sdd/prd-<nome>.md`: o quê e o porquê. Nenhuma palavra de tecnologia. Escrito com a skill `sdd:prd` e aprovado seção por seção pelo usuário (gate 1).
-2. `sdd/tdd-<nome>.md`: as decisões técnicas, como ADRs. Escrito com a skill `sdd:tdd` e aprovado seção por seção pelo usuário (gate 2). Não se redecidem numa change.
+1. `sdd/prd-<nome>.md`: o quê e o porquê. Nenhuma palavra de tecnologia, salvo a restrição que o usuário declara imposta de fora, que a skill registra à parte. Escrito com a skill `sdd:prd` e aprovado bloco a bloco pelo usuário, como a skill pede (gate 1).
+2. `sdd/tdd-<nome>.md`: as decisões técnicas, como ADRs. Escrito com a skill `sdd:tdd` e aprovado bloco a bloco pelo usuário, como a skill pede (gate 2). Não se redecidem numa change.
 3. `sdd/decomposicao-<nome>.md`: as changes, a ordem de execução com a razão, as regras de convivência e a tabela "Ciclo". Vem da skill `sdd:briefing`, que também escreve cada briefing e audita o gate 3.
 4. `sdd/briefing-openspec/briefing-change-NN-<nome>.md`: a entrada de cada change, autossuficiente: requisitos, regras, critérios de aceite e ADRs na íntegra, mais "o que já existe".
 5. `openspec/specs/`: o comportamento já entregue. O `openspec/config.yaml` traz o contexto do projeto e as regras por artefato (a língua, a origem citada de cada requisito e cenário, um teste por cenário); o OpenSpec o lê ao gerar cada artefato, e o briefing não repete o que está nele.
@@ -27,10 +27,11 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 1. briefing aprovado pelo usuário;
 2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código;
 3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist de 8 itens da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, depois da escolha do usuário; a revisão termina com a auditoria aprovada;
-4. `/opsx:apply`, no fluxo do OpenSpec; a última tarefa do `tasks.md` é a execução manual, em dado descartável, com o usuário olhando (regra das tarefas no `openspec/config.yaml`);
-5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito, com o motivo;
+4. `/opsx:apply`, no fluxo do OpenSpec; termina na tarefa que a regra das tarefas do `openspec/config.yaml` põe por último;
+5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito no `design.md` da change, com o motivo;
 6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista.
 
+- Sugestão de um comando do OpenSpec que pule um passo deste ciclo não vale (arquivar sem o verify, aplicar antes da auditoria, arquivar sem atualizar os specs).
 - Antes de propor, leia o spec da capability em `openspec/specs/` e rode `openspec list`: evita change duplicada ou em colisão. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
 - Não edite `openspec/specs/` à mão, exceto typo ou link: os specs mudam por delta e archive. Se editou, registre uma change retroativa.
 - Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
@@ -58,7 +59,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - Pedido curto, com erro de digitação ou com mais de uma leitura: diga a leitura adotada antes de agir.
 - Pedido que contraria requisito ou ADR volta ao usuário com opções; nunca é atendido em silêncio.
 - Delegação ("escolha o melhor") não dispensa o gate: siga a recomendação já apresentada e registre a delegação.
-- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho (a do gate 3 também não): não muda o `ANDAMENTO.md` nem o registro de processo; o relatório entra no registro junto com a primeira correção. Uma auditoria fecha com a verificação do repositório verde e sem contradição; repetição e redação menores ficam no relatório e se corrigem quando o arquivo mudar por outro motivo.
+- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho (a do gate 3 também não): não muda o `ANDAMENTO.md` nem o registro de processo; o relatório entra no registro junto com a primeira correção; a aprovação do gate 3, com ou sem correção, é unidade de trabalho: atualiza o "Ciclo", o `ANDAMENTO.md` e o registro, se houver, e vai no commit do gate 3. Uma auditoria fecha com a verificação do repositório verde e sem contradição; repetição e redação menores ficam no relatório e se corrigem quando o arquivo mudar por outro motivo.
 - Ao fechar trabalho seu, releia o diff inteiro e corrija antes de entregar.
 - Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração.
 - Um "sim" isolado responde só à pergunta principal da mensagem; o envio ao remoto perguntado à parte pede "sim" para ele (ou "sim, em tudo"). Em pergunta com mais de uma decisão, confirme cada uma.

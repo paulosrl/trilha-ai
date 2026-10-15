@@ -5,20 +5,12 @@ schema: spec-driven
 context: |
   Projeto: <nome>: <uma frase sobre o que é e para quem>.
 
-  Documentos que mandam, nesta ordem (regra do CLAUDE-comum.md), na pasta sdd/: prd-<nome>.md,
-  tdd-<nome>.md, decomposicao-<nome>.md, briefing-openspec/briefing-change-NN-<nome>.md; e
-  openspec/specs/.
-  Cada change nasce de um briefing aprovado; o design.md referencia os ADRs do TDD pelo
-  número e não redecide tecnologia. Faltou requisito: volta ao PRD. Faltou decisão
-  técnica: volta ao TDD. Não improvise.
-
   Stack (decidida no TDD; preencha depois da etapa 2): <linguagem e versão, gerenciador,
   banco, interface, lint, tipos, testes>.
 
-  Nome das pastas de changes e specs: a regra está no CLAUDE-comum.md.
-
-  Dados a proteger: <o dado real que nunca entra em teste manual e a variável ou o
-  caminho da cópia descartável>.
+  As regras do método (os documentos de sdd/ e a ordem deles, o ciclo, o nome das pastas) e as
+  deste repositório (os nomes dos documentos, os dados a proteger, as exceções) estão no
+  CLAUDE-comum.md e no CLAUDE.md, que o agente já carrega; este contexto não as repete.
 
 # Regras por artefato. Vieram das exigências dos briefings e dos commits de correção do
 # projeto Consulta Pública; valem para todo repositório que segue o método.

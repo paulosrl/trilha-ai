@@ -154,6 +154,31 @@ class Kit(unittest.TestCase):
         self.assertIn("ou o trabalho fora de change)", comum)
         self.assertIn("quando a auditoria do gate 3 for aprovada", comum)
 
+    def test_gates_aprovados_como_as_skills_pedem(self) -> None:
+        """v1.17: PRD e TDD são aprovados bloco a bloco, como as skills pedem; a restrição imposta é exceção."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertNotIn("seção por seção", comum)
+        self.assertIn("aprovado bloco a bloco pelo usuário, como a skill pede (gate 1)", comum)
+        self.assertIn("aprovado bloco a bloco pelo usuário, como a skill pede (gate 2)", comum)
+        self.assertIn("salvo a restrição que o usuário declara imposta de fora", comum)
+
+    def test_ciclo_sem_repetir_o_config_e_com_o_lugar_do_verify(self) -> None:
+        """v1.17: a execução manual fica só no config.yaml; o verify responde no design.md; a sugestão
+        de um comando do OpenSpec que pule passo não vale; a aprovação do gate 3 é unidade de trabalho."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertNotIn("execução manual, em dado descartável, com o usuário olhando", comum)
+        self.assertIn("recusada por escrito no `design.md` da change, com o motivo", comum)
+        self.assertIn("Sugestão de um comando do OpenSpec que pule um passo deste ciclo não vale", comum)
+        self.assertIn("a aprovação do gate 3, com ou sem correção, é unidade de trabalho", comum)
+
+    def test_config_nao_repete_o_comum_nem_o_claude(self) -> None:
+        """v1.17: o contexto do config.yaml aponta para o comum e o CLAUDE.md, que o agente já carrega."""
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        self.assertNotIn("Não improvise", config)
+        self.assertNotIn("Dados a proteger", config)
+        self.assertNotIn("Documentos que mandam", config)
+        self.assertIn("CLAUDE-comum.md e no CLAUDE.md, que o agente já carrega; este contexto não as repete", config)
+
     def test_cenario_mantido_no_delta_fica_como_esta(self) -> None:
         config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("todo cenário novo ou alterado cita o CA de origem", config)
