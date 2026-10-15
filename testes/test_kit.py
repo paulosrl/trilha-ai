@@ -720,7 +720,9 @@ class Kit(unittest.TestCase):
             falsos = Path(tmp) / "falsos"
             falsos.mkdir()
             _claude_falso(falsos, "printf '%s' '[{\"id\": \"sdd@meu-fork\", \"version\": \"0.3.9\"}]'")
-            env = {**os.environ, "PATH": f"{falsos}:{os.environ['PATH']}"}
+            # Fora do CI (no do kit, CI=true e sem o openspec, que a verificação então cobraria).
+            env = {**{k: v for k, v in os.environ.items() if k != "CI"},
+                   "PATH": f"{falsos}:{os.environ['PATH']}"}
             saida = subprocess.run(["bash", "scripts/check.sh"], cwd=pasta, env=env,
                                    capture_output=True, text=True)
             self.assertEqual(saida.returncode, 0, saida.stderr)
@@ -1081,9 +1083,10 @@ class Kit(unittest.TestCase):
         self.assertIn("trilha/meu.py não é do kit", saida.stderr)
 
     def _verifica(self, pasta: Path, *args: str, path: str | None = None,
-                  check_sh: bool = False) -> subprocess.CompletedProcess[str]:
+                  check_sh: bool = False, ci: bool = False) -> subprocess.CompletedProcess[str]:
         comando = ["bash", "scripts/check.sh"] if check_sh else ["bash", "trilha/verifica.sh", *args]
-        env = {**os.environ, "TRILHA_AI": str(RAIZ), **({"PATH": path} if path else {})}
+        env = {k: v for k, v in os.environ.items() if k != "CI"}  # o CI do kit define CI
+        env = {**env, "TRILHA_AI": str(RAIZ), **({"PATH": path} if path else {}), **({"CI": "true"} if ci else {})}
         return subprocess.run(comando, cwd=pasta, env=env, capture_output=True, text=True, check=False)
 
     def test_verifica_aprova_o_projeto_novo(self) -> None:
@@ -1123,9 +1126,20 @@ class Kit(unittest.TestCase):
             sem_openspec.mkdir()
             for programa in ("bash", "python3", "git", "dirname", "readlink"):
                 (sem_openspec / programa).symlink_to(shutil.which(programa))
-            saida = self._verifica(pasta, path=str(sem_openspec))
+            saida = self._verifica(pasta, path=str(sem_openspec), ci=False)
         self.assertEqual(saida.returncode, 0, saida.stderr)
         self.assertIn("o openspec não está instalado", saida.stderr)
+
+    def test_verifica_sem_openspec_no_ci_falha(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            sem_openspec = Path(tmp) / "sem-openspec"
+            sem_openspec.mkdir()
+            for programa in ("bash", "python3", "git", "dirname", "readlink"):
+                (sem_openspec / programa).symlink_to(shutil.which(programa))
+            saida = self._verifica(pasta, path=str(sem_openspec), ci=True)
+        self.assertNotEqual(saida.returncode, 0)
+        self.assertIn("o openspec falta", saida.stderr)
 
     def test_novo_cria_a_pasta_trilha_e_liga_as_travas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1192,7 +1206,9 @@ class Kit(unittest.TestCase):
                 "python3 -I scripts/confere_metodo.py --vizinho trilha-ai \\\n  --vizinho outro\n")
             check.write_text(texto + "echo a-stack-do-projeto\n", encoding="utf-8")
             self._commit_tudo(pasta, "vizinhos e a stack")
-            self.assertEqual(self._ferramenta("atualizar", str(pasta)).returncode, 0)
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertNotIn("a parte fixa de scripts/check.sh mudou", saida.stdout)
             migrado = check.read_text(encoding="utf-8")
         self.assertIn("bash trilha/verifica.sh --vizinho trilha-ai \\\n  --vizinho outro\n", migrado)
         self.assertNotIn("FONTE=", migrado)
@@ -1209,6 +1225,61 @@ class Kit(unittest.TestCase):
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(check.read_text(encoding="utf-8"), texto)
         self.assertIn("a parte fixa do scripts/check.sh não é a do kit", saida.stdout)
+        self.assertEqual(saida.returncode, 1, saida.stdout)
+        self.assertNotIn("commit sugerido", saida.stdout)
+
+    def test_atualizar_recusa_a_pasta_trilha_de_outra_coisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_1_30(tmp)
+            (pasta / "trilha").mkdir()
+            (pasta / "trilha/__init__.py").write_text("# um pacote do projeto\n", encoding="utf-8")
+            self._commit_tudo(pasta, "um pacote chamado trilha")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 1)
+            self.assertIn("trilha/ já existe e não é a do método", saida.stderr)
+            self.assertTrue((pasta / "trilha/__init__.py").is_file())
+            self.assertTrue((pasta / "scripts/confere_regras.py").is_file())  # nada foi mexido
+
+    def test_aviso_da_parte_fixa_preciso(self) -> None:
+        presente = FERRAMENTA._presente
+        self.assertTrue(presente("bash trilha/verifica.sh", {"bash trilha/verifica.sh --vizinho trilha-ai \\"}))
+        self.assertTrue(presente("fi", {"fi"}))
+        self.assertFalse(presente("fi", {"find ."}))
+        self.assertFalse(presente("run: |", {"run: |x"}))
+
+    def test_migracao_parcial_troca_a_importacao(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_1_30(tmp)
+            for antigo in FERRAMENTA.ANTES_DA_2_0.values():
+                (pasta / antigo).unlink(missing_ok=True)
+            claude = pasta / "CLAUDE.md"
+            claude.write_text(claude.read_text(encoding="utf-8").replace("@CLAUDE-comum.md\n", "@CLAUDE-comum.md  \n"),
+                              encoding="utf-8")
+            self._commit_tudo(pasta, "cópias apagadas à mão")
+            self._ferramenta("atualizar", str(pasta))
+            linhas = claude.read_text(encoding="utf-8").splitlines()
+        self.assertIn("@trilha/CLAUDE-comum.md", linhas)
+        self.assertFalse(any(l.startswith("@CLAUDE-comum.md") for l in linhas))
+
+    def test_copia_reprova_a_permissao_perdida(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            (pasta / "trilha/hooks/pre-commit").chmod(0o644)
+            saida = self._regras(pasta)
+        self.assertEqual(saida.returncode, 1)
+        self.assertIn("trilha/hooks/pre-commit perdeu a permissão de execução", saida.stderr)
+
+    def test_lista_do_metodo_pelos_arquivos_versionados(self) -> None:
+        solto = MODELO / "trilha/.rascunho.swp"
+        try:
+            solto.write_text("um arquivo do editor\n", encoding="utf-8")
+            spec = importlib.util.spec_from_file_location("kit_de_novo", RAIZ / "ferramentas" / "kit.py")
+            kit = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(kit)
+        finally:
+            solto.unlink()
+        self.assertNotIn("trilha/.rascunho.swp", kit.SEM_MUDAR)
+        self.assertIn("trilha/verifica.sh", kit.SEM_MUDAR)
 
     def test_dispensa_de_change_pela_pasta_trilha(self) -> None:
         """C13: a dispensa de change aponta para a pasta e para a ferramenta, sem lista repetida."""

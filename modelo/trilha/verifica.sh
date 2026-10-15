@@ -20,6 +20,9 @@ python3 -I trilha/confere_metodo.py "$@"
 # por exemplo); num projeto ainda sem specs, ele passa.
 if command -v openspec >/dev/null; then
   openspec validate --all --no-interactive
+elif [ -n "${CI:-}" ]; then
+  echo "FALHA: o openspec falta no CI; instale-o antes do scripts/check.sh" >&2
+  exit 1
 else
   echo "aviso: o openspec não está instalado; os specs e as changes não foram validados" >&2
 fi

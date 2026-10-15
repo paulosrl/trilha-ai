@@ -22,13 +22,29 @@ from pathlib import Path
 KIT = Path(__file__).resolve().parent.parent
 MODELO = KIT / "modelo"
 
+
 # Copiados sem mudar: a pasta trilha/ inteira, que a atualização troca por inteiro. O cache do
 # Python (__pycache__/), que os testes do kit criam ao importar os verificadores, não conta.
-SEM_MUDAR = tuple(
-    f"trilha/{arquivo.relative_to(MODELO / 'trilha')}"
-    for arquivo in sorted((MODELO / "trilha").rglob("*"))
-    if arquivo.is_file() and "__pycache__" not in arquivo.parts
-)
+def _do_metodo() -> tuple[str, ...]:
+    """Os arquivos versionados de modelo/trilha/ (um arquivo solto ali não vai aos projetos); sem
+    o git, o que estiver na pasta."""
+    saida = subprocess.run(
+        ["git", "-C", str(KIT), "ls-files", "-z", "modelo/trilha"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    nomes = [nome.removeprefix("modelo/") for nome in saida.stdout.split("\0") if nome]
+    if saida.returncode != 0 or not nomes:
+        nomes = [
+            f"trilha/{arquivo.relative_to(MODELO / 'trilha')}"
+            for arquivo in (MODELO / "trilha").rglob("*")
+            if arquivo.is_file() and "__pycache__" not in arquivo.parts
+        ]
+    return tuple(sorted(nomes))
+
+
+SEM_MUDAR = _do_metodo()
 # Preenchidos em cada projeto (destino: origem em modelo/): o projeto novo os recebe; a
 # atualização só cria o que falta, sem tocar no que o projeto já preencheu. Três origens têm
 # outro nome, porque o nome real valeria dentro do próprio kit (o CLAUDE.md seria carregado
@@ -151,10 +167,16 @@ def atualizar(pasta: Path) -> int:
         r"\*\*Estado:\*\*\s*em andamento", andamento.read_text(encoding="utf-8")
     ):
         raise Recusa('o ANDAMENTO.md diz "em andamento"; termine a unidade em curso antes')
+    trilha = pasta / "trilha"
+    if trilha.is_dir() and not (trilha / "CLAUDE-comum.md").is_file():
+        raise Recusa(
+            "a pasta trilha/ já existe e não é a do método (não tem o CLAUDE-comum.md); "
+            "renomeie-a antes de atualizar"
+        )
 
     comum = pasta / "trilha" / "CLAUDE-comum.md"
     antes = _versao(comum if comum.is_file() else pasta / "CLAUDE-comum.md")
-    _migrar(pasta)
+    migrou = _migrar(pasta)
     _copiar_trilha(pasta)
     for nome, origem in A_PREENCHER.items():
         if not (pasta / nome).exists():
@@ -174,6 +196,9 @@ def atualizar(pasta: Path) -> int:
     depois = _versao(MODELO / "trilha" / "CLAUDE-comum.md")
     mudou = _git(pasta, "status", "--short")
     print(mudou or "nada mudou: o projeto já está na versão do kit")
+    if not migrou:
+        print("FALHA: o scripts/check.sh ainda chama os scripts/confere_*, que saíram; troque-os")
+        return 1
     if not ok:
         print("FALHA: a conferência reprovou; os arquivos ficaram copiados, sem commit")
         return 1
@@ -195,16 +220,15 @@ def _copiar_trilha(pasta: Path) -> None:
         _copiar(pasta, nome, nome)
 
 
-def _migrar(pasta: Path) -> None:
+def _migrar(pasta: Path) -> bool:
     """O projeto de antes da 2.0 passa à pasta trilha/: sem as cópias soltas e com as citações."""
     antigas = [nome for nome in ANTES_DA_2_0.values() if (pasta / nome).is_file()]
-    if not antigas:
-        return
     for nome in antigas:
         (pasta / nome).unlink()
-    print(f"migrado para trilha/: saíram {', '.join(antigas)}")
+    if antigas:
+        print(f"migrado para trilha/: saíram {', '.join(antigas)}")
     ganchos = pasta / ".githooks"
-    if ganchos.is_dir():
+    if antigas and ganchos.is_dir():
         proprios = sorted(arquivo.name for arquivo in ganchos.iterdir())
         for nome in proprios:
             print(
@@ -216,12 +240,13 @@ def _migrar(pasta: Path) -> None:
     claude = pasta / "CLAUDE.md"
     if claude.is_file():
         texto = claude.read_text(encoding="utf-8")
-        importacao = re.compile(r"^@CLAUDE-comum\.md$", re.MULTILINE)
+        importacao = re.compile(r"^@CLAUDE-comum\.md[ \t]*$", re.MULTILINE)
         migrado = importacao.sub("@trilha/CLAUDE-comum.md", texto)
         if migrado != texto:
             claude.write_text(migrado, encoding="utf-8")
             print("CLAUDE.md: a importação passou a @trilha/CLAUDE-comum.md")
-    _migrar_check(pasta)
+    # As trocas rodam sempre: repeti-las não muda nada, e a migração parcial também se completa.
+    return _migrar_check(pasta)
 
 
 # A parte fixa do scripts/check.sh do kit até a 1.36, que a migração troca pelo trilha/verifica.sh.
@@ -243,22 +268,23 @@ BLOCO_ANTIGO = (
 CHAMADA_ANTIGA = "python3 -I scripts/confere_metodo.py"
 
 
-def _migrar_check(pasta: Path) -> None:
+def _migrar_check(pasta: Path) -> bool:
     """A parte fixa do check.sh, se for a do kit, vira o trilha/verifica.sh, com os --vizinho."""
     check = pasta / "scripts" / "check.sh"
     texto = check.read_text(encoding="utf-8") if check.is_file() else ""
-    if not texto or "trilha/verifica.sh" in texto:
-        return
+    if "scripts/confere_" not in texto:
+        return True
     if BLOCO_ANTIGO in texto and texto.count(CHAMADA_ANTIGA) == 1:
         texto = texto.replace(CHECK_ANTIGO, "# Parte fixa: as regras, o método e os specs.\n")
         texto = texto.replace(BLOCO_ANTIGO, "").replace(CHAMADA_ANTIGA, "bash trilha/verifica.sh")
         check.write_text(texto, encoding="utf-8")
         print("scripts/check.sh: a parte fixa passou a `bash trilha/verifica.sh`")
-        return
+        return "scripts/confere_" not in texto
     print(
         "aviso: a parte fixa do scripts/check.sh não é a do kit; troque à mão a chamada aos "
         "scripts/confere_*.py por `bash trilha/verifica.sh` (com os --vizinho que houver)"
     )
+    return False
 
 
 def _ligar_travas(pasta: Path) -> None:
@@ -358,11 +384,10 @@ def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
         velho = _na_versao(desde.split()[-1], origem)
         novo = (MODELO / origem).read_text(encoding="utf-8")
         projeto = _linhas_fixas((pasta / nome).read_text(encoding="utf-8"))
-        # A linha do kit vale também como começo da do projeto (a chamada com os --vizinho).
         faltam = sorted(
             linha
             for linha in _linhas_fixas(novo) - _linhas_fixas(velho)
-            if not any(nossa.startswith(linha) for nossa in projeto)
+            if not _presente(linha, projeto)
         )
         sobram = sorted((_linhas_fixas(velho) - _linhas_fixas(novo)) & projeto)
         if faltam or sobram:
@@ -371,6 +396,11 @@ def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
                 print(f"  + {linha}")
             for linha in sobram:
                 print(f"  - {linha}")
+
+
+def _presente(linha: str, projeto: set[str]) -> bool:
+    """A linha do kit está no projeto: igual, ou seguida de espaço e argumentos (os --vizinho)."""
+    return any(nossa == linha or nossa.startswith(f"{linha} ") for nossa in projeto)
 
 
 def _com_lingua(cabeca: str) -> str:

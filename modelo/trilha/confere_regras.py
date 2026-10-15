@@ -116,6 +116,14 @@ def diferencas_da_pasta(projeto: Path, kit: Path) -> list[str]:
         for nome in deles
         if nome in nossos and deles[nome].read_bytes() != nossos[nome].read_bytes()
     ]
+    # O git pula em silêncio o hook sem a permissão de execução: a cópia a mantém (cp -p).
+    falhas += [
+        f"trilha/{nome} perdeu a permissão de execução; copie-o do kit com cp -p"
+        for nome in deles
+        if nome in nossos
+        and deles[nome].stat().st_mode & 0o111
+        and not nossos[nome].stat().st_mode & 0o111
+    ]
     return falhas
 
 
