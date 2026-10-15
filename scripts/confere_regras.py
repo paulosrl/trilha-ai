@@ -18,6 +18,7 @@ Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema; "
 from __future__ import annotations
 
 import re
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -121,6 +122,22 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
     return falhas
 
 
+def avisos_das_travas(raiz: Path) -> list[str]:
+    """As travas do kit desligadas: aviso, não falha, porque o core.hooksPath é de cada clone."""
+    avisos = []
+    if (raiz / ".git").exists():
+        saida = subprocess.run(
+            ["git", "-C", str(raiz), "config", "core.hooksPath"], capture_output=True, text=True
+        )
+        if saida.stdout.strip() != ".githooks":
+            avisos.append("trava do commit desligada: rode git config core.hooksPath .githooks")
+    settings = raiz / ".claude" / "settings.json"
+    ligada = settings.is_file() and "scripts/guarda.py" in settings.read_text(encoding="utf-8")
+    if not ligada:
+        avisos.append("trava do Claude Code desligada: .claude/settings.json sem o guarda.py")
+    return avisos
+
+
 def main(argv: list[str]) -> int:
     if not argv or len(argv) not in (1, 3) or (len(argv) == 3 and argv[1] != "--fonte"):
         print(__doc__, file=sys.stderr)
@@ -128,6 +145,8 @@ def main(argv: list[str]) -> int:
     raiz = Path(argv[0]).resolve()
     fonte = Path(argv[2]).resolve() if len(argv) == 3 else None
     falhas = conferir(raiz, fonte)
+    for aviso in avisos_das_travas(raiz):
+        print(f"aviso: {aviso}", file=sys.stderr)
     for falha in falhas:
         print(f"FALHA: {falha}", file=sys.stderr)
     if not falhas:

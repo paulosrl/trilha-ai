@@ -511,6 +511,76 @@ class Kit(unittest.TestCase):
         self.assertNotIn('", em " + dados.atualizado', modelo)
 
 
+    def _guarda(self, comando: str, gh_sai_com: int = 0) -> subprocess.CompletedProcess:
+        """Roda a trava com um gh falso no PATH, que sai com o código pedido."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp:
+            gh = Path(tmp) / "gh"
+            gh.write_text(f"#!/bin/sh\nexit {gh_sai_com}\n")
+            gh.chmod(0o755)
+            env = {**os.environ, "PATH": f"{tmp}:{os.environ['PATH']}"}
+            return subprocess.run(
+                [sys.executable, "-I", str(RAIZ / "scripts/guarda.py")],
+                input=json.dumps({"tool_name": "Bash", "tool_input": {"command": comando}}),
+                capture_output=True, text=True, check=False, env=env,
+            )
+
+    def test_trava_do_claude_barra_so_o_que_o_metodo_proibe(self) -> None:
+        barrados = ("git push --force origin main", "git push -f", "git push origin +main",
+                    "git commit --no-verify -m x", "pkill -f node", "pgrep -af x",
+                    "gh pr merge 7 --squash", "gh pr merge 7", "gh pr merge 7 --merge --rebase")
+        for comando in barrados:
+            saida = self._guarda(comando)
+            self.assertEqual(saida.returncode, 2, comando)
+            self.assertIn("bloqueado pela trava do método", saida.stderr)
+        for comando in ("git push -u origin change/01-x", "kill 1234", "git status",
+                        "gh pr merge 7 --merge --delete-branch"):
+            self.assertEqual(self._guarda(comando).returncode, 0, comando)
+        vermelho = self._guarda("gh pr merge 7 --merge --delete-branch", gh_sai_com=1)
+        self.assertEqual(vermelho.returncode, 2)
+        self.assertIn("não está verde", vermelho.stderr)
+
+    def test_travas_ligadas_no_projeto_novo_e_a_do_commit_funciona(self) -> None:
+        env = {**os.environ, **GIT_TESTE}
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = Path(tmp) / "proj"
+            self._ferramenta("novo", str(pasta))
+            ligado = subprocess.run(["git", "config", "core.hooksPath"], cwd=pasta,
+                                    capture_output=True, text=True).stdout.strip()
+            self.assertEqual(ligado, ".githooks")
+            self.assertIn("scripts/guarda.py", (pasta / ".claude/settings.json").read_text())
+            subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
+            ok = subprocess.run(["git", "commit", "-qm", "kit"], cwd=pasta, env=env,
+                                capture_output=True, text=True)
+            self.assertEqual(ok.returncode, 0, ok.stderr)
+            claude = pasta / "CLAUDE.md"
+            claude.write_text(claude.read_text(encoding="utf-8").replace("@CLAUDE-comum.md", ""))
+            barrado = subprocess.run(["git", "commit", "-qam", "quebrado"], cwd=pasta, env=env,
+                                     capture_output=True, text=True)
+            self.assertNotEqual(barrado.returncode, 0)
+            self.assertIn("não importa o comum", barrado.stderr)
+
+    def test_atualizar_soma_a_trava_ao_settings_que_ja_existe(self) -> None:
+        import json
+
+        env = {**os.environ, **GIT_TESTE}
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_velho(tmp)
+            settings = pasta / ".claude/settings.json"
+            settings.write_text(json.dumps({"permissions": {"allow": ["Bash(ls:*)"]}}))
+            subprocess.run(["git", "config", "--unset", "core.hooksPath"], cwd=pasta, check=True)
+            subprocess.run(["git", "commit", "-qam", "settings do projeto"], cwd=pasta, env=env,
+                           check=True)
+            self.assertEqual(self._ferramenta("atualizar", str(pasta)).returncode, 0)
+            dados = json.loads(settings.read_text())
+            self.assertEqual(dados["permissions"], {"allow": ["Bash(ls:*)"]})
+            self.assertIn("scripts/guarda.py", json.dumps(dados["hooks"]))
+            self.assertEqual(self._ferramenta("atualizar", str(pasta)).returncode, 1)  # não commitado
+            subprocess.run(["git", "commit", "-qam", "kit"], cwd=pasta, env=env, check=True)
+            self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(json.dumps(json.loads(settings.read_text())["hooks"]).count("guarda"), 1)
+
     def _ferramenta(self, *args: str) -> subprocess.CompletedProcess:
         return subprocess.run(
             [sys.executable, "-I", str(RAIZ / "ferramentas/kit.py"), *args],

@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.26, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.27, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -75,6 +75,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 
 ## Armadilhas
 
+- As travas do kit não se contornam: o `.githooks/pre-commit` (ligado por `git config core.hooksPath .githooks`) confere as regras e o método antes de cada commit, e o `scripts/guarda.py`, hook do Claude Code no `.claude/settings.json`, barra o envio forçado, o `--no-verify`, o `pkill -f` e o merge fora do passo 7. Trava que barrar algo legítimo volta ao usuário.
 - Nunca use `pkill -f` ou `pgrep -f` com um padrão que possa casar o próprio shell; encerre processos pelo PID guardado.
 - Nunca pare, remova ou mate processo ou container de outro projeto sem ordem explícita.
 - Dado real nunca serve a teste manual: use uma cópia descartável e prove, antes e depois, que o real não mudou.

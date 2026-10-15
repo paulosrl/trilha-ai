@@ -24,6 +24,8 @@ Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do
    | `scripts/gerar_pagina_sdd.py` e `scripts/pagina_sdd_modelo.html` | copiar sem mudar nada; geram `sdd/documentacao.html` |
    | `sdd/` | criar vazia (`mkdir sdd`): o PRD, o TDD, a decomposição e os briefings nascem nela |
    | `github-verificacao.yml` | copiar como `.github/workflows/verificacao.yml`: a cada envio, o GitHub roda o `check.sh` e o `openspec validate`; a parte da stack entra na etapa 2 |
+   | `scripts/guarda.py` e `.githooks/pre-commit` | copiar sem mudar nada; as travas: a do Claude Code barra o comando proibido, a do commit confere as regras e o método; a do commit se liga com `git config core.hooksPath .githooks`, uma vez por clone |
+   | `claude-settings.json` | copiar como `.claude/settings.json`, ou somar o hook dele ao que já existir: liga o `guarda.py` |
    | `.gitignore` | apagar o bloco da stack que não for a sua, depois da etapa 2 |
 
 4. **Inicialize as ferramentas no repositório.** Uma vez por máquina, antes: `openspec config profile` e marque também o `verify`, que o perfil padrão do OpenSpec não traz e o ciclo usa no passo 5 (num repositório já inicializado, rode depois `openspec update`). Então `openspec init` (ele mantém o `config.yaml` copiado; se perguntar, não o sobrescreva) e `codegraph init`.

@@ -11,6 +11,7 @@ e o envio pede o "sim" do usuário. Esta pasta, ferramentas/, é só do kit e n�
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import shutil
 import subprocess
@@ -26,6 +27,8 @@ SEM_MUDAR = (
     "scripts/confere_metodo.py",
     "scripts/gerar_pagina_sdd.py",
     "scripts/pagina_sdd_modelo.html",
+    "scripts/guarda.py",
+    ".githooks/pre-commit",
 )
 # Preenchidos em cada projeto (destino: origem no kit): o projeto novo os recebe; a atualização
 # só cria o que falta, sem tocar no que o projeto já preencheu.
@@ -36,6 +39,7 @@ A_PREENCHER = {
     "scripts/check.sh": "scripts/check.sh",
     ".gitignore": ".gitignore",
     ".github/workflows/verificacao.yml": "github-verificacao.yml",
+    ".claude/settings.json": "claude-settings.json",
 }
 
 
@@ -83,6 +87,7 @@ def novo(pasta: Path) -> None:
     for nome, origem in A_PREENCHER.items():
         _copiar(pasta, nome, origem)
     (pasta / "sdd").mkdir()
+    _ligar_travas(pasta)
     print(f"criado: {pasta}, com o kit (comum {_versao(KIT / 'CLAUDE-comum.md')})")
     print("próximos passos (README do kit, a partir do passo 4):")
     print("  1. preencha o que está entre < e > no CLAUDE.md, no ANDAMENTO.md e no config.yaml;")
@@ -114,6 +119,7 @@ def atualizar(pasta: Path) -> int:
         if not (pasta / nome).exists():
             _copiar(pasta, nome, origem)
             print(f"aviso: {nome} não existia e foi criado do modelo do kit; preencha-o")
+    _ligar_travas(pasta)
     if (pasta / "sdd").is_dir():
         _rodar(pasta, [sys.executable, "-I", "scripts/gerar_pagina_sdd.py"])
 
@@ -131,6 +137,21 @@ def atualizar(pasta: Path) -> int:
     if mudou:
         print(f'commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {antes} → {depois}')
     return 0
+
+
+def _ligar_travas(pasta: Path) -> None:
+    """A trava do commit (core.hooksPath, do clone) e a do Claude Code, somada ao settings.json."""
+    _git(pasta, "config", "core.hooksPath", ".githooks")
+    modelo = json.loads((KIT / "claude-settings.json").read_text(encoding="utf-8"))
+    entrada = modelo["hooks"]["PreToolUse"][0]
+    settings = pasta / ".claude" / "settings.json"
+    atual = json.loads(settings.read_text(encoding="utf-8")) if settings.is_file() else {}
+    lista = atual.setdefault("hooks", {}).setdefault("PreToolUse", [])
+    if "scripts/guarda.py" not in json.dumps(lista):
+        lista.append(entrada)
+        settings.parent.mkdir(parents=True, exist_ok=True)
+        texto = json.dumps(atual, ensure_ascii=False, indent=2) + "\n"
+        settings.write_text(texto, encoding="utf-8")
 
 
 def _rodar(pasta: Path, comando: list[str]) -> bool:
