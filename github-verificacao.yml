@@ -1,0 +1,31 @@
+# A verificação do repositório no GitHub (CI). Copie como .github/workflows/verificacao.yml.
+# A cada envio à main e a cada pull request, roda a mesma verificação local (scripts/check.sh)
+# e a validação dos specs e das changes do OpenSpec. O merge de uma change só com tudo verde.
+name: verificacao
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: OpenSpec, na versão do kit
+        run: npm install -g @fission-ai/openspec@1.14.1
+      # Parte da stack, decidida no TDD (etapa 2): o que o check.sh precisa para rodar o lint,
+      # os tipos e os testes. Troque o comentário pelos passos reais. Exemplo para Python com uv:
+      #   - uses: astral-sh/setup-uv@v6
+      #   - run: uv sync
+      - name: A verificação do repositório
+        run: bash scripts/check.sh
+      - name: Os specs e as changes do OpenSpec
+        run: openspec validate --all --strict --no-interactive

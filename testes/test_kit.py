@@ -20,7 +20,10 @@ DO_KIT = (
     "scripts/gerar_pagina_sdd.py",
     "scripts/pagina_sdd_modelo.html",
     ".gitignore",
+    ".github/workflows/verificacao.yml",
 )
+# O que no repositório novo tem outro nome no kit.
+ORIGEM = {"CLAUDE.md": "esqueleto-CLAUDE.md", ".github/workflows/verificacao.yml": "github-verificacao.yml"}
 ESQUELETO_DO_CLAUDE = RAIZ / "CLAUDE.md"  # o deste repositório não é o esqueleto; o esqueleto é copiado abaixo
 
 
@@ -28,13 +31,12 @@ def _copia_do_kit(destino: Path) -> None:
     for nome in DO_KIT:
         alvo = destino / nome
         alvo.parent.mkdir(parents=True, exist_ok=True)
-        origem = RAIZ / ("esqueleto-CLAUDE.md" if nome == "CLAUDE.md" else nome)
-        shutil.copy(origem if origem.exists() else RAIZ / nome, alvo)
+        shutil.copy(RAIZ / ORIGEM.get(nome, nome), alvo)
 
 
 class Kit(unittest.TestCase):
     def test_arquivos_existem(self) -> None:
-        faltam = [n for n in DO_KIT if n != "CLAUDE.md" and not (RAIZ / n).is_file()]
+        faltam = [n for n in DO_KIT if not (RAIZ / ORIGEM.get(n, n)).is_file()]
         self.assertEqual(faltam, [])
 
     def test_versao_no_comum(self) -> None:
@@ -134,6 +136,17 @@ class Kit(unittest.TestCase):
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("O archive e os passos do `operations.archive` acontecem na branch, antes do merge", comum)
         self.assertIn("o PR sai do rascunho (`gh pr ready`)", comum)
+
+    def test_ci_no_kit_e_merge_so_com_ele_verde(self) -> None:
+        """v1.23: o GitHub roda o check.sh e o openspec validate; o merge só é pedido com tudo verde."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        ci = (RAIZ / "github-verificacao.yml").read_text(encoding="utf-8")
+        self.assertIn("só é pedido com a verificação do GitHub verde no PR (`gh pr checks`)", comum)
+        self.assertIn("run: bash scripts/check.sh", ci)
+        self.assertIn("run: openspec validate --all --strict --no-interactive", ci)
+        self.assertRegex(ci, r"@fission-ai/openspec@\d+\.\d+\.\d+")
+        # Fora de .github/workflows/ no kit: aqui o check.sh reprovaria, porque o kit não segue o método.
+        self.assertFalse((RAIZ / ".github/workflows/verificacao.yml").exists())
 
     def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
         """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
