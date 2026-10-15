@@ -121,6 +121,14 @@ class Kit(unittest.TestCase):
         self.assertIn("`gh auth login`", readme)
         self.assertIn("`gh repo create <nome> --private --source . --push`", readme)
 
+    def test_branch_e_pull_request_por_change(self) -> None:
+        """v1.21: cada change numa branch; PR em rascunho ao fim do propose; um "sim" para os envios, outro para o merge."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("Cada change vive numa branch `change/NN-nome`", comum)
+        self.assertIn("pull request em rascunho (`gh pr create --draft`)", comum)
+        self.assertIn("pedem um só \"sim\", dado no começo da change e válido até o merge", comum)
+        self.assertIn("O merge na main (`gh pr merge`) pede o seu próprio \"sim\"", comum)
+
     def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
         """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
