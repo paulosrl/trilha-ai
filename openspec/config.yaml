@@ -26,7 +26,7 @@ rules:
     - Listar cada teste existente que muda, com o motivo.
   specs:
     - Manter os títulos estruturais do OpenSpec em inglês (Requirement, Scenario, ADDED, MODIFIED, REMOVED, RENAMED).
-    - Escrever as cláusulas em PT-BR, com a palavra normativa em inglês: SHALL, MUST, SHALL NOT ou MUST NOT; o OpenSpec pede evitar SHOULD e MAY, e o `openspec validate` cobra SHALL ou MUST em todo requisito.
+    - "Escrever as cláusulas em PT-BR, com a palavra normativa em inglês: SHALL, MUST, SHALL NOT ou MUST NOT; o OpenSpec pede evitar SHOULD e MAY, e o `openspec validate` cobra SHALL ou MUST em todo requisito."
     - Todo requisito novo ou alterado cita o RF de origem do PRD; todo cenário novo ou alterado cita o CA de origem, ou "derivado de <RF>, sem CA"; o que o delta repete sem mudança fica como está.
     - Cada requisito tem pelo menos um cenário com WHEN/THEN, testável.
     - Um requisito renomeado usa RENAMED com FROM e TO, cada um com o título inteiro entre crases.

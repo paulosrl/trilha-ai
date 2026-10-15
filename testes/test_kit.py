@@ -217,6 +217,18 @@ class Kit(unittest.TestCase):
         config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("ou o do requisito quando o cenário não tem critério", config)
 
+    def test_regras_do_config_sao_texto(self) -> None:
+        """Item sem aspas com ": " vira chave e valor no YAML, e o OpenSpec ignora em silêncio todas as
+        regras daquele artefato ("must be an array of strings"); com " #", o resto vira comentário."""
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        depois_do_contexto = config.split("\nrules:\n", 1)[1]
+        soltos = [
+            linha.strip()
+            for linha in depois_do_contexto.splitlines()
+            if re.match(r"\s+- (?![\"'])", linha) and (": " in linha or " #" in linha)
+        ]
+        self.assertEqual(soltos, [])
+
     def test_regras_falam_do_usuario(self) -> None:
         for arquivo in ("CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
