@@ -129,6 +129,12 @@ class Kit(unittest.TestCase):
         self.assertIn("pedem um só \"sim\", dado no começo da change e válido até o merge", comum)
         self.assertIn("O merge na main (`gh pr merge`) pede o seu próprio \"sim\"", comum)
 
+    def test_archive_dentro_do_pull_request(self) -> None:
+        """v1.22: o archive e os passos seguintes na branch, antes do merge; depois, o PR sai do rascunho."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("O archive e os passos do `operations.archive` acontecem na branch, antes do merge", comum)
+        self.assertIn("o PR sai do rascunho (`gh pr ready`)", comum)
+
     def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
         """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")

@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.21, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.22, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -31,7 +31,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito no `design.md` da change, com o motivo;
 6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista.
 
-- Cada change vive numa branch `change/NN-nome`, aberta a partir da main atualizada no começo do ciclo, antes do primeiro commit da change. Ao fim do propose, a branch vai ao GitHub com um pull request em rascunho (`gh pr create --draft`), que mostra o plano antes do código. Os envios da branch (o do propose e o de cada parada do apply, o backup fora da máquina) pedem um só "sim", dado no começo da change e válido até o merge. O merge na main (`gh pr merge`) pede o seu próprio "sim"; a próxima change abre outra branch a partir da main atualizada.
+- Cada change vive numa branch `change/NN-nome`, aberta a partir da main atualizada no começo do ciclo, antes do primeiro commit da change. Ao fim do propose, a branch vai ao GitHub com um pull request em rascunho (`gh pr create --draft`), que mostra o plano antes do código. Os envios da branch (o do propose e o de cada parada do apply, o backup fora da máquina) pedem um só "sim", dado no começo da change e válido até o merge. O archive e os passos do `operations.archive` acontecem na branch, antes do merge, para que código, specs e página cheguem juntos à main; depois deles, o PR sai do rascunho (`gh pr ready`). O merge na main (`gh pr merge`) pede o seu próprio "sim"; a próxima change abre outra branch a partir da main atualizada.
 - O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele, e o que se sobrepuser muda no método, não no OpenSpec. O ciclo acima usa todos os passos que ele oferece; quando um comando oferece pular um (arquivar sem o verify, aplicar antes da revisão, arquivar sem atualizar os specs), quem escolhe é o usuário, com a recomendação de não pular.
 - Antes de propor, leia o spec da capability em `openspec/specs/` e rode `openspec list`: evita change duplicada ou em colisão. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
 - Os specs em `openspec/specs/` mudam pelos caminhos do OpenSpec: o delta, que o archive aplica, e a edição direta que as instruções dele pedem (o Purpose de um spec existente). Fora disso, à mão, só typo ou link; outra edição à mão pede uma change retroativa.
