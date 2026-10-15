@@ -10,7 +10,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 2. Execução manual
 
-- [ ] 2.1 Com o usuário olhando: `python3 ferramentas/kit.py novo` numa pasta descartável do scratchpad, com a saída dos próximos passos lida inteira; depois, a pasta apagada
+- [x] 2.1 Com o usuário olhando: `python3 ferramentas/kit.py novo` numa pasta descartável do scratchpad, com a saída dos próximos passos lida inteira; depois, a pasta apagada
 
 ## Workflow follow-up
 
