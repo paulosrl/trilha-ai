@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 -I \"$CLAUDE_PROJECT_DIR/scripts/guarda.py\""
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR/trilha/guarda.py\""
           }
         ]
       }

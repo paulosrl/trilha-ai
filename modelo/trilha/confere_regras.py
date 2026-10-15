@@ -1,16 +1,17 @@
-"""Confere as regras de um repositório que segue o CLAUDE-comum.md (parte fixa do check.sh).
+"""Confere as regras de um repositório que segue o CLAUDE-comum.md (no trilha/verifica.sh).
 
-Uso: python3 -I scripts/confere_regras.py <raiz do repositório> [--fonte <pasta do kit>]
+Uso: python3 -I trilha/confere_regras.py <raiz do repositório> [--fonte <pasta do kit>]
 
 Confere, na raiz indicada:
-- CLAUDE-comum.md existe, tem a linha de versão e não cita o projeto (as regras são de todos);
-- CLAUDE.md importa o comum (linha "@CLAUDE-comum.md"), não repete regra dele, tem o nome do
+- trilha/CLAUDE-comum.md existe e tem a linha de versão;
+- CLAUDE.md importa o comum (linha "@trilha/CLAUDE-comum.md"), não repete regra dele, tem o nome do
   produto no título, cita ANDAMENTO.md e openspec/config.yaml em "Documentos" e segue o
   esqueleto das sete seções, na ordem;
 - os dois somados têm no máximo 200 linhas;
 - ANDAMENTO.md existe, tem as seis linhas pedidas, com a data e a hora (nunca no futuro), e cabe
   em dez linhas;
-- com --fonte, o CLAUDE-comum.md é cópia idêntica do que está no kit;
+- com --fonte, a pasta trilha/ é cópia idêntica da modelo/trilha/ do kit, arquivo a arquivo
+  (o cache do Python, __pycache__/, não conta);
 - os campos < > dos modelos do kit ainda por preencher, como aviso (a stack só vem na etapa 2).
 
 Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema; "ok" se nada falhar.
@@ -25,6 +26,7 @@ from datetime import datetime
 from pathlib import Path
 
 LIMITE_DE_LINHAS = 200
+IMPORTACAO = "@trilha/CLAUDE-comum.md"
 LIMITE_DO_ANDAMENTO = 10
 ESQUELETO = (
     "## O que é",
@@ -89,12 +91,41 @@ def _secao(linhas: list[str], titulo: str) -> str:
     return "\n".join(texto)
 
 
+def _arquivos(pasta: Path) -> dict[str, Path]:
+    """Os arquivos de uma pasta do método, pelo caminho relativo, sem o cache do Python."""
+    if not pasta.is_dir():
+        return {}
+    return {
+        str(arquivo.relative_to(pasta)): arquivo
+        for arquivo in sorted(pasta.rglob("*"))
+        if arquivo.is_file() and "__pycache__" not in arquivo.parts
+    }
+
+
+def diferencas_da_pasta(projeto: Path, kit: Path) -> list[str]:
+    """O que impede a pasta trilha/ do projeto de ser cópia idêntica da do kit."""
+    deles, nossos = _arquivos(kit), _arquivos(projeto)
+    falhas = [f"trilha/{nome} falta; copie a pasta do kit" for nome in deles if nome not in nossos]
+    falhas += [
+        f"trilha/{nome} não é do kit; a pasta é só do método"
+        for nome in nossos
+        if nome not in deles
+    ]
+    falhas += [
+        f"trilha/{nome} difere do kit; copie a versão do kit sem mudar nada"
+        for nome in deles
+        if nome in nossos and deles[nome].read_bytes() != nossos[nome].read_bytes()
+    ]
+    return falhas
+
+
 def conferir(raiz: Path, fonte: Path | None) -> list[str]:
     falhas: list[str] = []
-    comum, proprio, andamento = raiz / "CLAUDE-comum.md", raiz / "CLAUDE.md", raiz / "ANDAMENTO.md"
+    comum = raiz / "trilha" / "CLAUDE-comum.md"
+    proprio, andamento = raiz / "CLAUDE.md", raiz / "ANDAMENTO.md"
     for arquivo in (comum, proprio, andamento):
         if not arquivo.is_file():
-            falhas.append(f"{arquivo.name} não existe na raiz")
+            falhas.append(f"{arquivo.relative_to(raiz)} não existe")
     if falhas:
         return falhas
 
@@ -102,8 +133,8 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
     versao = re.compile(r"^Versão \d+\.\d+, de \d{4}-\d\d-\d\d\.")
     if not any(versao.match(linha) for linha in linhas_comum):
         falhas.append("CLAUDE-comum.md sem a linha 'Versão X.Y, de AAAA-MM-DD.'")
-    if "@CLAUDE-comum.md" not in linhas_proprio:
-        falhas.append("CLAUDE.md não importa o comum (falta a linha @CLAUDE-comum.md)")
+    if IMPORTACAO not in linhas_proprio:
+        falhas.append(f"CLAUDE.md não importa o comum (falta a linha {IMPORTACAO})")
     item = re.compile(r"^(- |\d+\. )")
     regras_do_comum = {linha.strip() for linha in linhas_comum if item.match(linha)}
     for linha in linhas_proprio:
@@ -141,11 +172,11 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
         falhas.append(f"ANDAMENTO.md com a hora no futuro ({hora.group(1)}); leia-a com `date`")
 
     if fonte is not None:
-        original = fonte / "CLAUDE-comum.md"
-        if not original.is_file():
-            falhas.append(f"a fonte {original} não existe")
-        elif original.read_text(encoding="utf-8") != comum.read_text(encoding="utf-8"):
-            falhas.append("CLAUDE-comum.md difere da fonte; copie a versão do kit sem mudar nada")
+        original = fonte / "modelo" / "trilha"
+        if not (original / "CLAUDE-comum.md").is_file():
+            falhas.append(f"a fonte {original} não existe ou não é a pasta do kit")
+        else:
+            falhas += diferencas_da_pasta(raiz / "trilha", original)
     return falhas
 
 
@@ -159,10 +190,10 @@ def avisos_das_travas(raiz: Path) -> list[str]:
             text=True,
             check=False,
         )
-        if saida.stdout.strip() != ".githooks":
-            avisos.append("trava do commit desligada: rode git config core.hooksPath .githooks")
+        if saida.stdout.strip() != "trilha/hooks":
+            avisos.append("trava do commit desligada: rode git config core.hooksPath trilha/hooks")
     settings = raiz / ".claude" / "settings.json"
-    ligada = settings.is_file() and "scripts/guarda.py" in settings.read_text(encoding="utf-8")
+    ligada = settings.is_file() and "trilha/guarda.py" in settings.read_text(encoding="utf-8")
     if not ligada:
         avisos.append("trava do Claude Code desligada: .claude/settings.json sem o guarda.py")
     return avisos
@@ -192,7 +223,7 @@ def main(argv: list[str]) -> int:
     for falha in falhas:
         print(f"FALHA: {falha}", file=sys.stderr)
     if not falhas:
-        print("ok: CLAUDE.md, CLAUDE-comum.md e ANDAMENTO.md conferidos")
+        print("ok: CLAUDE.md, trilha/ e ANDAMENTO.md conferidos")
     return 1 if falhas else 0
 
 

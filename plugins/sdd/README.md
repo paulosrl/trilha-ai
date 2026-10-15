@@ -2,7 +2,7 @@
 
 Três skills do Claude Code que levam uma ideia de produto até o briefing de cada change do OpenSpec, separando **o que o produto faz** (decisão do dono do produto), **com que tecnologia** (decisão técnica assistida) e **em que ordem implementar** (OpenSpec).
 
-O plugin é parte do kit Trilha AI, e a versão dele é a do kit. O ciclo de cada change, os nomes das pastas, a verificação e o versionamento dos documentos são regras do `modelo/CLAUDE-comum.md` do kit, que prevalece sobre o que estiver aqui. As skills produzem só os documentos de `sdd/`.
+O plugin é parte do kit Trilha AI, e a versão dele é a do kit. O ciclo de cada change, os nomes das pastas, a verificação e o versionamento dos documentos são regras do `modelo/trilha/CLAUDE-comum.md` do kit, que prevalece sobre o que estiver aqui. As skills produzem só os documentos de `sdd/`.
 
 ## Instalação
 

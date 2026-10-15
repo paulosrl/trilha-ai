@@ -1,16 +1,16 @@
-"""Confere os documentos do método de um repositório que segue o kit (chamado pelo check.sh).
+"""Confere os documentos do método de um repositório que segue o kit (no trilha/verifica.sh).
 
-Uso: python3 -I scripts/confere_metodo.py [--sem-plugin] [--vizinho <nome>]...
+Uso: python3 -I trilha/confere_metodo.py [--sem-plugin] [--vizinho <nome>]...
 
 Confere, na raiz do repositório:
 - a decomposição tem toda change da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
 - o plugin `sdd` instalado, pela lista do Claude Code: o do kit, ligado e na versão do
-  CLAUDE-comum.md; só aviso, nunca falha, e nada sem o Claude Code (o CI) ou com --sem-plugin,
-  que a trava do commit usa para não esperar o Claude Code a cada commit.
+  trilha/CLAUDE-comum.md; só aviso, nunca falha, e nada sem o Claude Code (o CI) ou com
+  --sem-plugin, que a trava do commit usa para não esperar o Claude Code a cada commit.
 
-Roda no check.sh (e, por ele, no CI) e na trava do commit (.githooks/pre-commit): documento do
+Roda no check.sh (e, por ele, no CI) e na trava do commit (trilha/hooks/pre-commit): documento do
 método fora do formato barra o commit e o merge; o que depende da máquina (o plugin) só avisa.
 Sem a pasta `sdd/`, avisa que ela falta; sem a decomposição ou o TDD (o repositório que ainda não
 os escreveu), a conferência deles é pulada com aviso. Só python3, sem dependências. Sai com 1 e
@@ -121,7 +121,7 @@ def _instalacoes_do_sdd() -> list[dict] | None:
 
 
 def _versao_do_comum() -> str:
-    comum = RAIZ / "CLAUDE-comum.md"
+    comum = RAIZ / "trilha" / "CLAUDE-comum.md"
     texto = comum.read_text(encoding="utf-8") if comum.is_file() else ""
     achado = re.search(r"^Versão (\d+\.\d+),", texto, re.MULTILINE)
     return achado.group(1) if achado else ""
