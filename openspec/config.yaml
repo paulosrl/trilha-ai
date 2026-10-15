@@ -25,6 +25,7 @@ rules:
     - Escrever em PT-BR, com acentos, mantendo em inglês os títulos do modelo do OpenSpec.
     - Referenciar cada decisão técnica herdada pelo ADR do TDD; nunca redecidir tecnologia.
     - Listar cada teste existente que muda, com o motivo.
+    - Terminar com a seção "Verificação", preenchida no apply, com a evidência de cada cenário (o comando e o resultado); nenhum cenário fica comprovado só pela execução manual.
   specs:
     - Manter os títulos estruturais do OpenSpec em inglês (Requirement, Scenario, ADDED, MODIFIED, REMOVED, RENAMED).
     - "Escrever as cláusulas em PT-BR, com a palavra normativa em inglês (SHALL, MUST, SHALL NOT ou MUST NOT): o `openspec validate` cobra SHALL ou MUST em todo requisito, e um DEVE em português o reprova."
@@ -32,10 +33,14 @@ rules:
     - No RENAMED, o FROM e o TO trazem o título inteiro do requisito entre crases.
   tasks:
     - Escrever em PT-BR, com acentos.
-    - Para cada cenário ADDED ou MODIFIED, uma tarefa nomeia o teste que o comprova, com o código do critério de aceite no nome do teste, ou o do requisito quando o cenário não tem critério.
+    - Para cada cenário ADDED ou MODIFIED, uma tarefa nomeia o teste que o comprova, com o código do critério de aceite no nome do teste, ou o do requisito quando o cenário não tem critério, e dá o arquivo, o caso e o comando que o roda. Cenário sem teste automatizável diz por quê e qual evidência o substitui.
+    - O teste confere o efeito observável (o arquivo existe, a resposta chega, a tela mostra), nunca o valor literal que o código já usa.
     - A última tarefa antes do verify é a execução manual, em dado descartável, com o usuário olhando.
 
 operations:
+  apply:
+    guidance:
+      - Marcar a tarefa de um cenário só quando o teste que o comprova passar; se o teste não existir, criá-lo antes de marcar.
   archive:
     guidance:
       - 'Depois do archive, validar as specs e conferir o diff de openspec/specs/; atualizar a tabela "Ciclo" da decomposição, com o número do pull request da change na célula do archive ("PR #N"); gerar de novo sdd/documentacao.html.'

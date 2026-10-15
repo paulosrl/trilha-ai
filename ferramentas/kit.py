@@ -172,16 +172,17 @@ def _sincronizar_regras(pasta: Path) -> None:
     atuais = _regras((KIT / "openspec" / "config.yaml").read_text(encoding="utf-8"))
     if not _regras(texto) or _regras(texto) == atuais:
         return
-    for tag in _git(KIT, "tag", "--list", "v*").split():
+    # Toda versão do config.yaml que o kit já teve, e não só as das tags, que seguem o comum.
+    for versao in _git(KIT, "log", "--format=%h", "--", "openspec/config.yaml").split():
         antigas = subprocess.run(
-            ["git", "-C", str(KIT), "show", f"{tag}:openspec/config.yaml"],
+            ["git", "-C", str(KIT), "show", f"{versao}:openspec/config.yaml"],
             capture_output=True,
             text=True,
             check=False,
         ).stdout
         if _regras(antigas) and _regras(antigas) == _regras(texto):
             config.write_text(texto[: texto.find("\nrules:") + 1] + atuais, encoding="utf-8")
-            print(f"regras do openspec/config.yaml atualizadas: eram as do kit {tag}")
+            print(f"regras do openspec/config.yaml atualizadas: eram as do kit em {versao}")
             return
     print("aviso: o openspec/config.yaml tem regras próprias; compare-as com as do kit à mão")
 

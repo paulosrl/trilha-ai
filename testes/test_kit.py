@@ -75,7 +75,10 @@ class Kit(unittest.TestCase):
         self.assertNotIn("um por tarefa concluída", comum)
         self.assertNotIn("o apply para nela", comum)
         self.assertNotIn("commit por tarefa", config)
-        self.assertNotIn("  apply:", config)
+        # O apply pode ter instrução, mas nunca a que força parada ou commit (a decisão da v1.10).
+        apply = config.split("  apply:", 1)[1].split("  archive:", 1)[0] if "  apply:" in config else ""
+        for proibido in ("commit", "pare", "parada"):
+            self.assertNotIn(proibido, apply.lower())
 
     def test_specs_com_o_nome_do_openspec(self) -> None:
         """v1.11: só as changes levam número e data; os specs seguem o nome que o OpenSpec dá."""
@@ -147,6 +150,14 @@ class Kit(unittest.TestCase):
         # O CI do próprio kit roda estes testes.
         kit = (RAIZ / ".github/workflows/testes.yml").read_text(encoding="utf-8")
         self.assertIn("run: python3 -m unittest discover -s testes", kit)
+
+    def test_regras_de_verificacao_vindas_do_heimdall(self) -> None:
+        """Cada cenário com teste nomeado e evidência; tarefa marcada só com o teste passando."""
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        self.assertIn('Terminar com a seção "Verificação"', config)
+        self.assertIn("dá o arquivo, o caso e o comando que o roda", config)
+        self.assertIn("nunca o valor literal que o código já usa", config)
+        self.assertIn("Marcar a tarefa de um cenário só quando o teste que o comprova passar", config)
 
     def test_ci_com_acoes_fixadas_e_busca_de_segredos(self) -> None:
         """v1.29: ações pelo commit, gitleaks conferido pela soma, Dependabot e a regra dos segredos."""
@@ -671,7 +682,7 @@ class Kit(unittest.TestCase):
             config.write_text(contexto + antigo[antigo.find("\nrules:"):], encoding="utf-8")
             subprocess.run(["git", "commit", "-qam", "regras da 1.25"], cwd=pasta, env=env, check=True)
             saida = self._ferramenta("atualizar", str(pasta))
-            self.assertIn("eram as do kit v1.2", saida.stdout)
+            self.assertIn("eram as do kit em ", saida.stdout)
             texto = config.read_text(encoding="utf-8")
             self.assertTrue(texto.startswith(contexto))
             self.assertEqual(texto[texto.find("\nrules:"):], atual[atual.find("\nrules:"):])

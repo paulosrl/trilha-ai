@@ -196,7 +196,7 @@ a { color: var(--pinho); }
   </section>
 
   <section class="secao">
-    <h2>O que mudou da versão 1.20 à 1.28</h2>
+    <h2>O que mudou da versão 1.20 à 1.30</h2>
     <p>Cada item foi uma decisão do usuário e já está no kit.</p>
     <ol class="lista">
       <li><div><strong>GitHub obrigatório, com repositório privado criado na etapa 0.</strong><p>O trabalho deixa de viver só no disco. É a regra do trabalho interrompível levada até o fim: o commit sobrevive à queda da sessão, o envio sobrevive à queda da máquina.</p></div></li>
@@ -207,6 +207,8 @@ a { color: var(--pinho); }
       <li><div><strong>A change fecha no merge, não no archive.</strong><p>Depois do archive, a change some do <code>openspec list</code>; só o PR diz se falta o merge. Por isso a retomada de uma sessão olha o PR, e o <code>ANDAMENTO.md</code> só volta a "nada em andamento" depois do merge.</p></div></li>
       <li><div><strong>Travas automáticas (1.27).</strong><p>Antes de cada commit, o git confere as regras e o método. Antes de cada comando, o Claude Code barra o envio forçado, o <code>--no-verify</code>, o <code>pkill -f</code> e o merge fora do passo 7. O que era lembrado passa a ser cobrado.</p></div></li>
       <li><div><strong>Uma revisão independente (1.28).</strong><p>No passo do verify, um agente sem o contexto da sessão revisa a branch com o <code>/code-review</code>. Quem escreveu o código não é o único a revisá-lo.</p></div></li>
+      <li><div><strong>Segredos fora do git (1.29).</strong><p>O CI procura senhas e chaves em todo o histórico (gitleaks), as ações vão fixadas pelo commit e o Dependabot propõe as atualizações. Achado real se troca antes de tudo.</p></div></li>
+      <li><div><strong>Cada cenário com a sua prova.</strong><p>A tarefa nomeia o teste pelo arquivo, pelo caso e pelo comando; o teste confere o efeito que se vê; a tarefa só é marcada com o teste passando; e o <code>design.md</code> termina com a evidência de cada cenário. Regras que nasceram no heimdall e foram para o kit.</p></div></li>
     </ol>
   </section>
 
@@ -286,6 +288,7 @@ a { color: var(--pinho); }
     { id: "apply", nome: "Apply", titulo: "O código (apply)", gate: "", ciclo: true,
       voce: "Acompanha. Na última tarefa, olha a execução manual, em dado descartável.",
       claude: "Roda /opsx:apply: o código, tarefa a tarefa, com o tasks.md marcando o progresso.",
+      claudep: "Roda /opsx:apply: o código, tarefa a tarefa. A tarefa de um cenário só é marcada quando o teste que o comprova passa, e a evidência vai à seção Verificação do design.md.",
       git: "Um commit a cada parada, nunca um só no fim.",
       gitp: "Um commit a cada parada, na branch.",
       gh: "Os commits ficam só no disco até o fim da etapa.",
