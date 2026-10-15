@@ -423,7 +423,7 @@ class Kit(unittest.TestCase):
             self.assertIn('"estado": "retirada"', pagina)
             self.assertIn(".selo.retirada", pagina)
 
-    def _gera_pagina(self, arquivos: dict[str, str]) -> tuple[dict, str]:
+    def _gera_pagina(self, arquivos: dict[str, str], origin: str = "") -> tuple[dict, str]:
         """Copia o kit, escreve os documentos em sdd/, gera a página e devolve os dados e o stderr."""
         import json
 
@@ -431,6 +431,9 @@ class Kit(unittest.TestCase):
             destino = Path(tmp)
             _copia_do_kit(destino)
             (destino / "sdd").mkdir()
+            if origin:
+                subprocess.run(["git", "init", "-q"], cwd=destino, check=True)
+                subprocess.run(["git", "remote", "add", "origin", origin], cwd=destino, check=True)
             for nome, texto in arquivos.items():
                 (destino / "sdd" / nome).write_text(texto, encoding="utf-8")
             saida = subprocess.run(
@@ -452,7 +455,7 @@ class Kit(unittest.TestCase):
         )})
         changes = {c["numero"]: c for c in dados["changes"]}
         self.assertEqual(sorted(changes), ["01", "02"])
-        self.assertEqual(changes["01"]["nome"], "Fundacao cep")
+        self.assertEqual(changes["01"]["nome"], "fundacao-cep")  # como o OpenSpec escreve
         self.assertEqual(changes["01"]["estado"], "arquivada")
         self.assertEqual(changes["02"]["estado"], "futura")
         self.assertIn("linha do Ciclo fora do formato, ignorada: | 03 |", stderr)
@@ -468,6 +471,34 @@ class Kit(unittest.TestCase):
         self.assertNotRegex(resumo, r"\*\*|`|\]\(|^>")
         self.assertTrue(resumo.endswith("palavra…"), resumo)
         self.assertLessEqual(len(resumo), 301)
+
+    def test_pagina_liga_o_pr_de_cada_change_pelo_origin_local(self) -> None:
+        """O "PR #N" do Ciclo vira link pelo origin do git; o endereço sai sem .git e sem credencial."""
+        ciclo = (
+            "## Ciclo\n\n| NN | briefing | auditoria | archive |\n|---|---|---|---|\n"
+            "| 01 | briefing-change-01-a.md | aprovada | arquivada 2026-10-15 (PR #7) |\n"
+            "| 02 | briefing-change-02-b.md | — | — |\n"
+        )
+        for origin in ("git@github.com:dono/repo.git", "https://usuario:segredo@github.com/dono/repo.git"):
+            dados, _ = self._gera_pagina({"decomposicao-x.md": ciclo}, origin=origin)
+            self.assertEqual(dados["repositorio"], "https://github.com/dono/repo", origin)
+            self.assertEqual([c["pr"] for c in dados["changes"]], ["7", ""])
+        dados, _ = self._gera_pagina({"decomposicao-x.md": ciclo})
+        self.assertEqual(dados["repositorio"], "")
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        self.assertIn('célula do archive ("PR #N")', config)
+
+    def test_pagina_funciona_sem_rede_e_se_chama_documentacao_do_projeto(self) -> None:
+        modelo = (RAIZ / "scripts/pagina_sdd_modelo.html").read_text(encoding="utf-8")
+        gerador = (RAIZ / "scripts/gerar_pagina_sdd.py").read_text(encoding="utf-8")
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertNotIn("<script src=", modelo)
+        self.assertIn("marked v12.0.2", modelo)
+        self.assertNotIn("</script", modelo.split("marked v12.0.2", 1)[1].split("\n</script>", 1)[0])
+        self.assertIn('f"{nome}: documentação"', gerador)
+        self.assertIn("é a documentação do projeto, gerada", comum)
+        for texto in (modelo, gerador, comum):
+            self.assertNotIn("página do método", texto)
 
     def test_modelo_da_pagina_tem_teclado_celular_e_rodape_corretos(self) -> None:
         modelo = (RAIZ / "scripts/pagina_sdd_modelo.html").read_text(encoding="utf-8")

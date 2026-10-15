@@ -39,4 +39,4 @@ rules:
 operations:
   archive:
     guidance:
-      - Depois do archive, validar as specs e conferir o diff de openspec/specs/; atualizar a tabela "Ciclo" da decomposição; gerar de novo sdd/documentacao.html.
+      - 'Depois do archive, validar as specs e conferir o diff de openspec/specs/; atualizar a tabela "Ciclo" da decomposição, com o número do pull request da change na célula do archive ("PR #N"); gerar de novo sdd/documentacao.html.'

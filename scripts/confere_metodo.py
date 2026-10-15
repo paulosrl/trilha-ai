@@ -57,7 +57,7 @@ def conferir_decomposicao(texto: str) -> list[str]:
     ciclo = texto.split("## Ciclo", 1)[1].split("## ", 1)[0]
     linhas_1, linhas_ciclo = _linhas_de_tabela(secao_1), _linhas_de_tabela(ciclo)
     falhas = []
-    # Uma linha por change; a retirada, com "retirada" no archive (estado da página do método).
+    # Uma linha por change; a retirada, com "retirada" no archive (o estado que a página mostra).
     if _numeros(linhas_ciclo) != _numeros(linhas_1):
         falhas.append("decomposição: as changes da seção 1 e as da tabela Ciclo diferem")
     retiradas = {c[0] for c in linhas_1 if NUMERO.fullmatch(c[0]) and "retirada" in c[-1]}

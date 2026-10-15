@@ -1,8 +1,9 @@
-"""Gera sdd/documentacao.html: a página do método de um repositório, com três abas.
+"""Gera sdd/documentacao.html: a documentação do projeto, com três abas.
 
 Aba 1, o produto: sdd/prd-*.md. Aba 2, as decisões: sdd/tdd-*.md. Aba 3, as entregas:
 sdd/decomposicao-*.md, a faixa das changes lida da tabela "Ciclo" e os briefings de
-sdd/briefing-openspec/. Etapa que ainda não existe aparece como tal; nada é inventado.
+sdd/briefing-openspec/; o "PR #N" anotado no Ciclo vira link, pelo origin do git (local, sem
+rede). Etapa que ainda não existe aparece como tal; nada é inventado.
 O visual e o comportamento ficam em scripts/pagina_sdd_modelo.html.
 
 Uso (Python 3 puro, sem dependências):
@@ -77,9 +78,9 @@ def _resumo_do_produto(prd: str, limite: int = 300) -> str:
 
 
 def _nome_da_change(celula: str) -> str:
-    """O nome do briefing em qualquer ponto da célula → "Nome da change"; sem ele, vazio."""
+    """O nome da change como o OpenSpec o escreve, tirado do briefing citado na célula."""
     achado = re.search(r"briefing-change-\d+-([\w-]+)", celula)
-    return achado.group(1).replace("-", " ").capitalize() if achado else ""
+    return achado.group(1) if achado else ""
 
 
 VAZIO = {"", "—", "–", "-"}  # a célula de um passo que ainda não aconteceu
@@ -103,6 +104,7 @@ def _changes(decomposicao: str) -> list[dict[str, str]]:
             print(f"aviso: linha do Ciclo fora do formato, ignorada: {linha}", file=sys.stderr)
             continue
         numero, briefing, _auditoria, archive = celulas
+        pr = re.search(r"PR #(\d+)", linha)
         if archive.startswith("arquivada"):
             estado, rotulo = "arquivada", "arquivada"
         elif archive.startswith("retirada"):
@@ -112,7 +114,8 @@ def _changes(decomposicao: str) -> list[dict[str, str]]:
         else:
             estado, rotulo = "futura", "a fazer"
         nome = _nome_da_change(briefing)
-        changes.append({"numero": numero, "nome": nome, "estado": estado, "rotulo": rotulo})
+        changes.append({"numero": numero, "nome": nome, "estado": estado, "rotulo": rotulo,
+                        "pr": pr.group(1) if pr else ""})
     return changes
 
 
@@ -140,6 +143,22 @@ def _atualizado_em() -> str:
         return ""
 
 
+def _repositorio() -> str:
+    """O endereço web do origin, lido do git local (sem rede e sem credenciais); sem ele, vazio."""
+    try:
+        saida = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            cwd=RAIZ, capture_output=True, text=True, check=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return ""
+    url = saida.stdout.strip()
+    url = re.sub(r"^git@([^:]+):", r"https://\1/", url)  # git@github.com:dono/repo
+    url = re.sub(r"^(https?://)[^@/]+@", r"\1", url)  # https://usuario:token@...
+    url = re.sub(r"\.git$", "", url)
+    return url if url.startswith(("https://", "http://")) else ""
+
+
 def _json_seguro(valor: object) -> str:
     """JSON embutível em <script>: sem fechar a tag por engano."""
     return json.dumps(valor, ensure_ascii=False).replace("</", "<\\/")
@@ -159,9 +178,10 @@ def gerar_fragmento() -> str:
         "changes": _changes(decomposicao),
         "briefings": _briefings(),
         "atualizado": _atualizado_em(),
+        "repositorio": _repositorio(),
     }
     modelo = MODELO.read_text(encoding="utf-8")
-    return modelo.replace("__TITULO__", f"{nome}: o método").replace(
+    return modelo.replace("__TITULO__", f"{nome}: documentação").replace(
         "__DADOS__", _json_seguro(dados)
     )
 
