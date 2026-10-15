@@ -5,7 +5,8 @@ Uso (Python 3 puro, sem dependências), de qualquer pasta:
     python3 ferramentas/kit.py atualizar <pasta>   # a cópia nova do que se copia sem mudar
 
 Nenhum dos dois faz commit nem envia: o commit segue o CLAUDE-comum.md (a mensagem, a coautoria)
-e o envio pede o "sim" do usuário. Esta pasta, ferramentas/, é só do kit e não se copia.
+e o envio pede o "sim" do usuário. O que vai aos projetos está em modelo/; esta pasta,
+ferramentas/, é só do kit e não se copia.
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ import sys
 from pathlib import Path
 
 KIT = Path(__file__).resolve().parent.parent
+MODELO = KIT / "modelo"
 
 # Copiados sem mudar: a atualização os sobrescreve.
 SEM_MUDAR = (
@@ -30,16 +32,24 @@ SEM_MUDAR = (
     "scripts/guarda.py",
     ".githooks/pre-commit",
 )
-# Preenchidos em cada projeto (destino: origem no kit): o projeto novo os recebe; a atualização
-# só cria o que falta, sem tocar no que o projeto já preencheu.
+# Preenchidos em cada projeto (destino: origem em modelo/): o projeto novo os recebe; a
+# atualização só cria o que falta, sem tocar no que o projeto já preencheu. Três origens têm
+# outro nome, porque o nome real valeria dentro do próprio kit (o CLAUDE.md seria carregado
+# pelo Claude Code, o .gitignore pelo git e o settings.json também pelo Claude Code).
 A_PREENCHER = {
     "CLAUDE.md": "esqueleto-CLAUDE.md",
     "ANDAMENTO.md": "ANDAMENTO.md",
     "openspec/config.yaml": "openspec/config.yaml",
     "scripts/check.sh": "scripts/check.sh",
-    ".gitignore": ".gitignore",
-    ".github/workflows/verificacao.yml": "github-verificacao.yml",
+    ".gitignore": "gitignore",
+    ".github/workflows/verificacao.yml": ".github/workflows/verificacao.yml",
     ".claude/settings.json": "claude-settings.json",
+    ".github/dependabot.yml": ".github/dependabot.yml",
+}
+# Até a 1.34, o modelo ficava na raiz do kit, com estes nomes; as versões antigas são lidas assim.
+NA_RAIZ_ATE_1_34 = {
+    "gitignore": ".gitignore",
+    ".github/workflows/verificacao.yml": "github-verificacao.yml",
     ".github/dependabot.yml": "github-dependabot.yml",
 }
 # Dos preenchidos, os que só têm a parte da stack preenchida: o resto é fixo e muda com o kit.
@@ -91,7 +101,7 @@ def _versao(comum: Path) -> str:
 def _copiar(destino: Path, nome: str, origem: str) -> None:
     alvo = destino / nome
     alvo.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(KIT / origem, alvo)
+    shutil.copy2(MODELO / origem, alvo)
 
 
 def novo(pasta: Path) -> None:
@@ -106,7 +116,7 @@ def novo(pasta: Path) -> None:
         _copiar(pasta, nome, origem)
     (pasta / "sdd").mkdir()
     _ligar_travas(pasta)
-    print(f"criado: {pasta}, com o kit (comum {_versao(KIT / 'CLAUDE-comum.md')})")
+    print(f"criado: {pasta}, com o kit (comum {_versao(MODELO / 'CLAUDE-comum.md')})")
     print("próximos passos (README do kit, passos 3 a 6):")
     print("  1. preencha o que está entre < e > no CLAUDE.md, no ANDAMENTO.md e no config.yaml;")
     print("  2. openspec init (sem sobrescrever o config.yaml) e codegraph init;")
@@ -143,12 +153,12 @@ def atualizar(pasta: Path) -> int:
     if (pasta / "sdd").is_dir():
         _rodar(pasta, [sys.executable, "-I", "scripts/gerar_pagina_sdd.py"])
 
-    regras = ["scripts/confere_regras.py", ".", "--fonte", str(KIT)]
+    regras = ["scripts/confere_regras.py", ".", "--fonte", str(MODELO)]
     ok = _rodar(pasta, [sys.executable, "-I", *regras])
     ok = _rodar(pasta, [sys.executable, "-I", "scripts/confere_metodo.py"]) and ok
     if not any((pasta / ".claude").glob("**/*verify*")):
         print("aviso: o /opsx:verify não está instalado; ligue-o no perfil e rode openspec update")
-    depois = _versao(KIT / "CLAUDE-comum.md")
+    depois = _versao(MODELO / "CLAUDE-comum.md")
     mudou = _git(pasta, "status", "--short")
     print(mudou or "nada mudou: o projeto já está na versão do kit")
     if not ok:
@@ -162,7 +172,7 @@ def atualizar(pasta: Path) -> int:
 def _ligar_travas(pasta: Path) -> None:
     """A trava do commit (core.hooksPath, do clone) e a do Claude Code, somada ao settings.json."""
     _git(pasta, "config", "core.hooksPath", ".githooks")
-    modelo = json.loads((KIT / "claude-settings.json").read_text(encoding="utf-8"))
+    modelo = json.loads((MODELO / "claude-settings.json").read_text(encoding="utf-8"))
     entrada = modelo["hooks"]["PreToolUse"][0]
     settings = pasta / ".claude" / "settings.json"
     atual = json.loads(settings.read_text(encoding="utf-8")) if settings.is_file() else {}
@@ -172,6 +182,25 @@ def _ligar_travas(pasta: Path) -> None:
         settings.parent.mkdir(parents=True, exist_ok=True)
         texto = json.dumps(atual, ensure_ascii=False, indent=2) + "\n"
         settings.write_text(texto, encoding="utf-8")
+
+
+def _caminhos(origem: str) -> list[str]:
+    """Onde a origem esteve no kit: em modelo/ e, até a 1.34, na raiz."""
+    return [f"modelo/{origem}", NA_RAIZ_ATE_1_34.get(origem, origem)]
+
+
+def _na_versao(versao: str, origem: str) -> str:
+    """O texto da origem numa versão antiga do kit, onde quer que ela estivesse; vazio sem ela."""
+    for caminho in _caminhos(origem):
+        saida = subprocess.run(
+            ["git", "-C", str(KIT), "show", f"{versao}:{caminho}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if saida.returncode == 0:
+            return saida.stdout
+    return ""
 
 
 def _regras(texto: str) -> str:
@@ -185,17 +214,13 @@ def _sincronizar_regras(pasta: Path) -> None:
     if not config.is_file():
         return
     texto = config.read_text(encoding="utf-8")
-    atuais = _regras((KIT / "openspec" / "config.yaml").read_text(encoding="utf-8"))
+    atuais = _regras((MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8"))
     if not _regras(texto) or _regras(texto) == atuais:
         return
     # Toda versão do config.yaml que o kit já teve, e não só as das tags, que seguem o comum.
-    for versao in _git(KIT, "log", "--format=%h", "--", "openspec/config.yaml").split():
-        antigas = subprocess.run(
-            ["git", "-C", str(KIT), "show", f"{versao}:openspec/config.yaml"],
-            capture_output=True,
-            text=True,
-            check=False,
-        ).stdout
+    caminhos = _caminhos("openspec/config.yaml")
+    for versao in _git(KIT, "log", "--format=%h", "--", *caminhos).split():
+        antigas = _na_versao(versao, "openspec/config.yaml")
         if _regras(antigas) and _regras(antigas) == _regras(texto):
             cabeca = _com_lingua(texto[: texto.find("\nrules:") + 1])
             config.write_text(cabeca + atuais, encoding="utf-8")
@@ -215,20 +240,16 @@ def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
     if antes == "?":
         return
     # O commit que trouxe a versão do comum do projeto; o que o kit mudou depois dele vale avisar.
-    desde = _git(KIT, "log", "--format=%h", "-S", f"Versão {antes},", "--", "CLAUDE-comum.md")
+    comum = _caminhos("CLAUDE-comum.md")
+    desde = _git(KIT, "log", "--format=%h", "-S", f"Versão {antes},", "--", *comum)
     if not desde:
         return
     for nome in COM_PARTE_FIXA:
         origem = A_PREENCHER[nome]
         if not (pasta / nome).is_file():
             continue
-        velho = subprocess.run(
-            ["git", "-C", str(KIT), "show", f"{desde.split()[-1]}:{origem}"],
-            capture_output=True,
-            text=True,
-            check=False,
-        ).stdout
-        novo = (KIT / origem).read_text(encoding="utf-8")
+        velho = _na_versao(desde.split()[-1], origem)
+        novo = (MODELO / origem).read_text(encoding="utf-8")
         projeto = _linhas_fixas((pasta / nome).read_text(encoding="utf-8"))
         faltam = sorted(_linhas_fixas(novo) - _linhas_fixas(velho) - projeto)
         sobram = sorted((_linhas_fixas(velho) - _linhas_fixas(novo)) & projeto)

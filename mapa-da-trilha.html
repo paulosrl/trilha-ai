@@ -177,7 +177,7 @@ a { color: var(--pinho); }
           <tr><td>O método</td><td>Diz quando fazer commit: em cada passo do ciclo da change, a cada parada do apply e ao fechar cada etapa.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change" e "Trabalho interrompível"</td></tr>
           <tr><td>Claude</td><td>Escreve a mensagem (Conventional Commits, em português, com coautoria) e faz o commit no momento certo.</td><td><code>CLAUDE-comum.md</code>, "Convenções"</td></tr>
           <tr><td>Você</td><td>Autoriza os envios com um "sim": um por etapa e um só para toda a branch de cada change. Autoriza também o merge, que só é pedido com a verificação verde.</td><td><code>CLAUDE-comum.md</code>, "Como trabalhar com o usuário"</td></tr>
-          <tr><td>GitHub</td><td>Guarda a cópia fora da máquina, mostra o plano e o código no pull request e roda a verificação (CI) a cada envio. Não faz commit: recebe o que o Claude envia.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change", e <code>github-verificacao.yml</code></td></tr>
+          <tr><td>GitHub</td><td>Guarda a cópia fora da máquina, mostra o plano e o código no pull request e roda a verificação (CI) a cada envio. Não faz commit: recebe o que o Claude envia.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change", e <code>.github/workflows/verificacao.yml</code></td></tr>
         </tbody>
       </table>
     </div>
@@ -220,7 +220,7 @@ a { color: var(--pinho); }
       voce: "Instala as ferramentas, cria a pasta e copia os arquivos do kit. Cria a conta no GitHub (uma vez só) e autoriza o terminal com o gh.",
       claude: "Inicializa o OpenSpec, com o verify ligado no perfil, e o CodeGraph, e confere tudo com scripts/check.sh.",
       git: "git init e o primeiro commit, com a linha de coautoria da IA.",
-      gh: "O repositório nasce privado no GitHub e recebe o primeiro commit. A verificação do kit (github-verificacao.yml, copiado para .github/workflows/) roda a cada envio.",
+      gh: "O repositório nasce privado no GitHub e recebe o primeiro commit. A verificação do kit (.github/workflows/verificacao.yml, que o kit copia) roda a cada envio.",
       cmd: "gh auth login\ngit init && git commit -m \"chore: kit Trilha AI\"\ngh repo create <nome> --private --source . --push" },
     { id: "prd", nome: "PRD", titulo: "O produto (PRD)", gate: "gate 1",
       voce: "Aprova o PRD bloco a bloco.",

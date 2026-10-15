@@ -11,6 +11,7 @@ import unittest
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
+MODELO = RAIZ / "modelo"  # o que vai aos projetos
 # A lista dos arquivos do kit vive num lugar só: a ferramenta que cria e atualiza os projetos.
 _spec = importlib.util.spec_from_file_location("kit", RAIZ / "ferramentas" / "kit.py")
 FERRAMENTA = importlib.util.module_from_spec(_spec)
@@ -26,33 +27,41 @@ def _copia_do_kit(destino: Path) -> None:
     for nome in DO_KIT:
         alvo = destino / nome
         alvo.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy(RAIZ / ORIGEM.get(nome, nome), alvo)
+        shutil.copy(MODELO / ORIGEM.get(nome, nome), alvo)
 
 
 class Kit(unittest.TestCase):
     def test_arquivos_existem(self) -> None:
-        faltam = [n for n in DO_KIT if not (RAIZ / ORIGEM.get(n, n)).is_file()]
+        faltam = [n for n in DO_KIT if not (MODELO / ORIGEM.get(n, n)).is_file()]
         self.assertEqual(faltam, [])
+
+    def test_modelo_separado_e_inerte_no_kit(self) -> None:
+        """O que vai aos projetos fica em modelo/, com nomes que não valem dentro do kit."""
+        for inerte in ("CLAUDE.md", ".gitignore", ".claude"):
+            self.assertFalse((MODELO / inerte).exists(), inerte)
+        # O atalho da raiz serve ao check.sh dos projetos (--fonte ../trilha-ai) até a 2.0.
+        self.assertTrue((RAIZ / "CLAUDE-comum.md").is_symlink())
+        self.assertEqual((RAIZ / "CLAUDE-comum.md").resolve(), (MODELO / "CLAUDE-comum.md").resolve())
 
     def test_versao_no_comum(self) -> None:
         for arquivo in ("CLAUDE-comum.md",):
-            texto = (RAIZ / arquivo).read_text(encoding="utf-8")
+            texto = (MODELO / arquivo).read_text(encoding="utf-8")
             self.assertIsNotNone(re.search(r"^Versão \d+\.\d+, de \d{4}-\d\d-\d\d\.", texto, re.M), arquivo)
 
     def test_comum_nao_cita_curso(self) -> None:
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("curso", comum.lower().replace("em curso", ""))
         # O config.yaml vai a todo projeto: também não cita um.
-        self.assertNotIn("Consulta Pública", (RAIZ / "openspec/config.yaml").read_text(encoding="utf-8"))
+        self.assertNotIn("Consulta Pública", (MODELO / "openspec/config.yaml").read_text(encoding="utf-8"))
 
     def test_clear_com_o_comando_da_proxima_sessao(self) -> None:
         """v1.34: quem sugere o /clear mostra o comando exato a dar ao voltar, pronto para copiar."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("e mostre, num bloco de código, o comando exato a dar na próxima sessão", comum)
 
     def test_comum_sem_repetir_o_openspec_nem_a_si_mesmo(self) -> None:
         """v1.32: a instrução do propose já manda ler o projeto e os specs; o pkill -f num lugar só."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Antes de propor, rode `openspec list`", comum)
         self.assertNotIn("leia o spec da capability", comum)
         self.assertEqual(comum.count("`pkill -f`"), 1)
@@ -63,31 +72,31 @@ class Kit(unittest.TestCase):
 
     def test_comum_fecha_a_porta_do_briefing_curto(self) -> None:
         """v1.8: sem decomposição, o passo do ciclo fica no ANDAMENTO.md; com PRD e TDD, a decomposição vem antes."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("o passo do ciclo de cada change fica no `ANDAMENTO.md`", comum)
         self.assertIn("Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.", comum)
 
     def test_comum_preve_o_registro_de_processo_opcional(self) -> None:
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("registro de processo", comum)
         self.assertIn("é opcional; quem o mantém declara no `CLAUDE.md`", comum)
 
     def test_comum_cita_a_skill_briefing(self) -> None:
         """A skill do plugin chama-se sdd:briefing, para não colidir com a openspec-propose nativa do OpenSpec."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("`sdd:briefing`", comum)
         self.assertNotIn("openspec-propose", comum)
 
     def test_comum_poe_a_auditoria_na_revisao_do_openspec(self) -> None:
         """v1.9: a auditoria do gate 3 é a revisão que o OpenSpec pede ao fim do propose, não um passo à parte."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3", comum)
         self.assertNotIn("3. auditoria do gate 3, antes de qualquer código", comum)
 
     def test_metodo_nao_forca_o_apply(self) -> None:
         """v1.10: o apply segue o fluxo do OpenSpec; nem commit por tarefa nem parada forçada."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("4. `/opsx:apply`, no fluxo do OpenSpec;", comum)
         self.assertIn("Durante o apply, o ponto de retomada é o `tasks.md`", comum)
         self.assertNotIn("um por tarefa concluída", comum)
@@ -100,31 +109,31 @@ class Kit(unittest.TestCase):
 
     def test_specs_com_o_nome_do_openspec(self) -> None:
         """v1.11: só as changes levam número e data; os specs seguem o nome que o OpenSpec dá."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Os specs seguem o nome que o OpenSpec dá", comum)
         self.assertNotIn("changes e specs seguem `AAAA-MM-DD-NN-nome`", comum)
         self.assertNotIn("spec novo recebe o próximo número e a data do dia", comum)
 
     def test_auditoria_nao_e_unidade_de_trabalho(self) -> None:
         """v1.12: até a escolha do usuário, a auditoria não muda o ANDAMENTO.md nem o registro de processo."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Até a escolha, a auditoria não é unidade de trabalho", comum)
 
     def test_correcao_de_texto_nao_sobe_versao(self) -> None:
         """v1.14: só a mudança de sentido sobe a versão do PRD, do TDD ou da decomposição."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("não sobe a versão dele nem a linha \"de origem\" de quem o cita", comum)
         self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário", comum)
 
     def test_prd_e_spec_em_desacordo(self) -> None:
         """v1.15: o PRD aprovado manda sobre o spec; se o certo for o spec, o PRD ganha versão nova."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("PRD e spec em desacordo: vale o PRD aprovado", comum)
         self.assertIn("se o certo for o spec, o PRD ganha versão nova", comum)
 
     def test_regras_gerais_vindas_dos_repositorios(self) -> None:
         """v1.16: o "sim" isolado, o que ler antes do propose e a mutação desfeita saem dos CLAUDE.md."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Um \"sim\" isolado responde só à pergunta principal da mensagem", comum)
         self.assertIn("rode `openspec list`", comum)
         self.assertIn("(`progress.total`)", comum)
@@ -132,7 +141,7 @@ class Kit(unittest.TestCase):
 
     def test_remoto_privado_no_github(self) -> None:
         """v1.20: todo repositório do método tem um remoto privado no GitHub, criado na etapa 0."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         readme = (RAIZ / "README.md").read_text(encoding="utf-8")
         self.assertIn("desde a etapa 0, um remoto privado no GitHub (`origin`)", comum)
         self.assertIn("`gh repo create <nome> --private --source . --push`", comum)
@@ -141,7 +150,7 @@ class Kit(unittest.TestCase):
 
     def test_branch_e_pull_request_por_change(self) -> None:
         """v1.21: cada change numa branch; PR em rascunho ao fim do propose; um "sim" para os envios, outro para o merge."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("numa branch `change/NN-nome` aberta a partir da main atualizada", comum)
         self.assertIn("pull request em rascunho (`gh pr create --draft`)", comum)
         self.assertIn("um só \"sim\" para todos os envios da branch até o merge", comum)
@@ -150,14 +159,14 @@ class Kit(unittest.TestCase):
 
     def test_archive_dentro_do_pull_request(self) -> None:
         """v1.22: o archive e os passos seguintes na branch, antes do merge; depois, o PR sai do rascunho."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("o PR sai do rascunho (`gh pr ready`): código, specs e página chegam juntos à main", comum)
         self.assertIn("7. o merge", comum)
 
     def test_ci_no_kit_e_merge_so_com_ele_verde(self) -> None:
         """v1.23: o GitHub roda o check.sh e o openspec validate; o merge só é pedido com tudo verde."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
-        ci = (RAIZ / "github-verificacao.yml").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        ci = (MODELO / ".github/workflows/verificacao.yml").read_text(encoding="utf-8")
         self.assertIn("o merge, só com a verificação do GitHub verde no PR (`gh pr checks`)", comum)
         self.assertIn("run: bash scripts/check.sh", ci)
         self.assertIn("run: openspec validate --all --no-interactive", ci)
@@ -171,7 +180,7 @@ class Kit(unittest.TestCase):
 
     def test_regras_de_verificacao_vindas_do_heimdall(self) -> None:
         """Cada cenário com teste nomeado e evidência; tarefa marcada só com o teste passando."""
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn('Terminar com a seção "Verificação"', config)
         self.assertIn("dá o arquivo, o caso e o comando que o roda", config)
         self.assertIn("nunca o valor literal que o código já usa", config)
@@ -179,7 +188,7 @@ class Kit(unittest.TestCase):
 
     def test_regras_cabem_no_projeto_sem_prd(self) -> None:
         """O comum admite a correção vinda de um spec, sem PRD; as regras que pedem RF dizem o que vale."""
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         regras = config.split("\nrules:\n", 1)[1].split("\noperations:\n", 1)[0]
         for artefato in ("proposal", "specs", "tasks"):
             bloco = re.split(r"\n  (?=\w)", regras.split(f"  {artefato}:\n", 1)[1], maxsplit=1)[0]
@@ -187,7 +196,7 @@ class Kit(unittest.TestCase):
 
     def test_apply_registra_a_verificacao(self) -> None:
         """A regra do design só é lida no propose; quem preenche a Verificação é o apply, com ou sem design.md."""
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         apply = config.split("  apply:", 1)[1].split("  archive:", 1)[0]
         self.assertIn('na seção "Verificação" do design.md', apply)
         self.assertIn("no notas.md da pasta da change quando não houver design.md", apply)
@@ -195,32 +204,32 @@ class Kit(unittest.TestCase):
 
     def test_confere_metodo_se_declara_trava(self) -> None:
         """Desde a 1.27 ele roda na trava do commit e no CI; o texto dele diz isso."""
-        texto = (RAIZ / "scripts" / "confere_metodo.py").read_text(encoding="utf-8")
+        texto = (MODELO / "scripts" / "confere_metodo.py").read_text(encoding="utf-8")
         self.assertNotIn("portão de publicação", texto)
         self.assertIn("na trava do commit (.githooks/pre-commit)", texto)
 
     def test_ci_com_acoes_fixadas_e_busca_de_segredos(self) -> None:
         """v1.29: ações pelo commit, gitleaks conferido pela soma, Dependabot e a regra dos segredos."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
-        for arquivo in ("github-verificacao.yml", ".github/workflows/testes.yml"):
-            texto = (RAIZ / arquivo).read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        for arquivo in (MODELO / ".github/workflows/verificacao.yml", RAIZ / ".github/workflows/testes.yml"):
+            texto = arquivo.read_text(encoding="utf-8")
             # Também os exemplos comentados: quem os descomenta herda a fixação.
             usos = re.findall(r"^\s+(?:#\s+)?- uses: (\S+)", texto, re.M)
             self.assertTrue(usos, arquivo)
             for uso in usos:
                 self.assertRegex(uso, r"@[0-9a-f]{40}$", f"{arquivo}: {uso} sem o commit fixado")
-        ci = (RAIZ / "github-verificacao.yml").read_text(encoding="utf-8")
+        ci = (MODELO / ".github/workflows/verificacao.yml").read_text(encoding="utf-8")
         self.assertIn("sha256sum -c -", ci)
         self.assertIn("gitleaks\" detect --source . --no-banner --redact", ci)
         self.assertIn("fetch-depth: 0", ci)
         self.assertIn("branches: [main, master]", ci)  # o hubia e o heimdall usam master
-        for arquivo in ("github-dependabot.yml", ".github/dependabot.yml"):
-            self.assertIn("package-ecosystem: github-actions", (RAIZ / arquivo).read_text())
+        for arquivo in (MODELO / ".github/dependabot.yml", RAIZ / ".github/dependabot.yml"):
+            self.assertIn("package-ecosystem: github-actions", arquivo.read_text())
         self.assertIn("o CI os procura no histórico (gitleaks)", comum)
 
     def test_revisao_independente_no_verify(self) -> None:
         """v1.28: no passo 5, o /code-review por um agente sem o contexto da sessão."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         # Com o alvo: sem ele, o /code-review revisa só o que não foi commitado, vazio depois do commit.
         self.assertIn("5. `/opsx:verify` e a revisão independente do código, o `/code-review <número do PR>`",
                       comum)
@@ -229,7 +238,7 @@ class Kit(unittest.TestCase):
 
     def test_a_change_fecha_no_merge(self) -> None:
         """v1.25: a change fecha no merge; a retomada olha o PR; um só lugar para a regra dos envios."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         readme = (RAIZ / "README.md").read_text(encoding="utf-8")
         self.assertIn("A change fecha aqui, não no archive", comum)
         self.assertIn("numa branch `change/…`, `gh pr view` e `gh pr checks`", comum)
@@ -242,27 +251,27 @@ class Kit(unittest.TestCase):
 
     def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
         """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("atualiza a linha \"de origem\" de quem o cita, sem versão nova dele", comum)
 
     def test_ciclo_guarda_os_marcos_e_o_andamento_o_passo(self) -> None:
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("O passo do ciclo em que cada change está: a tabela", comum)
         self.assertIn("Os marcos de cada change (briefing, auditoria, archive): a tabela \"Ciclo\"", comum)
 
     def test_auditoria_tem_criterio_de_fechamento(self) -> None:
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Uma auditoria fecha com a verificação do repositório verde e sem contradição", comum)
 
     def test_hora_do_andamento_lida_do_relogio(self) -> None:
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("a hora, lida do relógio (`date`) e nunca estimada", comum)
 
     def test_archive_gera_a_pagina(self) -> None:
         """v1.13: os passos depois do archive vivem só no config.yaml; o comum aponta para lá."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
-        esqueleto = (RAIZ / "esqueleto-CLAUDE.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        esqueleto = (MODELO / "esqueleto-CLAUDE.md").read_text(encoding="utf-8")
         self.assertIn("os passos que o `operations.archive` do `openspec/config.yaml` lista", comum)
         self.assertNotIn("página do método gerada de novo", comum)
         self.assertIn("gerar de novo sdd/documentacao.html", config)
@@ -270,7 +279,7 @@ class Kit(unittest.TestCase):
 
     def test_regras_do_metodo_num_lugar_so(self) -> None:
         """v1.13: o teste por cenário fica no config.yaml e os 8 itens da auditoria, na skill."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("Cada cenário de spec vira um teste", comum)
         self.assertNotIn("todo requisito virou spec", comum)
         self.assertIn("pelo checklist da skill `sdd:briefing`", comum)
@@ -278,14 +287,14 @@ class Kit(unittest.TestCase):
 
     def test_andamento_sem_o_envio_e_com_trabalho_fora_de_change(self) -> None:
         """v1.13: o envio ao remoto não vai ao ANDAMENTO.md; a etapa admite trabalho fora de change."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("não guarda o estado do envio ao remoto", comum)
         self.assertIn("ou o trabalho fora de change)", comum)
         self.assertIn("a revisão termina com a auditoria aprovada, em commit e envio", comum)
 
     def test_gates_aprovados_como_as_skills_pedem(self) -> None:
         """v1.17: PRD e TDD são aprovados bloco a bloco, como as skills pedem; a restrição imposta é exceção."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("seção por seção", comum)
         self.assertIn("aprovado bloco a bloco pelo usuário, como a skill pede (gate 1)", comum)
         self.assertIn("aprovado bloco a bloco pelo usuário, como a skill pede (gate 2)", comum)
@@ -294,7 +303,7 @@ class Kit(unittest.TestCase):
     def test_ciclo_sem_repetir_o_config_e_com_o_lugar_do_verify(self) -> None:
         """v1.17: a execução manual fica só no config.yaml; o verify responde no design.md; a sugestão
         de um comando do OpenSpec que pule passo não vale; a aprovação do gate 3 é unidade de trabalho."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("execução manual, em dado descartável, com o usuário olhando", comum)
         self.assertIn("recusada por escrito no `design.md` da change, com o motivo", comum)
         self.assertIn("a tabela \"Ciclo\" da decomposição, atualizada no commit do passo de cada marco", comum)
@@ -303,7 +312,7 @@ class Kit(unittest.TestCase):
         """v1.18: a escolha do usuário, com ou sem correção, leva o relatório ao registro; a cópia nova
         dos arquivos do método dispensa change; o OpenSpec comanda, e o método nunca se sobrepõe a ele:
         quando um comando oferece pular um passo, quem escolhe é o usuário."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("o relatório entra no registro junto com a primeira correção", comum)
         self.assertIn("A escolha, com ou sem correção, é unidade de trabalho", comum)
         self.assertIn("a cópia nova dos arquivos que o método manda copiar sem mudar", comum)
@@ -315,7 +324,7 @@ class Kit(unittest.TestCase):
 
     def test_config_nao_repete_o_comum_nem_o_claude(self) -> None:
         """v1.17: o contexto do config.yaml aponta para o comum e o CLAUDE.md, que o agente já carrega."""
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertNotIn("Não improvise", config)
         self.assertNotIn("Dados a proteger", config)
         self.assertNotIn("Documentos que mandam", config)
@@ -325,8 +334,8 @@ class Kit(unittest.TestCase):
         """v1.19: o design.md é do OpenSpec, que o cria só quando cabe (o notas.md o substitui); os specs
         mudam também pela edição que o OpenSpec pede; o gate 3 aceita o caminho que o update indicar;
         as regras do config.yaml sem o MAY e com os títulos do OpenSpec em inglês."""
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("o OpenSpec o cria só quando cabe", comum)
         self.assertIn("o `notas.md` da pasta da change faz as vezes dele", comum)
         self.assertNotIn("Não edite `openspec/specs/` à mão", comum)
@@ -343,7 +352,7 @@ class Kit(unittest.TestCase):
 
     def test_lingua_no_context_como_o_openspec_escreve(self) -> None:
         """O bloco de formatLanguageContext (core/init.js do OpenSpec): o init --language o reconhece."""
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         contexto = config[config.find("context: |\n"):config.find("\nrules:")]
         contexto = "\n".join(linha[2:] for linha in contexto.splitlines()[1:])
         self.assertIn(FERRAMENTA.LINGUA, contexto)
@@ -353,19 +362,19 @@ class Kit(unittest.TestCase):
         self.assertIn("accents", FERRAMENTA.LINGUA)  # o hubia já perdeu acentos em textos de tela
 
     def test_cenario_mantido_no_delta_fica_como_esta(self) -> None:
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("todo cenário novo ou alterado cita o CA de origem", config)
         self.assertIn("o que o delta repete sem mudança fica como está", config)
 
     def test_tarefas_nomeiam_o_requisito_sem_criterio(self) -> None:
         """A regra de tarefas do config.yaml (a única que há) cobre o cenário sem critério."""
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("ou o do requisito quando o cenário não tem critério", config)
 
     def test_regras_do_config_sao_texto(self) -> None:
         """Item sem aspas com ": " vira chave e valor no YAML, e o OpenSpec ignora em silêncio todas as
         regras daquele artefato ("must be an array of strings"); com " #", o resto vira comentário."""
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         depois_do_contexto = config.split("\nrules:\n", 1)[1]
         soltos = [
             linha.strip()
@@ -376,7 +385,7 @@ class Kit(unittest.TestCase):
 
     def test_regras_falam_do_usuario(self) -> None:
         for arquivo in ("CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
-            texto = (RAIZ / arquivo).read_text(encoding="utf-8")
+            texto = (MODELO / arquivo).read_text(encoding="utf-8")
             self.assertNotRegex(texto, r"\b[àa] pessoa\b", arquivo)
 
     def test_scripts_cabem_no_lint_de_quem_copia(self) -> None:
@@ -385,7 +394,9 @@ class Kit(unittest.TestCase):
             f"{nome}:{numero}"
             for nome in (*DO_KIT, "ferramentas/kit.py")
             if nome.endswith(".py")
-            for numero, linha in enumerate((RAIZ / nome).read_text(encoding="utf-8").splitlines(), 1)
+            for numero, linha in enumerate(
+                (RAIZ / nome if nome.startswith("ferramentas/") else MODELO / nome)
+                .read_text(encoding="utf-8").splitlines(), 1)
             if len(linha) > 100
         ]
         self.assertEqual(longas, [])
@@ -395,6 +406,8 @@ class Kit(unittest.TestCase):
             destino = Path(tmp)
             _copia_do_kit(destino)
             saida = subprocess.run(
+                # A raiz do kit, como o check.sh dos projetos a passa (../trilha-ai): o atalho
+                # CLAUDE-comum.md da raiz leva ao modelo/ até a 2.0.
                 [sys.executable, "-I", str(destino / "scripts/confere_regras.py"), tmp, "--fonte", str(RAIZ)],
                 capture_output=True, text=True, check=False,
             )
@@ -438,7 +451,7 @@ class Kit(unittest.TestCase):
         self.assertIn("openspec/config.yaml", erro)
 
     def test_verificador_reprova_passo_numerado_do_comum_repetido(self) -> None:
-        passo = next(linha for linha in (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8").splitlines()
+        passo = next(linha for linha in (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8").splitlines()
                      if linha.startswith("2. "))
         erro = self._verifica_com_defeito("CLAUDE.md", "- Nenhuma.", f"- Nenhuma.\n\n{passo}")
         self.assertIn("repete regra do comum: 2. ", erro)
@@ -465,11 +478,11 @@ class Kit(unittest.TestCase):
 
     def test_campos_do_verificador_sao_os_dos_modelos(self) -> None:
         """A lista do confere_regras.py cobre cada campo < > dos modelos, e nenhum a mais."""
-        spec = importlib.util.spec_from_file_location("regras", RAIZ / "scripts/confere_regras.py")
+        spec = importlib.util.spec_from_file_location("regras", MODELO / "scripts/confere_regras.py")
         regras = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(regras)
         for nome, campos in regras.CAMPOS_DO_MODELO.items():
-            texto = (RAIZ / ORIGEM[nome]).read_text(encoding="utf-8").split("\nrules:")[0]
+            texto = (MODELO / ORIGEM[nome]).read_text(encoding="utf-8").split("\nrules:")[0]
             if nome.endswith(".yaml"):  # sem os comentários ("o que está entre < e >")
                 texto = "\n".join(l for l in texto.splitlines() if not l.lstrip().startswith("#"))
             trechos = [(m.start(), m.end()) for c in campos for m in re.finditer(re.escape(c), texto)]
@@ -622,13 +635,13 @@ class Kit(unittest.TestCase):
             self.assertEqual([c["pr"] for c in dados["changes"]], ["7", ""])
         dados, _ = self._gera_pagina({"decomposicao-x.md": ciclo})
         self.assertEqual(dados["repositorio"], "")
-        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn('célula do archive ("PR #N")', config)
 
     def test_pagina_funciona_sem_rede_e_se_chama_documentacao_do_projeto(self) -> None:
-        modelo = (RAIZ / "scripts/pagina_sdd_modelo.html").read_text(encoding="utf-8")
-        gerador = (RAIZ / "scripts/gerar_pagina_sdd.py").read_text(encoding="utf-8")
-        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        modelo = (MODELO / "scripts/pagina_sdd_modelo.html").read_text(encoding="utf-8")
+        gerador = (MODELO / "scripts/gerar_pagina_sdd.py").read_text(encoding="utf-8")
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("<script src=", modelo)
         self.assertIn("marked v12.0.2", modelo)
         self.assertNotIn("</script", modelo.split("marked v12.0.2", 1)[1].split("\n</script>", 1)[0])
@@ -638,7 +651,7 @@ class Kit(unittest.TestCase):
             self.assertNotIn("página do método", texto)
 
     def test_modelo_da_pagina_tem_teclado_celular_e_rodape_corretos(self) -> None:
-        modelo = (RAIZ / "scripts/pagina_sdd_modelo.html").read_text(encoding="utf-8")
+        modelo = (MODELO / "scripts/pagina_sdd_modelo.html").read_text(encoding="utf-8")
         self.assertIn("ArrowRight", modelo)
         self.assertIn('document.getElementById("aba-" + chave).focus()', modelo)
         self.assertIn(".briefings > li {", modelo)
@@ -660,7 +673,7 @@ class Kit(unittest.TestCase):
             gh.chmod(0o755)
             env = {**os.environ, "PATH": f"{tmp}:{os.environ['PATH']}"}
             return subprocess.run(
-                [sys.executable, "-I", str(RAIZ / "scripts/guarda.py")],
+                [sys.executable, "-I", str(MODELO / "scripts/guarda.py")],
                 input=json.dumps({"tool_name": "Bash", "tool_input": {"command": comando}}),
                 capture_output=True, text=True, check=False, env=env,
             )
@@ -758,9 +771,9 @@ class Kit(unittest.TestCase):
             saida = self._ferramenta("novo", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stderr)
             for destino, origem in ORIGEM.items():
-                self.assertEqual((pasta / destino).read_bytes(), (RAIZ / origem).read_bytes())
+                self.assertEqual((pasta / destino).read_bytes(), (MODELO / origem).read_bytes())
             for nome in FERRAMENTA.SEM_MUDAR:
-                self.assertEqual((pasta / nome).read_bytes(), (RAIZ / nome).read_bytes())
+                self.assertEqual((pasta / nome).read_bytes(), (MODELO / nome).read_bytes())
             self.assertTrue((pasta / "sdd").is_dir())
             self.assertIn("gh repo create", saida.stdout)
             self.assertIn("README do kit, passos 3 a 6", saida.stdout)
@@ -772,11 +785,11 @@ class Kit(unittest.TestCase):
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
             self.assertEqual((pasta / "CLAUDE-comum.md").read_bytes(),
-                             (RAIZ / "CLAUDE-comum.md").read_bytes())
+                             (MODELO / "CLAUDE-comum.md").read_bytes())
             # O que o projeto preencheu fica como está.
             self.assertEqual((pasta / ".github/workflows/verificacao.yml").read_text(),
                              "# a parte da stack, preenchida\n")
-            versao = re.search(r"^Versão (\d+\.\d+)", (RAIZ / "CLAUDE-comum.md").read_text(
+            versao = re.search(r"^Versão (\d+\.\d+)", (MODELO / "CLAUDE-comum.md").read_text(
                 encoding="utf-8"), re.M).group(1)
             self.assertIn(f"comum 1.19 → {versao}", saida.stdout)
             # A ferramenta não faz commit.
@@ -787,7 +800,7 @@ class Kit(unittest.TestCase):
         env = {**os.environ, **GIT_TESTE}
         antigo = subprocess.run(["git", "show", "v1.25:openspec/config.yaml"], cwd=RAIZ,
                                 capture_output=True, text=True, check=True).stdout
-        atual = (RAIZ / "openspec/config.yaml").read_text(encoding="utf-8")
+        atual = (MODELO / "openspec/config.yaml").read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_velho(tmp)
             config = pasta / "openspec/config.yaml"
@@ -837,7 +850,7 @@ class Kit(unittest.TestCase):
             self.assertNotIn("dependabot.yml mudou", saida.stdout)
             self.assertEqual(ci.read_text(encoding="utf-8"), antigo + stack)  # só o aviso
             # Com as linhas novas trazidas à mão, o aviso some, mesmo com a stack do projeto.
-            atual = (RAIZ / "github-verificacao.yml").read_text(encoding="utf-8")
+            atual = (MODELO / ".github/workflows/verificacao.yml").read_text(encoding="utf-8")
             ci.write_text(atual + stack, encoding="utf-8")
             comum.write_text(re.sub(r"^Versão [\d.]+,", "Versão 1.29,", comum.read_text(encoding="utf-8"),
                                     flags=re.M), encoding="utf-8")

@@ -1,11 +1,12 @@
 # CLAUDE.md — Trilha AI
 
-Este repositório é a **fonte do padrão** Trilha AI: o `CLAUDE-comum.md`, o esqueleto do `CLAUDE.md`, o `ANDAMENTO.md`, o `openspec/config.yaml`, os scripts. Ele não segue o próprio kit: não importe o `CLAUDE-comum.md` aqui nem crie `sdd/` aqui. O que vale está no `README.md`.
+Este repositório é a **fonte do padrão** Trilha AI. O que vai aos projetos fica em `modelo/` (o `CLAUDE-comum.md`, o esqueleto do `CLAUDE.md`, o `ANDAMENTO.md`, o `openspec/config.yaml`, os scripts); o resto é só do kit, e o `README.md` explica o uso. O kit não segue o próprio método: não importe o `CLAUDE-comum.md` aqui nem crie `sdd/` aqui. O `CLAUDE-comum.md` da raiz é só um atalho para o de `modelo/`, que o `check.sh` dos projetos compara com `../trilha-ai`; sai na versão 2.0.
 
 ## Regras
 
-- Toda mudança no `CLAUDE-comum.md` sobe a versão e a data na linha "Versão X.Y, de AAAA-MM-DD." e é registrada na mensagem do commit, que ganha a tag anotada `vX.Y` (enviada com ele: `git push origin main vX.Y`); os repositórios que seguem o padrão recebem a cópia depois, cada um sob ordem do usuário nomeando-o.
+- A ferramenta (`ferramentas/kit.py`), os verificadores e as travas mudam por change do OpenSpec, com o `openspec/config.yaml` da raiz (o do kit, não o de `modelo/`). A change nasce de uma descrição curta aprovada pelo usuário, sem PRD nem TDD, e segue a branch, o pull request e o merge do ciclo do comum. O texto do método (o comum e os modelos) muda fora de change.
+- Toda mudança no `modelo/CLAUDE-comum.md` sobe a versão e a data na linha "Versão X.Y, de AAAA-MM-DD." e é registrada na mensagem do commit, que ganha a tag anotada `vX.Y` (enviada com ele: `git push origin main vX.Y`); os repositórios que seguem o padrão recebem a cópia depois, cada um sob ordem do usuário nomeando-o.
 - Os arquivos de regras falam de "o usuário", nunca de "a pessoa"; o comum não menciona curso nenhum nem projeto nenhum: só o método.
-- O `CLAUDE-comum.md` e o esqueleto do `CLAUDE.md` somados cabem em 200 linhas.
-- Antes do commit: `python3 -m unittest discover -s testes` (Python 3 puro, sem dependências) e confira o código de saída. O GitHub roda os mesmos testes a cada envio (`.github/workflows/testes.yml`).
+- O `modelo/CLAUDE-comum.md` e o `modelo/esqueleto-CLAUDE.md` somados cabem em 200 linhas.
+- Antes do commit, cada um sozinho, conferindo o código de saída: `python3 -m unittest discover -s testes` (Python 3 puro, sem dependências) e o ruff 0.17 em `modelo/scripts/` e `ferramentas/` (`uvx ruff@0.17.0 check --isolated --line-length 100` e o mesmo com `format --check`). O GitHub roda os mesmos a cada envio (`.github/workflows/testes.yml`).
 - Responda em PT-BR, em linguagem simples, uma coisa por vez; publique só com "sim" explícito.

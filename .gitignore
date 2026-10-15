@@ -1,25 +1,5 @@
-# Comum a qualquer stack
-.env
-*.log
-.DS_Store
-
-# Python (apague se a stack decidida no TDD for outra)
-.venv/
+# Só do kit. O .gitignore que os projetos recebem é o modelo/gitignore.
 __pycache__/
 *.py[cod]
-.mypy_cache/
-.pytest_cache/
 .ruff_cache/
-
-# Node (apague se a stack decidida no TDD for outra)
-node_modules/
-.next/
-
-# Dados locais: nunca versionar banco nem cópia de uso real
-*.db
-*.db-wal
-*.db-shm
-*.sqlite
-
-# O índice do CodeGraph é local a cada máquina
 .codegraph/
