@@ -1660,6 +1660,17 @@ class Kit(unittest.TestCase):
         passos = saida.stdout.split("próximos passos", 1)[1]
         self.assertIn("openspec config profile", passos)
 
+    def test_novo_cita_o_codegraph_como_opcional(self) -> None:
+        """F36: o CodeGraph é opcional no método; o passo dele diz isso e fica fora do openspec."""
+        with tempfile.TemporaryDirectory() as tmp:
+            saida = self._ferramenta("novo", f"{tmp}/proj")
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        passos = re.split(r"\n  (?=\d+\. )", saida.stdout.split("próximos passos", 1)[1])
+        codegraph = [p for p in passos if "codegraph init" in p]
+        self.assertEqual(len(codegraph), 1, passos)
+        self.assertIn("se usar o CodeGraph", codegraph[0])
+        self.assertNotIn("openspec init", codegraph[0])
+
     def test_novo_sem_openspec_avisa(self) -> None:
         saida = self._novo_com_openspec(None)
         self.assertEqual(saida.returncode, 0, saida.stderr)
