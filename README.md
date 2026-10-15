@@ -26,9 +26,9 @@ Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do
    | `github-verificacao.yml` | copiar como `.github/workflows/verificacao.yml`: a cada envio, o GitHub roda o `check.sh` e o `openspec validate`; a parte da stack entra na etapa 2 |
    | `.gitignore` | apagar o bloco da stack que não for a sua, depois da etapa 2 |
 
-4. **Inicialize as ferramentas no repositório:** `openspec init` (ele mantém o `config.yaml` copiado; se perguntar, não o sobrescreva) e `codegraph init`.
+4. **Inicialize as ferramentas no repositório.** Uma vez por máquina, antes: `openspec config profile` e marque também o `verify`, que o perfil padrão do OpenSpec não traz e o ciclo usa no passo 5 (num repositório já inicializado, rode depois `openspec update`). Então `openspec init` (ele mantém o `config.yaml` copiado; se perguntar, não o sobrescreva) e `codegraph init`.
 5. **Confira:** `bash scripts/check.sh` deve terminar com `ok` na parte das regras e na do método. Com este kit em `../trilha-ai` (ou em `TRILHA_AI`), ele confere também que o comum é cópia idêntica do daqui; sem ele, avisa.
-6. **Primeiro commit,** com a linha de coautoria da IA, **e o repositório no GitHub:** `gh repo create <nome> --private --source . --push` cria o repositório privado, liga-o como `origin` e envia o primeiro commit. Na conta gratuita, o merge só com a verificação verde é regra do método; com o GitHub Pro (ou num repositório público), ligue também a proteção da main, exigindo o check `verificar`.
+6. **Primeiro commit,** com a linha de coautoria da IA, **e o repositório no GitHub:** `gh repo create <nome> --private --source . --push` cria o repositório privado, liga-o como `origin` e envia o primeiro commit. Na conta gratuita, o merge só com a verificação verde é regra do método; com o GitHub Pro (ou num repositório público), ligue também a proteção da main, exigindo o check `verificar`, mas deixe o dono passar por ela: o trabalho fora de change (PRD, TDD, decomposição) e o fechamento de cada change vão direto à main.
 7. **Siga para a etapa 1 do guia:** o PRD.
 
 ## Os arquivos de regras

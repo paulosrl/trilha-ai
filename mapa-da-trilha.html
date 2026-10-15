@@ -186,7 +186,7 @@ a { color: var(--pinho); }
         <thead><tr><th>Quem</th><th>O que faz com o git</th><th>Onde está escrito</th></tr></thead>
         <tbody>
           <tr><td>OpenSpec</td><td>Nada. Cria e move arquivos (a change, o delta, o archive). Os comandos dele nem sabem que o git existe.</td><td>docs/team-workflow.md do OpenSpec</td></tr>
-          <tr><td>O método</td><td>Diz quando fazer commit: ao fim do propose, na aprovação do gate 3, a cada parada do apply e ao fechar cada etapa.</td><td><code>CLAUDE-comum.md</code>, "Trabalho interrompível"</td></tr>
+          <tr><td>O método</td><td>Diz quando fazer commit: em cada passo do ciclo da change, a cada parada do apply e ao fechar cada etapa.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change" e "Trabalho interrompível"</td></tr>
           <tr><td>Claude</td><td>Escreve a mensagem (Conventional Commits, em português, com coautoria) e faz o commit no momento certo.</td><td><code>CLAUDE-comum.md</code>, "Convenções"</td></tr>
           <tr><td>Você</td><td>Autoriza os envios com um "sim": um por etapa e um só para toda a branch de cada change. Autoriza também o merge, que só é pedido com a verificação verde.</td><td><code>CLAUDE-comum.md</code>, "Como trabalhar com o usuário"</td></tr>
           <tr><td>GitHub</td><td>Guarda a cópia fora da máquina, mostra o plano e o código no pull request e roda a verificação (CI) a cada envio. Não faz commit: recebe o que o Claude envia.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change", e <code>github-verificacao.yml</code></td></tr>
@@ -196,7 +196,7 @@ a { color: var(--pinho); }
   </section>
 
   <section class="secao">
-    <h2>O que mudou da versão 1.20 à 1.24</h2>
+    <h2>O que mudou da versão 1.20 à 1.25</h2>
     <p>Cada item foi uma decisão do usuário e já está no kit.</p>
     <ol class="lista">
       <li><div><strong>GitHub obrigatório, com repositório privado criado na etapa 0.</strong><p>O trabalho deixa de viver só no disco. É a regra do trabalho interrompível levada até o fim: o commit sobrevive à queda da sessão, o envio sobrevive à queda da máquina.</p></div></li>
@@ -204,6 +204,7 @@ a { color: var(--pinho); }
       <li><div><strong>O archive dentro do PR, antes do merge.</strong><p>O OpenSpec aceita as duas convenções e pede só que você escolha uma. Dentro do PR, a main nunca tem specs e código em desacordo, e os passos que o método faz depois do archive (o Ciclo, a página) entram juntos.</p></div></li>
       <li><div><strong>Verificação automática (CI) a cada envio, e o merge só com ela verde.</strong><p>O <code>scripts/check.sh</code> e o <code>openspec validate --all --strict</code> rodam no GitHub. O Claude confere com <code>gh pr checks</code> antes de pedir o merge. A proteção da main pelo próprio GitHub é opcional, porque exige o GitHub Pro ou um repositório público.</p></div></li>
       <li><div><strong>Merge com merge commit, nunca squash.</strong><p>Os commits de retomada (propose, gate 3, cada parada do apply) continuam na história. O squash os juntaria num só.</p></div></li>
+      <li><div><strong>A change fecha no merge, não no archive.</strong><p>Depois do archive, a change some do <code>openspec list</code>; só o PR diz se falta o merge. Por isso a retomada de uma sessão olha o PR, e o <code>ANDAMENTO.md</code> só volta a "nada em andamento" depois do merge.</p></div></li>
     </ol>
   </section>
 
@@ -227,6 +228,7 @@ a { color: var(--pinho); }
       voce: "Instala as ferramentas, cria a pasta e copia os arquivos do kit.",
       vocep: "Instala as ferramentas, cria a pasta e copia os arquivos do kit. Cria a conta no GitHub (uma vez só) e autoriza o terminal com o gh.",
       claude: "Inicializa o OpenSpec e o CodeGraph e confere tudo com scripts/check.sh.",
+      claudep: "Inicializa o OpenSpec, com o verify ligado no perfil, e o CodeGraph, e confere tudo com scripts/check.sh.",
       git: "git init e o primeiro commit, com a linha de coautoria da IA.",
       gh: "Nada previsto: o kit não criava o remoto, e o trabalho vivia só no seu disco.",
       ghp: "O repositório nasce privado no GitHub e recebe o primeiro commit. A verificação do kit (github-verificacao.yml, copiado para .github/workflows/) roda a cada envio.",
@@ -298,7 +300,7 @@ a { color: var(--pinho); }
     { id: "archive", nome: "Archive", titulo: "O arquivamento (archive)", gate: "", ciclo: true,
       voce: "Confirma o archive.",
       claude: "Roda /opsx:archive: o delta entra em openspec/specs/ e a change vai para archive/. Depois valida os specs, atualiza o Ciclo e gera de novo sdd/documentacao.html.",
-      git: "Commit do archive.", gitp: "Commit do archive, na branch. O ANDAMENTO.md volta a \"nada em andamento\".",
+      git: "Commit do archive.", gitp: "Commit do archive, na branch. O ANDAMENTO.md aponta o próximo passo: o merge.",
       gh: "Ao fechar a change, envio só com \"sim\", se houver remoto.",
       ghp: "Envio da branch e o PR sai do rascunho. Código, specs e página chegam juntos à main.",
       cmd: "/opsx:archive\ngit commit -m \"docs(openspec): archive da change NN\"",
@@ -307,12 +309,12 @@ a { color: var(--pinho); }
       voce: "Diz \"sim\" para o envio, se houver remoto.",
       vocep: "Lê o PR na ordem que o OpenSpec sugere (proposal, delta, código) e diz \"sim\" ao merge, que só é pedido com a verificação verde.",
       claude: "Envia a main e o ANDAMENTO.md volta a \"nada em andamento\". A próxima change começa na mesma main.",
-      claudep: "Faz o merge, apaga a branch e volta à main atualizada. A próxima change abre uma branch nova.",
+      claudep: "Faz o merge, apaga a branch, volta à main atualizada e põe o ANDAMENTO.md em \"nada em andamento\". A change fecha aqui, não no archive.",
       git: "Tudo já está na main, misturado com as outras changes.",
-      gitp: "A main recebe a change inteira num merge commit. Os commits de retomada continuam na história.",
+      gitp: "A main recebe a change inteira num merge commit, e os commits de retomada continuam na história. Um último commit na main fecha o ANDAMENTO.md.",
       gh: "A main no remoto, se você tiver criado um.",
       ghp: "PR fechado, branch apagada, main com specs e código de acordo.",
-      cmd: "git push", cmdp: "gh pr checks\ngh pr merge --merge --delete-branch\ngit switch main && git pull" },
+      cmd: "git push", cmdp: "gh pr checks\ngh pr merge --merge --delete-branch\ngit switch main && git pull\ngit commit -m \"docs(andamento): change NN fechada\" && git push" },
   ];
 
   const svg = document.getElementById("svg");

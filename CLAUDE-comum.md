@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.24, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.25, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -24,14 +24,14 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 ## O ciclo de cada change (OpenSpec)
 
-1. briefing aprovado pelo usuário;
-2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código;
-3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist de 8 itens da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, ou pelo caminho que ele indicar (o artefato que falta, uma change nova), depois da escolha do usuário; a revisão termina com a auditoria aprovada;
-4. `/opsx:apply`, no fluxo do OpenSpec; termina na tarefa que a regra das tarefas do `openspec/config.yaml` põe por último;
-5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito no `design.md` da change, com o motivo;
-6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista.
+1. briefing aprovado pelo usuário, numa branch `change/NN-nome` aberta a partir da main atualizada antes do primeiro commit da change; o usuário dá aqui um só "sim" para todos os envios da branch até o merge;
+2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código; commit, envio e pull request em rascunho (`gh pr create --draft`), que mostra o plano antes do código;
+3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist de 8 itens da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, ou pelo caminho que ele indicar (o artefato que falta, uma change nova), depois da escolha do usuário; a revisão termina com a auditoria aprovada, em commit e envio;
+4. `/opsx:apply`, no fluxo do OpenSpec; termina na tarefa que a regra das tarefas do `openspec/config.yaml` põe por último; commit e envio a cada parada, nunca um só no fim;
+5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito no `design.md` da change, com o motivo; commit e envio;
+6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista; commit e envio, e o PR sai do rascunho (`gh pr ready`): código, specs e página chegam juntos à main;
+7. o merge, só com a verificação do GitHub verde no PR (`gh pr checks`) e com um "sim" só para ele: `gh pr merge --merge --delete-branch` (merge commit, nunca squash nem rebase, que apagariam os pontos de retomada ou a fronteira da change). De volta à main atualizada, o `ANDAMENTO.md` vai a "nada em andamento" num commit, enviado sob o mesmo "sim". A change fecha aqui, não no archive; a próxima abre outra branch.
 
-- Cada change vive numa branch `change/NN-nome`, aberta a partir da main atualizada no começo do ciclo, antes do primeiro commit da change. Ao fim do propose, a branch vai ao GitHub com um pull request em rascunho (`gh pr create --draft`), que mostra o plano antes do código. Os envios da branch (o do propose e o de cada parada do apply, o backup fora da máquina) pedem um só "sim", dado no começo da change e válido até o merge. O archive e os passos do `operations.archive` acontecem na branch, antes do merge, para que código, specs e página cheguem juntos à main; depois deles, o PR sai do rascunho (`gh pr ready`). O merge na main (`gh pr merge --merge --delete-branch`: merge commit, nunca squash nem rebase, que apagariam os pontos de retomada ou a fronteira da change) pede o seu próprio "sim", e só é pedido com a verificação do GitHub verde no PR (`gh pr checks`); a próxima change abre outra branch a partir da main atualizada.
 - O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele, e o que se sobrepuser muda no método, não no OpenSpec. O ciclo acima usa todos os passos que ele oferece; quando um comando oferece pular um (arquivar sem o verify, aplicar antes da revisão, arquivar sem atualizar os specs), quem escolhe é o usuário, com a recomendação de não pular.
 - Antes de propor, leia o spec da capability em `openspec/specs/` e rode `openspec list`: evita change duplicada ou em colisão. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
 - Os specs em `openspec/specs/` mudam pelos caminhos do OpenSpec: o delta, que o archive aplica, e a edição direta que as instruções dele pedem (o Purpose de um spec existente). Fora disso, à mão, só typo ou link; outra edição à mão pede uma change retroativa.
@@ -48,10 +48,10 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não está em disco se perde, e o que não está anotado precisa ser adivinhado. Por isso:
 
 - `ANDAMENTO.md`, na raiz, existe sempre e diz, em até dez linhas: o estado ("em andamento" ou "nada em andamento"), a etapa (PRD, TDD, decomposição, a change e o passo do ciclo, ou o trabalho fora de change), a unidade em curso (o artefato, ou o apply, cujo progresso é o `tasks.md`), o que já está feito nela, o próximo passo exato e a hora, lida do relógio (`date`) e nunca estimada; não guarda o estado do envio ao remoto, que o `git status` mostra. Escreva-o **antes** de começar cada unidade de trabalho e reescreva-o ao terminá-la; ao fechar a etapa, volte a "nada em andamento". É versionado e vai no commit de cada unidade.
-- Durante o apply, o ponto de retomada é o `tasks.md`, que o OpenSpec marca tarefa a tarefa. Faça um commit ao fim do propose, outro quando a auditoria do gate 3 for aprovada e outro a cada parada do apply, nunca um só commit no fim: o commit é o ponto de retomada que sobrevive a qualquer queda.
+- Durante o apply, o ponto de retomada é o `tasks.md`, que o OpenSpec marca tarefa a tarefa. Os commits de cada passo do ciclo são os pontos de retomada que sobrevivem a qualquer queda.
 - Todo repositório do método tem, desde a etapa 0, um remoto privado no GitHub (`origin`): o commit sobrevive à queda da sessão; o envio, à perda da máquina. Faltou o remoto: diga-o antes de qualquer outra coisa e proponha criá-lo com `gh repo create <nome> --private --source . --push`, só com "sim".
-- Ao fechar uma etapa, diga ao usuário quantos commits estão por enviar ao remoto; envie só com "sim".
-- Ao começar qualquer sessão, antes de agir: leia `ANDAMENTO.md`, `git status`, `git log -3` e, se houver change ativa, `openspec list`; diga onde parou, o que está por commitar e qual é o próximo passo. Trabalho não commitado que você encontrar só é continuado ou descartado com a escolha do usuário.
+- Envios ao remoto: fora de change (o PRD, o TDD, a decomposição e o trabalho que dispensa change), o commit vai direto à main e, ao fechar a etapa, diga ao usuário quantos commits estão por enviar; envie só com "sim". Dentro de change, valem o "sim" dos envios da branch e o do merge (passos 1 e 7 do ciclo).
+- Ao começar qualquer sessão, antes de agir: leia `ANDAMENTO.md`, `git status`, `git log -3`, se houver change ativa, `openspec list` e, numa branch `change/…`, `gh pr view` e `gh pr checks` (depois do archive, só o PR diz se falta o merge); diga onde parou, o que está por commitar e qual é o próximo passo. Trabalho não commitado que você encontrar só é continuado ou descartado com a escolha do usuário.
 
 ## Como trabalhar com o usuário
 
@@ -63,10 +63,10 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - Delegação ("escolha o melhor") não dispensa o gate: siga a recomendação já apresentada e registre a delegação.
 - Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho (a do gate 3 também não): não muda o `ANDAMENTO.md` nem o registro de processo. A escolha, com ou sem correção, é unidade de trabalho: atualiza o `ANDAMENTO.md` e leva o relatório ao registro, se houver; a aprovação do gate 3 atualiza também o "Ciclo" e vai no commit do gate 3. Uma auditoria fecha com a verificação do repositório verde e sem contradição; repetição e redação menores ficam no relatório e se corrigem quando o arquivo mudar por outro motivo.
 - Ao fechar trabalho seu, releia o diff inteiro e corrija antes de entregar.
-- Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração.
+- Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração; o envio ao GitHub segue a regra dos envios, em "Trabalho interrompível".
 - Um "sim" isolado responde só à pergunta principal da mensagem; o envio ao remoto perguntado à parte pede "sim" para ele (ou "sim, em tudo"). Em pergunta com mais de uma decisão, confirme cada uma.
 - Não escreva em outro repositório nem troque de projeto sem ordem explícita nomeando-o.
-- Sugira `/clear` em uma linha no fim da mensagem em todo corte natural (etapa fechada, change arquivada, conferência longa terminada, antes de outra frente), só com tudo em disco e commitado, nunca no meio de uma tarefa; diga o que o usuário recupera ao voltar.
+- Sugira `/clear` em uma linha no fim da mensagem em todo corte natural (etapa fechada, change com o merge feito, conferência longa terminada, antes de outra frente), só com tudo em disco e commitado, nunca no meio de uma tarefa; diga o que o usuário recupera ao voltar.
 
 ## Convenções
 

@@ -126,28 +126,41 @@ class Kit(unittest.TestCase):
     def test_branch_e_pull_request_por_change(self) -> None:
         """v1.21: cada change numa branch; PR em rascunho ao fim do propose; um "sim" para os envios, outro para o merge."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertIn("Cada change vive numa branch `change/NN-nome`", comum)
+        self.assertIn("numa branch `change/NN-nome` aberta a partir da main atualizada", comum)
         self.assertIn("pull request em rascunho (`gh pr create --draft`)", comum)
-        self.assertIn("pedem um só \"sim\", dado no começo da change e válido até o merge", comum)
-        self.assertIn("O merge na main (`gh pr merge --merge --delete-branch`: merge commit, nunca squash", comum)
-        self.assertIn("pede o seu próprio \"sim\"", comum)
+        self.assertIn("um só \"sim\" para todos os envios da branch até o merge", comum)
+        self.assertIn("`gh pr merge --merge --delete-branch` (merge commit, nunca squash", comum)
+        self.assertIn("com um \"sim\" só para ele", comum)
 
     def test_archive_dentro_do_pull_request(self) -> None:
         """v1.22: o archive e os passos seguintes na branch, antes do merge; depois, o PR sai do rascunho."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertIn("O archive e os passos do `operations.archive` acontecem na branch, antes do merge", comum)
-        self.assertIn("o PR sai do rascunho (`gh pr ready`)", comum)
+        self.assertIn("o PR sai do rascunho (`gh pr ready`): código, specs e página chegam juntos à main", comum)
+        self.assertIn("7. o merge", comum)
 
     def test_ci_no_kit_e_merge_so_com_ele_verde(self) -> None:
         """v1.23: o GitHub roda o check.sh e o openspec validate; o merge só é pedido com tudo verde."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         ci = (RAIZ / "github-verificacao.yml").read_text(encoding="utf-8")
-        self.assertIn("só é pedido com a verificação do GitHub verde no PR (`gh pr checks`)", comum)
+        self.assertIn("o merge, só com a verificação do GitHub verde no PR (`gh pr checks`)", comum)
         self.assertIn("run: bash scripts/check.sh", ci)
         self.assertIn("run: openspec validate --all --strict --no-interactive", ci)
         self.assertRegex(ci, r"@fission-ai/openspec@\d+\.\d+\.\d+")
         # Fora de .github/workflows/ no kit: aqui o check.sh reprovaria, porque o kit não segue o método.
         self.assertFalse((RAIZ / ".github/workflows/verificacao.yml").exists())
+
+    def test_a_change_fecha_no_merge(self) -> None:
+        """v1.25: a change fecha no merge; a retomada olha o PR; um só lugar para a regra dos envios."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        readme = (RAIZ / "README.md").read_text(encoding="utf-8")
+        self.assertIn("A change fecha aqui, não no archive", comum)
+        self.assertIn("numa branch `change/…`, `gh pr view` e `gh pr checks`", comum)
+        self.assertIn("change com o merge feito", comum)
+        self.assertNotIn("change arquivada, conferência", comum)
+        self.assertIn("fora de change (o PRD, o TDD, a decomposição e o trabalho que dispensa change), o commit vai direto à main", comum)
+        self.assertEqual(comum.count("envie só com \"sim\""), 1)
+        self.assertIn("o envio ao GitHub segue a regra dos envios", comum)
+        self.assertIn("`openspec config profile` e marque também o `verify`", readme)
 
     def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
         """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
@@ -189,7 +202,7 @@ class Kit(unittest.TestCase):
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("não guarda o estado do envio ao remoto", comum)
         self.assertIn("ou o trabalho fora de change)", comum)
-        self.assertIn("quando a auditoria do gate 3 for aprovada", comum)
+        self.assertIn("a revisão termina com a auditoria aprovada, em commit e envio", comum)
 
     def test_gates_aprovados_como_as_skills_pedem(self) -> None:
         """v1.17: PRD e TDD são aprovados bloco a bloco, como as skills pedem; a restrição imposta é exceção."""
