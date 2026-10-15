@@ -28,8 +28,8 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 4. A documentação
 
-- [ ] 4.1 Escrever `plugins/sdd/README.md` a partir do `README.md` e do `docs/instalacao.md` do plugin: o que cada skill faz, a instalação só como plugin (`sdd@trilha-ai`), o pacote `@fission-ai/openspec`, o encadeamento das três skills, e o ciclo e o versionamento remetidos ao comum; tirar `docs/`, `prompts/` e `exemplo/`; conferir com `git grep -n "npm install -g openspec"`, que não acha nada
-- [ ] 4.2 Citar no `README.md` do kit o comando novo de instalação e o `plugins/sdd/README.md`; conferir com `git grep -n "sdd@pipeline"` restrito ao README do kit, que não acha nada
+- [x] 4.1 Escrever `plugins/sdd/README.md` a partir do `README.md` e do `docs/instalacao.md` do plugin: o que cada skill faz, a instalação só como plugin (`sdd@trilha-ai`), o pacote `@fission-ai/openspec`, o encadeamento das três skills, e o ciclo e o versionamento remetidos ao comum; tirar `docs/`, `prompts/` e `exemplo/`; conferir com `git grep -n "npm install -g openspec"`, que não acha nada
+- [x] 4.2 Citar no `README.md` do kit o comando novo de instalação e o `plugins/sdd/README.md`; conferir com `git grep -n "sdd@pipeline"` restrito ao README do kit, que não acha nada
 
 ## 5. Execução manual
 
