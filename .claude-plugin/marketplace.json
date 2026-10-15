@@ -1,0 +1,15 @@
+{
+  "name": "pipeline-prd-tdd-openspec",
+  "description": "Pipeline em 3 estágios para desenvolvimento assistido por IA: PRD (produto) → TDD (decisão técnica) → OpenSpec (implementação)",
+  "owner": {
+    "name": "Paulo (paulosrl)",
+    "url": "https://github.com/paulosrl"
+  },
+  "plugins": [
+    {
+      "name": "sdd",
+      "source": "./plugins/sdd",
+      "description": "Skills /sdd:prd, /sdd:tdd e /sdd:briefing — da ideia de produto ao briefing pronto para o /opsx:propose do OpenSpec"
+    }
+  ]
+}
