@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.33, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.34, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -66,7 +66,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração; o envio ao GitHub segue a regra dos envios, em "Trabalho interrompível".
 - Um "sim" isolado responde só à pergunta principal da mensagem; o envio ao remoto perguntado à parte pede "sim" para ele (ou "sim, em tudo"). Em pergunta com mais de uma decisão, confirme cada uma.
 - Não escreva em outro repositório nem troque de projeto sem ordem explícita nomeando-o.
-- Sugira `/clear` em uma linha no fim da mensagem em todo corte natural (etapa fechada, change com o merge feito, conferência longa terminada, antes de outra frente), só com tudo em disco e commitado, nunca no meio de uma tarefa; diga o que o usuário recupera ao voltar.
+- Sugira `/clear` em uma linha no fim da mensagem em todo corte natural (etapa fechada, change com o merge feito, conferência longa terminada, antes de outra frente), só com tudo em disco e commitado, nunca no meio de uma tarefa; diga o que o usuário recupera ao voltar e mostre, num bloco de código, o comando exato a dar na próxima sessão.
 
 ## Convenções
 

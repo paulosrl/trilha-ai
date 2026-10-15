@@ -45,6 +45,11 @@ class Kit(unittest.TestCase):
         # O config.yaml vai a todo projeto: também não cita um.
         self.assertNotIn("Consulta Pública", (RAIZ / "openspec/config.yaml").read_text(encoding="utf-8"))
 
+    def test_clear_com_o_comando_da_proxima_sessao(self) -> None:
+        """v1.34: quem sugere o /clear mostra o comando exato a dar ao voltar, pronto para copiar."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("e mostre, num bloco de código, o comando exato a dar na próxima sessão", comum)
+
     def test_comum_sem_repetir_o_openspec_nem_a_si_mesmo(self) -> None:
         """v1.32: a instrução do propose já manda ler o projeto e os specs; o pkill -f num lugar só."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
