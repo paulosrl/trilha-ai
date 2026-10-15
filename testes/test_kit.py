@@ -98,6 +98,12 @@ class Kit(unittest.TestCase):
         self.assertIn("não sobe a versão dele nem a linha \"de origem\" de quem o cita", comum)
         self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário.", comum)
 
+    def test_prd_e_spec_em_desacordo(self) -> None:
+        """v1.15: o PRD aprovado manda sobre o spec; se o certo for o spec, o PRD ganha versão nova."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("PRD e spec em desacordo: vale o PRD aprovado", comum)
+        self.assertIn("se o certo for o spec, o PRD ganha versão nova", comum)
+
     def test_archive_gera_a_pagina(self) -> None:
         """v1.13: os passos depois do archive vivem só no config.yaml; o comum aponta para lá."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
