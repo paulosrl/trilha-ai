@@ -123,6 +123,7 @@ def atualizar(pasta: Path) -> int:
             _copiar(pasta, nome, origem)
             print(f"aviso: {nome} não existia e foi criado do modelo do kit; preencha-o")
     _ligar_travas(pasta)
+    _sincronizar_regras(pasta)
     if (pasta / "sdd").is_dir():
         _rodar(pasta, [sys.executable, "-I", "scripts/gerar_pagina_sdd.py"])
 
@@ -155,6 +156,34 @@ def _ligar_travas(pasta: Path) -> None:
         settings.parent.mkdir(parents=True, exist_ok=True)
         texto = json.dumps(atual, ensure_ascii=False, indent=2) + "\n"
         settings.write_text(texto, encoding="utf-8")
+
+
+def _regras(texto: str) -> str:
+    """A parte do config.yaml que vem do kit: das regras por artefato até o fim."""
+    return texto[texto.find("\nrules:") + 1 :] if "\nrules:" in texto else ""
+
+
+def _sincronizar_regras(pasta: Path) -> None:
+    """Atualiza as regras do config.yaml só se forem as de uma versão do kit, sem mudança."""
+    config = pasta / "openspec" / "config.yaml"
+    if not config.is_file():
+        return
+    texto = config.read_text(encoding="utf-8")
+    atuais = _regras((KIT / "openspec" / "config.yaml").read_text(encoding="utf-8"))
+    if not _regras(texto) or _regras(texto) == atuais:
+        return
+    for tag in _git(KIT, "tag", "--list", "v*").split():
+        antigas = subprocess.run(
+            ["git", "-C", str(KIT), "show", f"{tag}:openspec/config.yaml"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout
+        if _regras(antigas) and _regras(antigas) == _regras(texto):
+            config.write_text(texto[: texto.find("\nrules:") + 1] + atuais, encoding="utf-8")
+            print(f"regras do openspec/config.yaml atualizadas: eram as do kit {tag}")
+            return
+    print("aviso: o openspec/config.yaml tem regras próprias; compare-as com as do kit à mão")
 
 
 def _rodar(pasta: Path, comando: list[str]) -> bool:

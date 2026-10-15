@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0  # as tags vX.Y, que a ferramenta usa para reconhecer regras antigas
       - name: Os testes do kit (Python 3 puro, sem dependências)
         run: python3 -m unittest discover -s testes -v
       - name: Os scripts que os projetos copiam passam no ruff (lint e formato, limite de 100)

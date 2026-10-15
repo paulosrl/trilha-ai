@@ -657,6 +657,30 @@ class Kit(unittest.TestCase):
             self.assertIn("CLAUDE-comum.md", subprocess.run(
                 ["git", "status", "--short"], cwd=pasta, capture_output=True, text=True).stdout)
 
+    def test_atualizar_sincroniza_so_as_regras_que_vieram_do_kit(self) -> None:
+        env = {**os.environ, **GIT_TESTE}
+        antigo = subprocess.run(["git", "show", "v1.25:openspec/config.yaml"], cwd=RAIZ,
+                                capture_output=True, text=True, check=True).stdout
+        atual = (RAIZ / "openspec/config.yaml").read_text(encoding="utf-8")
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_velho(tmp)
+            config = pasta / "openspec/config.yaml"
+            contexto = "schema: spec-driven\ncontext: |\n  Projeto: o meu.\n"
+            config.write_text(contexto + antigo[antigo.find("\nrules:"):], encoding="utf-8")
+            subprocess.run(["git", "commit", "-qam", "regras da 1.25"], cwd=pasta, env=env, check=True)
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertIn("eram as do kit v1.2", saida.stdout)
+            texto = config.read_text(encoding="utf-8")
+            self.assertTrue(texto.startswith(contexto))
+            self.assertEqual(texto[texto.find("\nrules:"):], atual[atual.find("\nrules:"):])
+            subprocess.run(["git", "checkout", "-q", "."], cwd=pasta, check=True)
+            subprocess.run(["git", "clean", "-qfd"], cwd=pasta, check=True)
+            config.write_text(contexto + "rules:\n  proposal:\n    - Uma regra própria.\n")
+            subprocess.run(["git", "commit", "-qam", "regras próprias"], cwd=pasta, env=env, check=True)
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertIn("regras próprias", saida.stdout)
+            self.assertIn("Uma regra própria.", config.read_text(encoding="utf-8"))
+
     def test_ferramenta_recusa_trabalho_pendente_change_em_curso_e_outra_branch(self) -> None:
         env = {**os.environ, **GIT_TESTE}
         with tempfile.TemporaryDirectory() as tmp:
