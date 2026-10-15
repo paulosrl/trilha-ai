@@ -2,13 +2,15 @@
 
 Trilha AI é um método de desenvolvimento assistido por IA: PRD → TDD → OpenSpec, com o usuário aprovando em gates e cada cenário virando um teste. Este repositório é a fonte do padrão que todo repositório do método copia.
 
+O percurso inteiro, estação por estação, com o que acontece no git e no GitHub em cada uma, está desenhado em `mapa-da-trilha.html`: abra-o no navegador. Ele explica o método e não se copia para os projetos.
+
 Este repositório é a **fonte** dos arquivos que todo repositório novo copia. O `CLAUDE-comum.md` daqui é a versão vigente do padrão (a linha "Versão" no topo dele diz qual). Os outros arquivos são esqueletos, com o que preencher entre `<` e `>`.
 
 Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do aluno, no repositório do curso (https://github.com/paulosrl/consulta-publica, pasta `docs/curso/`). A ordem, resumida:
 
 1. **Instale as ferramentas** (Claude Code, OpenSpec, CodeGraph e o plugin `sdd`), pela subseção "Instalar as ferramentas" da etapa 0, que copia os comandos das documentações oficiais. O kit precisa também do **Python 3** instalado, porque o verificador `scripts/confere_regras.py` é um programa Python sem dependências; no Ubuntu e no WSL ele costuma vir instalado: confira com `python3 --version`. Precisa ainda de uma **conta no GitHub** e do GitHub CLI (`gh`, instalação em https://cli.github.com), autenticado uma vez com `gh auth login`: todo repositório do método tem um remoto privado no GitHub.
 2. **Crie a pasta e o git:** `mkdir <nome> && cd <nome> && git init`.
-3. **Copie os arquivos deste repositório** (menos este README, o `CLAUDE.md` e a pasta `testes/`) para a raiz do repositório novo, mantendo os caminhos:
+3. **Copie os arquivos deste repositório** (menos este README, o `CLAUDE.md`, o `mapa-da-trilha.html` e a pasta `testes/`) para a raiz do repositório novo, mantendo os caminhos:
 
    | Arquivo | O que fazer |
    |---|---|

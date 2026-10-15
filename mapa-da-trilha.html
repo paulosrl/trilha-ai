@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mapa da Trilha AI</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Big+Shoulders+Display:wght@700;800&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: um mapa de trilha. As estações do método correm no alto; embaixo, o git e o GitHub
+   se desenham passo a passo; o painel da estação diz quem faz o quê. */
+:root {
+  --chao: #F2F4EE;
+  --papel: #FBFCF8;
+  --tinta: #17221C;
+  --tinta-2: #4A5A50;
+  --linha: #C9D2C8;
+  --pinho: #1F5C43;
+  --marca: #C98F00;
+  --marca-fundo: #FFF3CC;
+  --ramo: #2F6FAE;
+  --ramo-fundo: #E3EEF8;
+  --fonte-placa: "Big Shoulders Display", "Arial Narrow", Impact, sans-serif;
+  --fonte-texto: "Atkinson Hyperlegible", "Segoe UI", Roboto, sans-serif;
+  --fonte-cod: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --chao: #0E1612; --papel: #15201A; --tinta: #E6EDE6; --tinta-2: #9DB0A3; --linha: #2C3B33;
+    --pinho: #5BBF8E; --marca: #F2C230; --marca-fundo: #3A3112; --ramo: #6FA8E0; --ramo-fundo: #162638;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --chao: #0E1612; --papel: #15201A; --tinta: #E6EDE6; --tinta-2: #9DB0A3; --linha: #2C3B33;
+  --pinho: #5BBF8E; --marca: #F2C230; --marca-fundo: #3A3112; --ramo: #6FA8E0; --ramo-fundo: #162638;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--chao); color: var(--tinta);
+  font: 16px/1.55 var(--fonte-texto);
+}
+.pagina {
+  max-width: 1180px; margin: 0 auto;
+  padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 40px;
+}
+h1, h2 { font-family: var(--fonte-placa); text-transform: uppercase; letter-spacing: .02em; line-height: 1; margin: 0; text-wrap: balance; }
+h1 { font-size: clamp(2.6rem, 7vw, 4.4rem); font-weight: 800; }
+h2 { font-size: clamp(1.7rem, 4vw, 2.3rem); font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+code { font-family: var(--fonte-cod); font-size: .86em; background: var(--papel); border: 1px solid var(--linha); border-radius: 4px; padding: 0 .3em; overflow-wrap: anywhere; }
+a { color: var(--pinho); }
+:focus-visible { outline: 3px solid var(--marca); outline-offset: 2px; }
+
+.topo { display: grid; gap: 14px; }
+.rotulo { font-size: .78rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--tinta-2); }
+.topo p { color: var(--tinta-2); font-size: 1.08rem; }
+
+.controles { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+.chave { display: inline-flex; border: 2px solid var(--tinta); border-radius: 999px; padding: 3px; background: var(--papel); }
+.chave button {
+  font: 700 .95rem var(--fonte-texto); border: 0; background: transparent; color: var(--tinta);
+  padding: 8px 16px; border-radius: 999px; cursor: pointer;
+}
+.chave button[aria-pressed="true"] { background: var(--tinta); color: var(--chao); }
+.botoes { display: flex; gap: 8px; flex-wrap: wrap; }
+.botao {
+  font: 700 .95rem var(--fonte-texto); cursor: pointer; padding: 9px 16px; border-radius: 6px;
+  border: 2px solid var(--tinta); background: var(--papel); color: var(--tinta);
+}
+.botao.principal { background: var(--marca); border-color: var(--marca); color: #17221C; }
+
+.mapa { background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; overflow-x: auto; }
+.mapa svg { display: block; min-width: 900px; width: 100%; height: auto; }
+.legenda { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: .85rem; color: var(--tinta-2); padding: 0 4px; }
+.legenda span { display: inline-flex; align-items: center; gap: 8px; }
+.amostra { width: 22px; height: 4px; border-radius: 2px; display: inline-block; }
+
+/* SVG */
+.trilho { stroke: var(--tinta); stroke-width: 3; stroke-dasharray: 2 7; stroke-linecap: round; fill: none; }
+.estacao rect { fill: var(--papel); stroke: var(--tinta); stroke-width: 2; }
+.estacao .faixa { fill: var(--pinho); stroke: none; }
+.estacao text { fill: var(--tinta); font-family: var(--fonte-texto); font-size: 13px; font-weight: 700; text-anchor: middle; }
+.estacao .num { font-family: var(--fonte-placa); font-size: 15px; fill: var(--tinta-2); }
+.estacao { cursor: pointer; }
+.estacao.sel rect { stroke: var(--marca); stroke-width: 3; }
+.estacao.sel .faixa { fill: var(--marca); }
+.gate { fill: var(--marca); font-family: var(--fonte-cod); font-size: 10px; font-weight: 500; text-anchor: middle; }
+.ciclo-chave { stroke: var(--tinta-2); stroke-width: 1.5; fill: none; }
+.ciclo-txt { fill: var(--tinta-2); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; text-anchor: middle; }
+.raia { fill: var(--tinta-2); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.raia-fio { stroke: var(--linha); stroke-width: 1; }
+.main { stroke: var(--pinho); stroke-width: 4; fill: none; }
+.ramo { stroke: var(--ramo); stroke-width: 4; fill: none; }
+.commit { fill: var(--papel); stroke-width: 3; }
+.commit.m { stroke: var(--pinho); }
+.commit.r { stroke: var(--ramo); }
+.merge { fill: var(--pinho); }
+.envio { stroke: var(--tinta-2); stroke-width: 1.6; fill: none; }
+.envio.duvida { stroke-dasharray: 3 4; }
+.nuvem { fill: var(--ramo-fundo); stroke: var(--ramo); stroke-width: 1.6; }
+.pr { fill: var(--ramo-fundo); stroke: var(--ramo); stroke-width: 1.6; }
+.pr-txt { fill: var(--ramo); font-size: 11.5px; font-weight: 700; }
+.ci { fill: var(--pinho); font-size: 13px; font-weight: 700; text-anchor: middle; }
+.nota { fill: var(--tinta-2); font-size: 11.5px; }
+.nota.forte { fill: var(--tinta); font-weight: 700; }
+.cadeado { fill: none; stroke: var(--pinho); stroke-width: 1.8; }
+.andarilho { fill: var(--marca); stroke: var(--tinta); stroke-width: 2; }
+[data-passo] { transition: opacity .45s ease; }
+.futuro { opacity: .28; }
+.agora .commit, .commit.agora { animation: pulso 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes pulso { 50% { transform: scale(1.35); } }
+#andarilho-g { transition: transform .8s cubic-bezier(.5,.1,.3,1); }
+
+/* Painel da estação */
+.painel { display: grid; gap: 18px; background: var(--papel); border: 1px solid var(--linha); border-radius: 10px; padding: 24px clamp(16px, 3vw, 32px); }
+.painel-topo { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline; }
+.painel-num { font-family: var(--fonte-placa); font-size: 2.6rem; font-weight: 800; color: var(--marca); line-height: 1; }
+.selo { font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 3px 10px; border-radius: 999px; background: var(--marca-fundo); color: var(--tinta); border: 1px solid var(--marca); }
+.papeis { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0; border-top: 1px solid var(--linha); }
+.papel { padding: 16px 18px 16px 0; border-bottom: 1px solid var(--linha); display: grid; gap: 6px; align-content: start; min-width: 0; }
+.papel h3 { margin: 0; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-2); display: flex; gap: 8px; align-items: center; }
+.papel p { font-size: .98rem; }
+.novo { font-size: .68rem; letter-spacing: .08em; padding: 1px 7px; border-radius: 999px; background: var(--ramo-fundo); color: var(--ramo); border: 1px solid var(--ramo); }
+.comando { font-family: var(--fonte-cod); font-size: .86rem; background: var(--chao); border: 1px solid var(--linha); border-radius: 6px; padding: 10px 12px; overflow-x: auto; white-space: pre; }
+.troca { animation: entra .4s ease; }
+@keyframes entra { from { opacity: .2; transform: translateY(6px); } }
+
+/* Seções de texto */
+.secao { display: grid; gap: 18px; }
+.quem { width: 100%; border-collapse: collapse; font-size: .98rem; }
+.quem th, .quem td { text-align: left; padding: 12px 14px 12px 0; border-bottom: 1px solid var(--linha); vertical-align: top; }
+.quem th { font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-2); }
+.quem td:first-child { font-weight: 700; white-space: nowrap; }
+.tabela { overflow-x: auto; }
+.lista { display: grid; gap: 14px; padding: 0; margin: 0; list-style: none; counter-reset: d; }
+.lista li { display: grid; grid-template-columns: 2.4rem 1fr; gap: 12px; align-items: start; }
+.lista li::before { counter-increment: d; content: counter(d); font-family: var(--fonte-placa); font-size: 1.8rem; font-weight: 800; color: var(--marca); line-height: 1; }
+.lista strong { display: block; }
+.lista p { color: var(--tinta-2); }
+.fontes { font-size: .88rem; color: var(--tinta-2); display: grid; gap: 4px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+<main class="pagina">
+
+  <header class="topo">
+    <span class="rotulo">Método Trilha AI · PRD → TDD → OpenSpec</span>
+    <h1>Mapa da Trilha AI</h1>
+    <p>O percurso inteiro de um projeto, da pasta vazia à change entregue, com o que acontece no seu computador e no GitHub em cada estação. Clique numa estação ou aperte <strong>Percorrer</strong>.</p>
+  </header>
+
+  <section class="secao" aria-label="O mapa">
+    <div class="controles">
+      <div class="chave" role="group" aria-label="Qual versão do processo">
+        <button type="button" id="modo-hoje" aria-pressed="false">Antes da 1.20</button>
+        <button type="button" id="modo-proposta" aria-pressed="true">Agora</button>
+      </div>
+      <div class="botoes">
+        <button type="button" class="botao" id="voltar" aria-label="Estação anterior">‹ Anterior</button>
+        <button type="button" class="botao principal" id="percorrer">▶ Percorrer</button>
+        <button type="button" class="botao" id="avancar" aria-label="Próxima estação">Próxima ›</button>
+      </div>
+    </div>
+    <div class="mapa"><svg id="svg" viewBox="0 0 1120 330" role="img" aria-label="Mapa das estações do método, com o git e o GitHub"></svg></div>
+    <div class="legenda" id="legenda"></div>
+  </section>
+
+  <section class="painel" id="painel" aria-live="polite"></section>
+
+  <section class="secao">
+    <h2>Quem faz o commit?</h2>
+    <p>O OpenSpec só lê e escreve arquivos em <code>openspec/</code>. A documentação oficial é direta: ele <em>nunca faz commit, branch, push ou pull</em> no seu projeto. No Trilha AI, quem decide quando fazer commit é o método, quem faz é o Claude e quem libera o envio é você.</p>
+    <div class="tabela">
+      <table class="quem">
+        <thead><tr><th>Quem</th><th>O que faz com o git</th><th>Onde está escrito</th></tr></thead>
+        <tbody>
+          <tr><td>OpenSpec</td><td>Nada. Cria e move arquivos (a change, o delta, o archive). Os comandos dele nem sabem que o git existe.</td><td>docs/team-workflow.md do OpenSpec</td></tr>
+          <tr><td>O método</td><td>Diz quando fazer commit: ao fim do propose, na aprovação do gate 3, a cada parada do apply e ao fechar cada etapa.</td><td><code>CLAUDE-comum.md</code>, "Trabalho interrompível"</td></tr>
+          <tr><td>Claude</td><td>Escreve a mensagem (Conventional Commits, em português, com coautoria) e faz o commit no momento certo.</td><td><code>CLAUDE-comum.md</code>, "Convenções"</td></tr>
+          <tr><td>Você</td><td>Autoriza os envios com um "sim": um por etapa e um só para toda a branch de cada change. Autoriza também o merge, que só é pedido com a verificação verde.</td><td><code>CLAUDE-comum.md</code>, "Como trabalhar com o usuário"</td></tr>
+          <tr><td>GitHub</td><td>Guarda a cópia fora da máquina, mostra o plano e o código no pull request e roda a verificação (CI) a cada envio. Não faz commit: recebe o que o Claude envia.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change", e <code>github-verificacao.yml</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="secao">
+    <h2>O que mudou da versão 1.20 à 1.24</h2>
+    <p>Cada item foi uma decisão do usuário e já está no kit.</p>
+    <ol class="lista">
+      <li><div><strong>GitHub obrigatório, com repositório privado criado na etapa 0.</strong><p>O trabalho deixa de viver só no disco. É a regra do trabalho interrompível levada até o fim: o commit sobrevive à queda da sessão, o envio sobrevive à queda da máquina.</p></div></li>
+      <li><div><strong>Uma branch e um pull request por change.</strong><p>A branch nasce no começo do ciclo; o PR em rascunho nasce com o propose e mostra o plano antes de qualquer código. Um só "sim" autoriza os envios da branch até o merge. É a rotina que o próprio OpenSpec recomenda.</p></div></li>
+      <li><div><strong>O archive dentro do PR, antes do merge.</strong><p>O OpenSpec aceita as duas convenções e pede só que você escolha uma. Dentro do PR, a main nunca tem specs e código em desacordo, e os passos que o método faz depois do archive (o Ciclo, a página) entram juntos.</p></div></li>
+      <li><div><strong>Verificação automática (CI) a cada envio, e o merge só com ela verde.</strong><p>O <code>scripts/check.sh</code> e o <code>openspec validate --all --strict</code> rodam no GitHub. O Claude confere com <code>gh pr checks</code> antes de pedir o merge. A proteção da main pelo próprio GitHub é opcional, porque exige o GitHub Pro ou um repositório público.</p></div></li>
+      <li><div><strong>Merge com merge commit, nunca squash.</strong><p>Os commits de retomada (propose, gate 3, cada parada do apply) continuam na história. O squash os juntaria num só.</p></div></li>
+    </ol>
+  </section>
+
+  <section class="fontes">
+    <span class="rotulo">Fontes</span>
+    <a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/team-workflow.md">OpenSpec: OpenSpec on a Team (branch, PR e quando arquivar)</a>
+    <a href="https://github.com/Fission-AI/OpenSpec/blob/main/docs/reviewing-changes.md">OpenSpec: Reviewing a Change (as duas revisões)</a>
+    <a href="https://github.com/github/spec-kit">GitHub Spec Kit (uma branch numerada por feature)</a>
+    <a href="https://github.com/anthropics/claude-code-action">Claude Code Action (o Claude revisando o PR)</a>
+  </section>
+</main>
+
+<script>
+(() => {
+  const X = [55, 155, 255, 355, 455, 555, 655, 755, 855, 955, 1060];
+  const Y = { trilho: 52, main: 175, ramo: 225, nuvem: 290 };
+
+  // Cada estação: quem faz o quê; "hoje" e "proposta" só onde diferem.
+  const E = [
+    { id: "preparar", nome: "Preparar", titulo: "Preparar o terreno", gate: "",
+      voce: "Instala as ferramentas, cria a pasta e copia os arquivos do kit.",
+      vocep: "Instala as ferramentas, cria a pasta e copia os arquivos do kit. Cria a conta no GitHub (uma vez só) e autoriza o terminal com o gh.",
+      claude: "Inicializa o OpenSpec e o CodeGraph e confere tudo com scripts/check.sh.",
+      git: "git init e o primeiro commit, com a linha de coautoria da IA.",
+      gh: "Nada previsto: o kit não criava o remoto, e o trabalho vivia só no seu disco.",
+      ghp: "O repositório nasce privado no GitHub e recebe o primeiro commit. A verificação do kit (github-verificacao.yml, copiado para .github/workflows/) roda a cada envio.",
+      cmd: "git init\ngit commit -m \"chore: kit Trilha AI\"",
+      cmdp: "gh auth login\ngit init && git commit -m \"chore: kit Trilha AI\"\ngh repo create <nome> --private --source . --push" },
+    { id: "prd", nome: "PRD", titulo: "O produto (PRD)", gate: "gate 1",
+      voce: "Aprova o PRD bloco a bloco.",
+      claude: "Escreve sdd/prd-<nome>.md com a skill sdd:prd. Nenhuma palavra de tecnologia.",
+      git: "Commit na main com o PRD aprovado e o ANDAMENTO.md.",
+      gh: "Ao fechar a etapa, o Claude diz quantos commits faltam enviar. Só envia com o seu \"sim\", e só se você tiver criado um remoto por conta própria.",
+      ghp: "Envio da main com o seu \"sim\". A cópia no GitHub é o backup: se a máquina morrer, o PRD sobrevive.",
+      cmd: "git commit -m \"docs(prd): …\"", cmdp: "git commit -m \"docs(prd): …\"\ngit push" },
+    { id: "tdd", nome: "TDD", titulo: "As decisões técnicas (TDD)", gate: "gate 2",
+      voce: "Aprova cada decisão técnica, com a consequência de cada opção.",
+      claude: "Escreve sdd/tdd-<nome>.md com a skill sdd:tdd (os ADRs) e preenche a parte da stack do check.sh.",
+      git: "Commit na main com o TDD aprovado.",
+      gh: "Igual ao PRD: envio só com \"sim\", se houver remoto.",
+      ghp: "Envio com \"sim\". Daqui em diante o CI roda também o lint e os testes da stack escolhida.",
+      cmd: "git commit -m \"docs(tdd): …\"", cmdp: "git commit -m \"docs(tdd): …\"\ngit push" },
+    { id: "decomp", nome: "Decompor", titulo: "A decomposição em changes", gate: "aprovação",
+      voce: "Aprova as changes e a ordem de execução.",
+      claude: "Escreve sdd/decomposicao-<nome>.md com a skill sdd:briefing, com a tabela Ciclo.",
+      git: "Commit na main com a decomposição.",
+      gh: "Envio só com \"sim\", se houver remoto.",
+      ghp: "Envio com \"sim\". Dali em diante a main só recebe change por pull request, com a verificação verde. Com o GitHub Pro, o próprio GitHub pode barrar o resto.",
+      cmd: "git commit -m \"docs(decomposicao): …\"",
+      cmdp: "git commit -m \"docs(decomposicao): …\"\ngit push" },
+    { id: "briefing", nome: "Briefing", titulo: "O briefing da change", gate: "aprovação", ciclo: true,
+      voce: "Aprova o briefing da change.",
+      claude: "Escreve sdd/briefing-openspec/briefing-change-NN-<nome>.md: requisitos, critérios de aceite e ADRs na íntegra.",
+      git: "Commit na main.",
+      gitp: "Abre a branch change/NN-nome a partir da main atualizada. O briefing é o primeiro commit dela.",
+      gh: "Nada.", ghp: "Nada ainda: a branch existe só no seu computador. Aqui você dá o \"sim\" único que vale para todos os envios desta branch.",
+      cmd: "git commit -m \"docs(briefing): change NN\"",
+      cmdp: "git switch main && git pull\ngit switch -c change/NN-nome\ngit commit -m \"docs(briefing): change NN\"" },
+    { id: "propose", nome: "Propose", titulo: "O plano da change (propose)", gate: "", ciclo: true,
+      voce: "Espera. Nenhum código é escrito nesta estação.",
+      claude: "Roda /opsx:propose com o briefing: proposal, specs (o delta), design e tasks em openspec/changes/NN-nome/.",
+      git: "Commit ao fim do propose, como o CLAUDE-comum.md manda.",
+      gitp: "Commit ao fim do propose, na branch.",
+      gh: "Nada até o fim da etapa.",
+      ghp: "Envio da branch e PR em rascunho. O CI roda openspec validate --strict. O PR mostra o plano antes do código.",
+      cmd: "/opsx:propose @sdd/briefing-openspec/briefing-change-NN-….md\ngit commit -m \"feat(openspec): propose NN\"",
+      cmdp: "/opsx:propose @sdd/briefing-openspec/briefing-change-NN-….md\ngit commit -m \"feat(openspec): propose NN\"\ngit push -u origin change/NN-nome\ngh pr create --draft" },
+    { id: "revisao", nome: "Revisão", titulo: "A revisão do plano", gate: "gate 3", ciclo: true,
+      voce: "Escolhe o que corrigir e aprova a auditoria.",
+      claude: "Audita pelo checklist de 8 itens da skill sdd:briefing e corrige com /opsx:update, depois da sua escolha.",
+      git: "Commit da auditoria aprovada, com a tabela Ciclo atualizada.",
+      gitp: "Commit da auditoria aprovada, com a tabela Ciclo atualizada, na branch.",
+      gh: "Nada até o fim da etapa.", ghp: "Envio da branch. O PR passa a mostrar o plano já auditado.",
+      cmd: "git commit -m \"docs(openspec): gate 3 da change NN\"",
+      cmdp: "git commit -m \"docs(openspec): gate 3 da change NN\"\ngit push" },
+    { id: "apply", nome: "Apply", titulo: "O código (apply)", gate: "", ciclo: true,
+      voce: "Acompanha. Na última tarefa, olha a execução manual, em dado descartável.",
+      claude: "Roda /opsx:apply: o código, tarefa a tarefa, com o tasks.md marcando o progresso.",
+      git: "Um commit a cada parada, nunca um só no fim.",
+      gitp: "Um commit a cada parada, na branch.",
+      gh: "Os commits ficam só no disco até o fim da etapa.",
+      ghp: "Envio da branch a cada parada: backup fora da máquina. O CI roda os testes a cada envio.",
+      cmd: "/opsx:apply\ngit commit -m \"feat(...): tarefas 1.1 a 2.3\"",
+      cmdp: "/opsx:apply\ngit commit -m \"feat(...): tarefas 1.1 a 2.3\"\ngit push" },
+    { id: "verify", nome: "Verify", titulo: "A conferência (verify)", gate: "", ciclo: true,
+      voce: "Decide cada sugestão: aplicar ou recusar.",
+      claude: "Roda /opsx:verify e registra cada sugestão no design.md, aplicada ou recusada, com o motivo.",
+      git: "Commit.", gitp: "Commit, na branch.",
+      gh: "Nada até o fim da etapa.", ghp: "Envio da branch. CI verde.",
+      cmd: "/opsx:verify\ngit commit -m \"fix(...): sugestões do verify\"",
+      cmdp: "/opsx:verify\ngit commit -m \"fix(...): sugestões do verify\"\ngit push" },
+    { id: "archive", nome: "Archive", titulo: "O arquivamento (archive)", gate: "", ciclo: true,
+      voce: "Confirma o archive.",
+      claude: "Roda /opsx:archive: o delta entra em openspec/specs/ e a change vai para archive/. Depois valida os specs, atualiza o Ciclo e gera de novo sdd/documentacao.html.",
+      git: "Commit do archive.", gitp: "Commit do archive, na branch. O ANDAMENTO.md volta a \"nada em andamento\".",
+      gh: "Ao fechar a change, envio só com \"sim\", se houver remoto.",
+      ghp: "Envio da branch e o PR sai do rascunho. Código, specs e página chegam juntos à main.",
+      cmd: "/opsx:archive\ngit commit -m \"docs(openspec): archive da change NN\"",
+      cmdp: "/opsx:archive\ngit commit -m \"docs(openspec): archive da change NN\"\ngit push\ngh pr ready" },
+    { id: "merge", nome: "Entrega", nomep: "Merge", titulo: "A entrega", titulop: "O merge", gate: "seu sim", ciclo: true,
+      voce: "Diz \"sim\" para o envio, se houver remoto.",
+      vocep: "Lê o PR na ordem que o OpenSpec sugere (proposal, delta, código) e diz \"sim\" ao merge, que só é pedido com a verificação verde.",
+      claude: "Envia a main e o ANDAMENTO.md volta a \"nada em andamento\". A próxima change começa na mesma main.",
+      claudep: "Faz o merge, apaga a branch e volta à main atualizada. A próxima change abre uma branch nova.",
+      git: "Tudo já está na main, misturado com as outras changes.",
+      gitp: "A main recebe a change inteira num merge commit. Os commits de retomada continuam na história.",
+      gh: "A main no remoto, se você tiver criado um.",
+      ghp: "PR fechado, branch apagada, main com specs e código de acordo.",
+      cmd: "git push", cmdp: "gh pr checks\ngh pr merge --merge --delete-branch\ngit switch main && git pull" },
+  ];
+
+  const svg = document.getElementById("svg");
+  const painel = document.getElementById("painel");
+  const legenda = document.getElementById("legenda");
+  let modo = "proposta";
+  let atual = 0;
+  let relogio = null;
+
+  const NS = "http://www.w3.org/2000/svg";
+  // el(nome, atributos, [texto], [pai]): o texto e o pai são opcionais, em qualquer ordem.
+  function el(nome, attrs, a, b) {
+    const [texto, pai] = typeof a === "string" ? [a, b] : [b, a];
+    const n = document.createElementNS(NS, nome);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    if (texto !== undefined) n.textContent = texto;
+    (pai || svg).appendChild(n);
+    return n;
+  }
+  const grupo = (passo, pai) => el("g", { "data-passo": passo }, pai);
+  const p = () => modo === "proposta";
+  const val = (e, k) => (p() && e[k + "p"] !== undefined ? e[k + "p"] : e[k]);
+
+  function desenhar() {
+    svg.replaceChildren();
+    // Raias
+    const raias = p()
+      ? [["main", Y.main], ["branch da change", Y.ramo], ["GitHub", Y.nuvem]]
+      : [["main", Y.main], ["GitHub", Y.nuvem]];
+    for (const [nome, y] of raias) {
+      if (y !== Y.nuvem) el("line", { x1: 8, x2: 1112, y1: y + 20, y2: y + 20, class: "raia-fio" });
+      el("text", { x: 10, y: y - 16, class: "raia" }, nome);
+    }
+    // Chave do ciclo
+    el("path", { d: `M ${X[4] - 40} 112 v 8 H ${X[10] + 40} v -8`, class: "ciclo-chave" });
+    el("text", { x: (X[4] + X[10]) / 2, y: 136, class: "ciclo-txt" }, "o ciclo de cada change · repete até a última");
+    // Trilho e estações
+    el("line", { x1: X[0], x2: X[10], y1: Y.trilho, y2: Y.trilho, class: "trilho" });
+    E.forEach((e, i) => {
+      const g = el("g", { class: "estacao", tabindex: 0, role: "button", "aria-label": `Estação ${i}: ${val(e, "titulo")}`, "data-i": i });
+      el("rect", { x: X[i] - 38, y: Y.trilho - 22, width: 76, height: 44, rx: 4 }, g);
+      el("rect", { x: X[i] - 38, y: Y.trilho - 22, width: 76, height: 6, class: "faixa" }, g);
+      el("text", { x: X[i], y: Y.trilho - 2, class: "num" }, String(i), g);
+      el("text", { x: X[i], y: Y.trilho + 15 }, val(e, "nome"), g);
+      if (e.gate) el("text", { x: X[i], y: Y.trilho + 38, class: "gate" }, e.gate, g);
+      g.addEventListener("click", () => { parar(); ir(i); });
+      g.addEventListener("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); parar(); ir(i); } });
+    });
+    // Andarilho
+    const a = el("g", { id: "andarilho-g" });
+    el("path", { d: "M 0 -24 l 9 -14 h -18 z", class: "andarilho" }, a);
+
+    // Linha da main
+    el("path", { d: `M ${X[0]} ${Y.main} H ${X[10]}`, class: "main" }, grupo(0));
+    for (let i = 0; i <= (p() ? 3 : 9); i++) commits(i, Y.main, "m");
+    if (p()) {
+      // A branch sai da main no briefing e volta no merge
+      el("path", { d: `M ${X[3] + 40} ${Y.main} C ${X[4] - 30} ${Y.main}, ${X[4] - 40} ${Y.ramo}, ${X[4]} ${Y.ramo} H ${X[9]} C ${X[9] + 50} ${Y.ramo}, ${X[10] - 40} ${Y.main}, ${X[10]} ${Y.main}`, class: "ramo" }, grupo(4));
+      for (let i = 4; i <= 9; i++) commits(i, Y.ramo, "r");
+      const gm = grupo(10);
+      el("circle", { cx: X[10], cy: Y.main, r: 9, class: "merge commit" }, gm);
+      el("text", { x: X[10] - 4, y: Y.main - 16, class: "nota forte", "text-anchor": "end" }, "merge com o seu sim", gm);
+    }
+
+    // GitHub
+    if (p()) {
+      const g0 = grupo(0);
+      nuvem(X[0], Y.nuvem, g0);
+      el("text", { x: X[0] + 22, y: Y.nuvem + 4, class: "nota" }, "repositório privado + CI", g0);
+      for (const i of [1, 2, 3]) envio(i, Y.main, false);
+      const g3 = grupo(3);
+      el("rect", { x: X[3] - 7, y: Y.nuvem - 4, width: 14, height: 11, rx: 2, class: "cadeado" }, g3);
+      el("path", { d: `M ${X[3] - 4} ${Y.nuvem - 4} v -4 a 4 4 0 0 1 8 0 v 4`, class: "cadeado" }, g3);
+      el("text", { x: X[3] + 12, y: Y.nuvem + 22, class: "nota", "text-anchor": "middle" }, "proteção opcional (Pro)", g3);
+      for (const i of [5, 6, 7, 8, 9]) envio(i, Y.ramo, false);
+      const gpr = grupo(5);
+      el("rect", { x: X[5] + 12, y: Y.nuvem - 13, width: X[10] - X[5] - 24, height: 26, rx: 13, class: "pr" }, gpr);
+      el("text", { x: X[5] + 26, y: Y.nuvem + 4, class: "pr-txt" }, "pull request da change NN", gpr);
+      for (const i of [5, 6, 7, 8, 9]) {
+        const g = grupo(i);
+        el("text", { x: X[i] + 26, y: Y.nuvem - 20, class: "ci" }, "✓", g);
+      }
+      const g9 = grupo(9);
+      el("text", { x: X[9] - 30, y: Y.nuvem + 30, class: "nota" }, "sai do rascunho", g9);
+      const g5 = grupo(5);
+      el("text", { x: X[5] + 26, y: Y.nuvem + 30, class: "nota" }, "rascunho + CI", g5);
+    } else {
+      const g0 = grupo(0);
+      el("text", { x: X[0] - 40, y: Y.nuvem + 4, class: "nota" }, "até a 1.19, sem remoto previsto: os envios abaixo só existiam se você criasse um por conta própria", g0);
+      for (const i of [1, 2, 3, 10]) envio(i, Y.main, true);
+    }
+
+    legenda.replaceChildren();
+    const itens = [["var(--pinho)", "main"], ...(p() ? [["var(--ramo)", "branch da change"]] : []), ["var(--tinta-2)", "envio ao GitHub (sempre com o seu \"sim\")"], ["var(--marca)", "você está aqui"]];
+    for (const [cor, txt] of itens) {
+      const s = document.createElement("span");
+      s.innerHTML = `<i class="amostra" style="background:${cor}"></i>`;
+      s.append(txt);
+      legenda.append(s);
+    }
+    ir(atual, true);
+  }
+
+  function commits(i, y, tipo) {
+    const g = grupo(i);
+    const xs = E[i].id === "apply" ? [X[i] - 28, X[i], X[i] + 28] : [X[i]];
+    for (const x of xs) el("circle", { cx: x, cy: y, r: 7, class: `commit ${tipo}` }, g);
+  }
+  function envio(i, y, duvida) {
+    const g = grupo(i);
+    const x = X[i] + 14;
+    el("path", { d: `M ${x} ${y + 10} V ${duvida ? Y.nuvem - 8 : Y.nuvem - 16} m -4 -6 l 4 6 l 4 -6`, class: "envio" + (duvida ? " duvida" : "") }, g);
+    if (duvida) el("text", { x: x + 6, y: Y.nuvem - 22, class: "nota" }, "?", g);
+  }
+  function nuvem(x, y, g) {
+    el("path", { d: `M ${x - 14} ${y + 6} a 7 7 0 0 1 2 -13 a 9 9 0 0 1 17 -2 a 7 7 0 0 1 9 9 a 6 6 0 0 1 -2 6 z`, class: "nuvem" }, g);
+  }
+
+  function ir(i, semFoco) {
+    atual = Math.max(0, Math.min(E.length - 1, i));
+    svg.querySelectorAll("[data-passo]").forEach(n => {
+      const k = Number(n.dataset.passo);
+      n.classList.toggle("futuro", k > atual);
+      n.classList.toggle("agora", k === atual);
+    });
+    svg.querySelectorAll(".estacao").forEach(n => n.classList.toggle("sel", Number(n.dataset.i) === atual));
+    const a = document.getElementById("andarilho-g");
+    if (a) a.setAttribute("transform", `translate(${X[atual]} ${Y.trilho})`);
+    // Em tela estreita o mapa rola dentro da caixa: leva a estação atual para o meio.
+    const caixa = svg.parentElement;
+    if (!semFoco && caixa.scrollWidth > caixa.clientWidth) {
+      const x = X[atual] * caixa.scrollWidth / 1120 - caixa.clientWidth / 2;
+      caixa.scrollTo({ left: Math.max(0, x), behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    }
+    preencher();
+  }
+
+  function preencher() {
+    const e = E[atual];
+    const muda = k => p() && e[k + "p"] !== undefined && e[k + "p"] !== e[k];
+    const papel = (rotulo, k) => `
+      <div class="papel"><h3>${rotulo}${muda(k) ? '<span class="novo">muda</span>' : ""}</h3><p>${esc(val(e, k))}</p></div>`;
+    painel.innerHTML = `
+      <div class="painel-topo troca">
+        <span class="painel-num">${atual}</span>
+        <h2>${esc(val(e, "titulo"))}</h2>
+        ${e.gate ? `<span class="selo">${esc(e.gate)}</span>` : ""}
+        ${e.ciclo ? `<span class="selo" style="background:transparent">repete a cada change</span>` : ""}
+      </div>
+      <div class="papeis troca">
+        ${papel("Você", "voce")}
+        ${papel("Claude, com as skills e o OpenSpec", "claude")}
+        ${papel("Git, no seu computador", "git")}
+        ${papel("GitHub", "gh")}
+      </div>
+      <div class="comando troca" aria-label="Comandos desta estação">${esc(val(e, "cmd"))}</div>`;
+  }
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  const bPerc = document.getElementById("percorrer");
+  function parar() { clearInterval(relogio); relogio = null; bPerc.textContent = "▶ Percorrer"; }
+  bPerc.addEventListener("click", () => {
+    if (relogio) return parar();
+    if (atual >= E.length - 1) ir(0);
+    bPerc.textContent = "❚❚ Pausar";
+    relogio = setInterval(() => { if (atual >= E.length - 1) return parar(); ir(atual + 1); }, 3400);
+  });
+  document.getElementById("voltar").addEventListener("click", () => { parar(); ir(atual - 1); });
+  document.getElementById("avancar").addEventListener("click", () => { parar(); ir(atual + 1); });
+  const bHoje = document.getElementById("modo-hoje"), bProp = document.getElementById("modo-proposta");
+  function trocar(m) { modo = m; bHoje.setAttribute("aria-pressed", m === "hoje"); bProp.setAttribute("aria-pressed", m === "proposta"); desenhar(); }
+  bHoje.addEventListener("click", () => trocar("hoje"));
+  bProp.addEventListener("click", () => trocar("proposta"));
+  desenhar();
+})();
+</script>
+</body>
+</html>
