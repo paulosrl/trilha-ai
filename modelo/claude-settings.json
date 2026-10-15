@@ -11,5 +11,16 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "sdd@trilha-ai": true
+  },
+  "extraKnownMarketplaces": {
+    "trilha-ai": {
+      "source": {
+        "source": "github",
+        "repo": "paulosrl/trilha-ai"
+      }
+    }
   }
 }

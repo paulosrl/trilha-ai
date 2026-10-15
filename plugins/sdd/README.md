@@ -7,12 +7,14 @@ O plugin é parte do kit Trilha AI, e a versão dele é a do kit. O ciclo de cad
 ## Instalação
 
 ```bash
-claude plugin marketplace add paulosrl/trilha-ai
-claude plugin install sdd@trilha-ai
-claude plugin list        # deve listar sdd@trilha-ai, na versão do kit
+claude plugin marketplace add paulosrl/trilha-ai     # uma vez por máquina
+claude plugin install sdd@trilha-ai --scope project  # uma vez por máquina, na pasta de cada projeto
+claude plugin list        # deve listar sdd@trilha-ai, escopo project, na versão do kit
 ```
 
-Para atualizar: `claude plugin marketplace update trilha-ai` e `claude plugin update sdd@trilha-ai`, depois uma sessão nova.
+O plugin vale por projeto: o `.claude/settings.json` que o kit escreve o declara, e as descrições das skills só entram nas sessões dos repositórios do método. A instalação para o usuário inteiro, que o kit ensinava até a 2.1, sai com `claude plugin uninstall sdd@trilha-ai` depois que todos os projetos da máquina tiverem o plugin instalado no projeto; até lá, ela continua valendo em todo repositório.
+
+Para atualizar: `claude plugin marketplace update trilha-ai` e, na pasta do projeto, `claude plugin update sdd@trilha-ai`, depois uma sessão nova.
 
 No método, só a instalação como plugin vale: o kit cita as skills como `sdd:prd`, `sdd:tdd` e `sdd:briefing`, e a conferência do método avisa quando o plugin instalado não está na versão do projeto. As skills também são acionadas pela descrição do pedido ("preciso de um PRD para…").
 
@@ -44,7 +46,7 @@ Ideia
 Cada `SKILL.md` é a fonte do que a skill faz; o resumo abaixo só orienta.
 
 - **`sdd:prd`** (`skills/prd/SKILL.md`): escreve `sdd/prd-<nome>.md` — problema, objetivos, atores, escopo, requisitos em EARS, regras, entidades conceituais, fluxos, critérios de aceite e o que fica fora — sem nenhuma tecnologia, salvo a restrição imposta de fora (`RST`). Aprovação em cinco blocos, em linguagem simples. O modo "como está" escreve o PRD de um sistema que já existe, lido dos specs, do README e do código.
-- **`sdd:tdd`** (`skills/tdd/SKILL.md`): escreve `sdd/tdd-<nome>.md` — cada decisão técnica como ADR, a arquitetura, o modelo físico de dados e o ferramental. No modo assistido, entrevista por consequências ("quantas pessoas usam ao mesmo tempo?"), com uma recomendação justificada por decisão; no modo expert, valida a stack declarada; no modo "como está", registra as decisões que o código já tomou. Aprovação em três blocos.
+- **`sdd:tdd`** (`skills/tdd/SKILL.md`): escreve `sdd/tdd-<nome>.md` — cada decisão técnica como ADR, a arquitetura, o modelo físico de dados e o ferramental. No modo assistido, entrevista por consequências ("quantas pessoas usam ao mesmo tempo?"), com uma recomendação justificada por decisão, partindo dos padrões técnicos do projeto (`sdd/padroes-tecnicos.md`) quando existirem; no modo expert, valida a stack declarada; no modo "como está", registra as decisões que o código já tomou. Aprovação em três blocos.
 - **`sdd:briefing`** (`skills/briefing/SKILL.md`): confere o par PRD e TDD, decompõe o escopo em changes ordenadas (`sdd/decomposicao-<nome>.md`, com a tabela "Ciclo"), escreve o briefing de cada change para o `/opsx:propose` e audita o que ele gerou. Nunca escreve os artefatos do OpenSpec.
 
 ## Erros comuns e como o método os evita

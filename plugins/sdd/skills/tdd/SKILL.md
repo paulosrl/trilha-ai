@@ -27,7 +27,7 @@ Estágio 3 — skill briefing     → EM QUE ORDEM. Decomposição e o briefing 
 1. **Toda decisão técnica é um ADR leve**: contexto → opções → decisão → consequências. Nada de escolha silenciosa.
 2. **Entrevista por consequências, nunca por tecnologia.** O usuário leigo não escolhe entre PostgreSQL e SQLite; ele responde quantas pessoas usam, onde os dados podem morar, o que acontece se o computador quebrar. A skill traduz.
 3. **Recomendação única justificada.** Para cada decisão, apresente no máximo 3 opções em uma linha cada e **uma recomendação** com razão em linguagem de consequência. O usuário aprova ou veta; nunca escolhe no vácuo.
-4. **Defaults institucionais declarados, nunca impostos.** Os padrões da casa são ponto de partida; a entrevista confirma ou desvia, e o desvio vira ADR com justificativa.
+4. **Padrões do projeto declarados, nunca impostos.** Os do `sdd/padroes-tecnicos.md`, quando existir, são ponto de partida; a entrevista confirma ou desvia, e o desvio vira ADR com justificativa.
 5. **Reversibilidade classificada.** Cada ADR é marcado `🚪 porta de um sentido` (caro de reverter: linguagem, banco, arquitetura de distribuição) ou `🔁 porta de dois sentidos` (barato: biblioteca de UI, formato de exportação). O usuário sabe onde gastar atenção.
 6. **O PRD é soberano.** O TDD não altera requisito, regra ou critério de aceite. Se uma decisão técnica revelar lacuna ou conflito no PRD, registre como `PEN-TDD-XXX` e devolva ao dono do PRD — não resolva por conta.
 
@@ -81,7 +81,7 @@ Cobertura mínima de decisões (adapte ao produto; omita o que não se aplica, d
 3. **ADR-003 Persistência** — banco/arquivo, com justificativa
 4. **ADR-004 Interface** — CLI / desktop / web / API
 5. **ADR-005 Autenticação e autorização** — ou "não aplicável por PER-XXX"
-6. **ADR-006 Ferramental** — pacotes, lint, testes, CI (bloco institucional da linguagem)
+6. **ADR-006 Ferramental** — pacotes, lint, testes, CI (os padrões do projeto para a linguagem, quando houver)
 7. **ADR-007 Implantação** — como roda em produção (ou "máquina do usuário")
 8. **ADR-00N** — integrações, filas, cache, IA/RAG, conforme o PRD exigir
 
@@ -108,27 +108,9 @@ crescessem; C exigiria operar um servidor que ninguém vai manter (Q7).
 Aprova, veta ou pergunta?
 ```
 
-### 4. Defaults institucionais
+### 4. Padrões técnicos do projeto
 
-Ponto de partida quando a entrevista levar a essas regiões de decisão (confirme, nunca imponha; desvio vira ADR justificado):
-
-**Banco de dados (quando a topologia pedir servidor):** PostgreSQL com extensão **pgvector** habilitada. Desvio (NoSQL, embarcado) exige razão registrada no ADR.
-
-**Projetos Python:**
-- Python ≥ 3.12.3 (`python = ">=3.12.3"` no `pyproject.toml`)
-- Pacotes exclusivamente via `uv` (`uv add`, `uv venv`, `uv run`, `uv sync`); `pip`/`poetry`/`pipenv` proibidos; `pyproject.toml` como único manifesto; `uv.lock` versionado como fonte de verdade da resolução
-- Dependências com faixa de compatibilidade (`>=2.5,<3.0` ou `~=2.5`), nunca travadas (`==`) nem livres
-- Lint/formatação `ruff`; testes `pytest`; tipos `mypy` ou `pyright`; CI mínima com lint + testes por push/PR
-
-**Projetos Node.js/TypeScript** (mutuamente exclusivo com o bloco Python):
-- Node na Active LTS vigente (confirme antes de travar; declare em `"engines"`); nunca versão em End of Life
-- `pnpm` como gerenciador padrão; `npm`/`yarn` só com justificativa em ADR
-- Dependências em caret range (`^`); lockfile versionado
-- Lint/formatação `Biome`; testes `Vitest`; `strict: true` no `tsconfig.json`; CI mínima
-
-**Docker (quando houver app + serviços):** `docker-compose.yml` em sintaxe v2 (sem chave `version:`), variáveis via `.env`, `Dockerfile` instalando com `uv` ou `pnpm` conforme a linguagem. Imagens de infraestrutura fixadas em major + variante (`postgres:16-alpine`, `node:26-alpine`) — nunca `latest`, nunca patch hiper-específico.
-
-**Quando a topologia for programa local simples** (ADR-001 = local, usuário único): Docker e CI podem ser dispensados por ADR explícito ("complexidade não justificada pelo produto") — simplicidade também é decisão registrada.
+Quando a entrevista chegar a decisões de banco, linguagem, gerenciador de pacotes, ferramental ou contêineres, leia o `sdd/padroes-tecnicos.md` do projeto, se existir: é o ponto de partida dessas decisões, que a entrevista confirma ou desvia (o desvio vira ADR justificado). Sem o arquivo, recomende só pelo PRD e pela entrevista, sem padrão de casa presumido. A skill não traz padrões próprios: o kit Trilha AI entrega o arquivo ao projeto, que o ajusta.
 
 ### 5. Modelo físico de dados
 
@@ -182,7 +164,7 @@ O que muda em relação ao modo assistido:
 
 | ADR | Decisão | Reversibilidade | Origem |
 |-----|---------|-----------------|--------|
-| ADR-001 | ... | 🚪 / 🔁 | entrevista Q1 | RST-XXX | default institucional | declaração expert |
+| ADR-001 | ... | 🚪 / 🔁 | entrevista Q1 | RST-XXX | padrões do projeto | declaração expert |
 
 ## 2. Registros de Decisão (ADRs)
 
@@ -211,7 +193,7 @@ O que muda em relação ao modo assistido:
 
 ## 5. Ferramental e Qualidade
 
-[Bloco institucional da linguagem escolhida: versões, gerenciador, lint,
+[Ferramental da linguagem escolhida: versões, gerenciador, lint,
 testes, tipos, CI — ou ADR de dispensa]
 
 ## 6. Implantação

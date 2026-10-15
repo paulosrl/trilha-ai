@@ -58,6 +58,7 @@ A_PREENCHER = {
     ".github/workflows/verificacao.yml": ".github/workflows/verificacao.yml",
     ".claude/settings.json": "claude-settings.json",
     ".github/dependabot.yml": ".github/dependabot.yml",
+    "sdd/padroes-tecnicos.md": "sdd/padroes-tecnicos.md",
 }
 # Antes da 2.0, o que hoje está em trilha/ ficava solto; as versões antigas são lidas assim. É
 # também o que a migração de um projeto antigo tira da raiz, de scripts/ e de .githooks/.
@@ -96,6 +97,11 @@ LINGUA = (
     "Keep OpenSpec structural headings and SHALL/MUST keywords in English.\n"
     "Write every Portuguese word with its accents."
 )
+# O plugin vale por projeto: o settings.json o declara, e cada máquina o instala uma vez nele. O
+# trilha/confere_metodo.py, que roda no projeto sem este arquivo, cita o mesmo comando.
+INSTALAR_NO_PROJETO = "claude plugin install sdd@trilha-ai --scope project"
+# As chaves do modelo do settings.json que o projeto recebe entrada por entrada, sem perder as dele.
+DECLARACOES = ("enabledPlugins", "extraKnownMarketplaces")
 
 
 class Recusa(Exception):
@@ -142,7 +148,7 @@ def novo(pasta: Path) -> None:
     _copiar_trilha(pasta)
     for nome, origem in A_PREENCHER.items():
         _copiar(pasta, nome, origem)
-    (pasta / "sdd").mkdir()
+    (pasta / "sdd").mkdir(exist_ok=True)
     _ligar_travas(pasta)
     print(f"criado: {pasta}, com o kit (comum {_versao(MODELO / 'trilha' / 'CLAUDE-comum.md')})")
     print("próximos passos (README do kit, passos 3 a 6):")
@@ -150,8 +156,9 @@ def novo(pasta: Path) -> None:
     print("  2. uma vez por máquina, openspec config profile, com o verify marcado (o passo 5")
     print("     do ciclo o usa); depois, openspec init (sem sobrescrever o config.yaml) e")
     print("     codegraph init;")
-    print("  3. bash scripts/check.sh, que deve terminar com ok;")
-    print("  4. o primeiro commit e: gh repo create <nome> --private --source . --push")
+    print(f"  3. uma vez por máquina, nesta pasta, {INSTALAR_NO_PROJETO};")
+    print("  4. bash scripts/check.sh, que deve terminar com ok;")
+    print("  5. o primeiro commit e: gh repo create <nome> --private --source . --push")
     aviso = _aviso_do_perfil()
     if aviso:
         print(f"aviso: {aviso}")
@@ -227,6 +234,7 @@ def atualizar(pasta: Path) -> int:
     depois = _versao(MODELO / "trilha" / "CLAUDE-comum.md")
     mudou = _git(pasta, "status", "--short")
     print(mudou or "nada mudou: o projeto já está na versão do kit")
+    print(f"uma vez por máquina, se o plugin ainda não estiver no projeto: {INSTALAR_NO_PROJETO}")
     if not migrou:
         print("FALHA: o scripts/check.sh ainda chama os scripts/confere_*, que saíram; troque-os")
         return 1
@@ -319,7 +327,8 @@ def _migrar_check(pasta: Path) -> bool:
 
 
 def _ligar_travas(pasta: Path) -> None:
-    """A trava do commit (core.hooksPath, do clone) e a do Claude Code, somada ao settings.json."""
+    """A trava do commit (core.hooksPath, do clone) e a do Claude Code, somada ao settings.json com
+    a declaração do plugin."""
     _git(pasta, "config", "core.hooksPath", "trilha/hooks")
     modelo = json.loads((MODELO / "claude-settings.json").read_text(encoding="utf-8"))
     entrada = modelo["hooks"]["PreToolUse"][0]
@@ -337,7 +346,14 @@ def _ligar_travas(pasta: Path) -> None:
     lista[:] = [grupo for grupo in lista if grupo["hooks"]]
     if "trilha/guarda.py" not in json.dumps(lista):
         lista.append(entrada)
-    if json.dumps(lista) != antes or not settings.is_file():
+    # O que o projeto já declarou fica, inclusive o plugin que ele desligou.
+    declarado = json.dumps([atual.get(chave) for chave in DECLARACOES])
+    for chave in DECLARACOES:
+        proprias = atual.setdefault(chave, {})
+        for nome, valor in modelo[chave].items():
+            proprias.setdefault(nome, valor)
+    mudou = declarado != json.dumps([atual.get(chave) for chave in DECLARACOES])
+    if mudou or json.dumps(lista) != antes or not settings.is_file():
         settings.parent.mkdir(parents=True, exist_ok=True)
         texto = json.dumps(atual, ensure_ascii=False, indent=2) + "\n"
         settings.write_text(texto, encoding="utf-8")

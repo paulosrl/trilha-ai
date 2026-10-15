@@ -7,9 +7,10 @@ Confere, na raiz do repositório:
   da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
-- o plugin `sdd` instalado, pela lista do Claude Code: o do kit, ligado e na versão do
-  trilha/CLAUDE-comum.md; só aviso, nunca falha, e nada sem o Claude Code (o CI), sem a resposta
-  dele no prazo ou com --sem-plugin, que a trava do commit usa para não esperar a cada commit.
+- o plugin `sdd` que vale no projeto, pela lista do Claude Code lida na pasta dele: o do kit,
+  ligado e na versão do trilha/CLAUDE-comum.md; só aviso, nunca falha, e nada sem o Claude Code
+  (o CI), sem a resposta dele no prazo ou com --sem-plugin, que a trava do commit usa para não
+  esperar a cada commit.
 
 Roda no check.sh (e, por ele, no CI) e na trava do commit (trilha/hooks/pre-commit): documento do
 método fora do formato barra o commit e o merge; o que depende da máquina (o plugin) só avisa.
@@ -31,10 +32,13 @@ SDD = RAIZ / "sdd"
 ANDAMENTO = RAIZ / "ANDAMENTO.md"
 PLUGIN_SDD = "sdd@trilha-ai"
 # Dois comandos, não ligados por &&: o install roda mesmo se o marketplace já estiver registrado.
+# O plugin vale por projeto (o settings.json dele o declara); o kit.py cita o mesmo comando.
 INSTALAR = (
     "`claude plugin marketplace add paulosrl/trilha-ai` (se ainda não estiver) e "
-    f"`claude plugin install {PLUGIN_SDD}`"
+    f"`claude plugin install {PLUGIN_SDD} --scope project`"
 )
+# Do escopo mais específico ao mais geral, como nas configurações do Claude Code.
+ESCOPOS_DO_PROJETO = ("local", "project")
 # Quanto esperar pela lista de plugins do Claude Code; sem resposta nele, segue sem aviso.
 PRAZO_DO_CLAUDE = 10
 NUMERO = re.compile(r"\d{2,3}")
@@ -134,7 +138,8 @@ def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
 
 
 def _instalacoes_do_sdd() -> list[dict] | None:
-    """As instalações do plugin sdd, pela lista do Claude Code; None se ela não responder."""
+    """As instalações do plugin sdd que valem no projeto, pela lista do Claude Code lida na pasta
+    dele (o "ligado" segue o settings.json da pasta); None se ela não responder."""
     try:
         saida = subprocess.run(
             ["claude", "plugin", "list", "--json"],
@@ -142,13 +147,37 @@ def _instalacoes_do_sdd() -> list[dict] | None:
             text=True,
             timeout=PRAZO_DO_CLAUDE,
             check=False,
+            cwd=RAIZ,
         )
         lista = json.loads(saida.stdout) if saida.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
         return None
     if not isinstance(lista, list):
         return None
-    return [p for p in lista if isinstance(p, dict) and str(p.get("id", "")).startswith("sdd@")]
+    sdd = [p for p in lista if isinstance(p, dict) and str(p.get("id", "")).startswith("sdd@")]
+    return _que_valem(sdd)
+
+
+def _que_valem(instalacoes: list[dict]) -> list[dict]:
+    """Por plugin, a instalação mais específica que vale aqui: a local deste projeto, a de projeto
+    dele ou a da máquina inteira (sem pasta). A de outra pasta aparece na lista, mas não vale."""
+
+    def ordem(plugin: dict) -> int | None:
+        pasta = plugin.get("projectPath")
+        if not pasta:
+            return len(ESCOPOS_DO_PROJETO)
+        if Path(str(pasta)).resolve() != RAIZ.resolve():
+            return None
+        escopo = plugin.get("scope")
+        return ESCOPOS_DO_PROJETO.index(escopo) if escopo in ESCOPOS_DO_PROJETO else None
+
+    melhores: dict[str, tuple[int, dict]] = {}
+    for plugin in instalacoes:
+        posicao = ordem(plugin)
+        atual = melhores.get(plugin["id"])
+        if posicao is not None and (atual is None or posicao < atual[0]):
+            melhores[plugin["id"]] = (posicao, plugin)
+    return [plugin for _, plugin in melhores.values()]
 
 
 def _versao_do_comum() -> str:
