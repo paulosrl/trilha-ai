@@ -23,7 +23,8 @@ Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do
    | `scripts/confere_metodo.py` | copiar sem mudar nada; confere a decomposição, o TDD e o `ANDAMENTO.md`; os repositórios ao lado entram no `check.sh`, um `--vizinho` por nome |
    | `scripts/gerar_pagina_sdd.py` e `scripts/pagina_sdd_modelo.html` | copiar sem mudar nada; geram `sdd/documentacao.html` |
    | `sdd/` | criar vazia (`mkdir sdd`): o PRD, o TDD, a decomposição e os briefings nascem nela |
-   | `github-verificacao.yml` | copiar como `.github/workflows/verificacao.yml`: a cada envio, o GitHub roda o `check.sh` e o `openspec validate`; a parte da stack entra na etapa 2 |
+   | `github-verificacao.yml` | copiar como `.github/workflows/verificacao.yml`: a cada envio, o GitHub roda o `check.sh`, o `openspec validate` e a busca de senhas e chaves no histórico (gitleaks); as ações vão fixadas pelo commit; a parte da stack entra na etapa 2 |
+   | `github-dependabot.yml` | copiar como `.github/dependabot.yml`: o Dependabot (gratuito) abre um pull request a cada versão nova das ações e, depois da etapa 2, das dependências da stack |
    | `scripts/guarda.py` e `.githooks/pre-commit` | copiar sem mudar nada; as travas: a do Claude Code barra o comando proibido, a do commit confere as regras e o método; a do commit se liga com `git config core.hooksPath .githooks`, uma vez por clone |
    | `claude-settings.json` | copiar como `.claude/settings.json`, ou somar o hook dele ao que já existir: liga o `guarda.py` |
    | `.gitignore` | apagar o bloco da stack que não for a sua, depois da etapa 2 |

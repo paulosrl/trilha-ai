@@ -1,6 +1,8 @@
 # A verificação do repositório no GitHub (CI). Copie como .github/workflows/verificacao.yml.
-# A cada envio à main e a cada pull request, roda a mesma verificação local (scripts/check.sh)
-# e a validação dos specs e das changes do OpenSpec. O merge de uma change só com tudo verde.
+# A cada envio à main e a cada pull request, roda a mesma verificação local (scripts/check.sh),
+# a validação dos specs e das changes do OpenSpec e a busca de senhas e chaves no histórico.
+# O merge de uma change só com tudo verde. As ações vão fixadas pelo commit (o Dependabot as
+# atualiza), e o gitleaks é conferido pela soma publicada na versão dele.
 name: verificacao
 
 on:
@@ -15,8 +17,10 @@ jobs:
   verificar:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0  # o histórico inteiro, para a busca de segredos
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
         with:
           node-version: "22"
       - name: OpenSpec, na versão do kit
@@ -29,3 +33,9 @@ jobs:
         run: bash scripts/check.sh
       - name: Os specs e as changes do OpenSpec
         run: openspec validate --all --strict --no-interactive
+      - name: Senhas e chaves no histórico (gitleaks)
+        run: |
+          curl -fsSLo "$RUNNER_TEMP/gitleaks.tar.gz" https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+          "$RUNNER_TEMP/gitleaks" detect --source . --no-banner --redact

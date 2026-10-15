@@ -1,0 +1,13 @@
+# As atualizações automáticas de dependências (Dependabot, gratuito). Copie como
+# .github/dependabot.yml. Cada atualização chega como pull request, com a verificação do CI.
+version: 2
+updates:
+  - package-ecosystem: github-actions  # as ações do CI, fixadas pelo commit
+    directory: /
+    schedule:
+      interval: weekly
+  # Parte da stack, decidida no TDD (etapa 2): o gerenciador de pacotes do projeto. Exemplos:
+  #   - package-ecosystem: uv   # ou pip, npm
+  #     directory: /
+  #     schedule:
+  #       interval: weekly

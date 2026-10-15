@@ -147,6 +147,23 @@ class Kit(unittest.TestCase):
         kit = (RAIZ / ".github/workflows/testes.yml").read_text(encoding="utf-8")
         self.assertIn("run: python3 -m unittest discover -s testes", kit)
 
+    def test_ci_com_acoes_fixadas_e_busca_de_segredos(self) -> None:
+        """v1.29: ações pelo commit, gitleaks conferido pela soma, Dependabot e a regra dos segredos."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        for arquivo in ("github-verificacao.yml", ".github/workflows/testes.yml"):
+            texto = (RAIZ / arquivo).read_text(encoding="utf-8")
+            usos = re.findall(r"^\s+- uses: (\S+)", texto, re.M)
+            self.assertTrue(usos, arquivo)
+            for uso in usos:
+                self.assertRegex(uso, r"@[0-9a-f]{40}$", f"{arquivo}: {uso} sem o commit fixado")
+        ci = (RAIZ / "github-verificacao.yml").read_text(encoding="utf-8")
+        self.assertIn("sha256sum -c -", ci)
+        self.assertIn("gitleaks\" detect --source . --no-banner --redact", ci)
+        self.assertIn("fetch-depth: 0", ci)
+        for arquivo in ("github-dependabot.yml", ".github/dependabot.yml"):
+            self.assertIn("package-ecosystem: github-actions", (RAIZ / arquivo).read_text())
+        self.assertIn("o CI os procura no histórico (gitleaks)", comum)
+
     def test_revisao_independente_no_verify(self) -> None:
         """v1.28: no passo 5, o /code-review por um agente sem o contexto da sessão."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")

@@ -40,6 +40,7 @@ A_PREENCHER = {
     ".gitignore": ".gitignore",
     ".github/workflows/verificacao.yml": "github-verificacao.yml",
     ".claude/settings.json": "claude-settings.json",
+    ".github/dependabot.yml": "github-dependabot.yml",
 }
 
 

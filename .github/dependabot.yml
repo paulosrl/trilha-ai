@@ -1,0 +1,7 @@
+# As ações do CI do kit, fixadas pelo commit: o Dependabot abre um pull request a cada versão nova.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
