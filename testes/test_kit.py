@@ -92,6 +92,12 @@ class Kit(unittest.TestCase):
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Até a escolha, a auditoria não é unidade de trabalho", comum)
 
+    def test_correcao_de_texto_nao_sobe_versao(self) -> None:
+        """v1.14: só a mudança de sentido sobe a versão do PRD, do TDD ou da decomposição."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("não sobe a versão dele nem a linha \"de origem\" de quem o cita", comum)
+        self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário.", comum)
+
     def test_archive_gera_a_pagina(self) -> None:
         """v1.13: os passos depois do archive vivem só no config.yaml; o comum aponta para lá."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")

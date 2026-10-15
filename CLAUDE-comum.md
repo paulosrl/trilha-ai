@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.13, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.14, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -37,6 +37,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 ## Registrar cada decisão no artefato dono dela
 
 - Decisão de produto: nova versão do PRD. Decisão técnica: nova versão do TDD. Decisão local de uma change: o `design.md` dela. O passo do ciclo em que cada change está: a tabela "Ciclo" da decomposição. Desvio ou incidente, às claras e nunca escondido: o `design.md` da change em curso, ou a decomposição se estiver fora de change. Nada fica só na conversa.
+- Correção de texto no PRD, no TDD ou na decomposição que não muda requisito, decisão nem ordem (redação, erro, referência) não sobe a versão dele nem a linha "de origem" de quem o cita: fica no registro de processo, se houver, ou na mensagem do commit. Só a mudança de sentido é versão nova, aprovada pelo usuário.
 
 ## Trabalho interrompível: saber onde parou
 
