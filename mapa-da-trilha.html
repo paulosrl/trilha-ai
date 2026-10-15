@@ -184,19 +184,12 @@ a { color: var(--pinho); }
   </section>
 
   <section class="secao">
-    <h2>O que mudou desde a versão 1.20</h2>
-    <p>Cada item foi uma decisão do usuário e já está no kit.</p>
+    <h2>Por que o archive fica dentro do pull request</h2>
+    <p>O OpenSpec aceita arquivar a change antes ou depois do merge e pede só que o time escolha uma forma e a mantenha; a documentação dele recomenda arquivar depois do merge. O método arquiva antes, dentro do pull request da change.</p>
     <ol class="lista">
-      <li><div><strong>GitHub obrigatório, com repositório privado criado na etapa 0.</strong><p>O trabalho deixa de viver só no disco. É a regra do trabalho interrompível levada até o fim: o commit sobrevive à queda da sessão, o envio sobrevive à queda da máquina.</p></div></li>
-      <li><div><strong>Uma branch e um pull request por change.</strong><p>A branch nasce no começo do ciclo; o PR em rascunho nasce com o propose e mostra o plano antes de qualquer código. Um só "sim" autoriza os envios da branch até o merge. É a rotina que o próprio OpenSpec recomenda.</p></div></li>
-      <li><div><strong>O archive dentro do PR, antes do merge.</strong><p>O OpenSpec aceita as duas convenções e pede só que você escolha uma. Dentro do PR, a main nunca tem specs e código em desacordo, e os passos que o método faz depois do archive (o Ciclo, a página) entram juntos.</p></div></li>
-      <li><div><strong>Verificação automática (CI) a cada envio, e o merge só com ela verde.</strong><p>O <code>scripts/check.sh</code> e o <code>openspec validate --all</code> rodam no GitHub. O Claude confere com <code>gh pr checks</code> antes de pedir o merge. A proteção da main pelo próprio GitHub é opcional, porque exige o GitHub Pro ou um repositório público.</p></div></li>
-      <li><div><strong>Merge com merge commit, nunca squash.</strong><p>Os commits de retomada (propose, gate 3, cada parada do apply) continuam na história. O squash os juntaria num só.</p></div></li>
-      <li><div><strong>A change fecha no merge, não no archive.</strong><p>Depois do archive, a change some do <code>openspec list</code>; só o PR diz se falta o merge. Por isso a retomada de uma sessão olha o PR, e o <code>ANDAMENTO.md</code> só volta a "nada em andamento" depois do merge.</p></div></li>
-      <li><div><strong>Travas automáticas (1.27).</strong><p>Antes de cada commit, o git confere as regras e o método. Antes de cada comando, o Claude Code barra o envio forçado, o <code>--no-verify</code>, o <code>pkill -f</code> e o merge sem merge commit ou sem a verificação verde. O que era lembrado passa a ser cobrado.</p></div></li>
-      <li><div><strong>Uma revisão independente (1.28).</strong><p>No passo do verify, um agente sem o contexto da sessão revisa o PR com o <code>/code-review &lt;número do PR&gt;</code>. Quem escreveu o código não é o único a revisá-lo.</p></div></li>
-      <li><div><strong>Segredos fora do git (1.29).</strong><p>O CI procura senhas e chaves em todo o histórico (gitleaks), as ações vão fixadas pelo commit e o Dependabot propõe as atualizações. Achado real se troca antes de tudo.</p></div></li>
-      <li><div><strong>Cada cenário com a sua prova.</strong><p>A tarefa nomeia o teste pelo arquivo, pelo caso e pelo comando; o teste confere o efeito que se vê; a tarefa só é marcada com o teste passando; e o <code>design.md</code> termina com a evidência de cada cenário. Regras que nasceram no heimdall e foram para o kit.</p></div></li>
+      <li><div><strong>A main nunca fica em desacordo.</strong><p>Com o archive depois do merge, a main passaria um tempo com o código novo e os specs de antes dele.</p></div></li>
+      <li><div><strong>A change chega inteira, num só merge.</strong><p>O código, os specs, a tabela Ciclo e a página entram juntos. Arquivar depois pediria mais um envio à main só para o archive.</p></div></li>
+      <li><div><strong>A change fecha no merge.</strong><p>Depois do archive, a change some do <code>openspec list</code>; só o pull request diz se falta o merge. Por isso a retomada de uma sessão olha o PR, e o <code>ANDAMENTO.md</code> só volta a "nada em andamento" depois do merge.</p></div></li>
     </ol>
   </section>
 
@@ -217,11 +210,11 @@ a { color: var(--pinho); }
   // Cada estação: quem faz o quê.
   const E = [
     { id: "preparar", nome: "Preparar", titulo: "Preparar o terreno", gate: "",
-      voce: "Instala as ferramentas, cria a pasta e copia os arquivos do kit. Cria a conta no GitHub (uma vez só) e autoriza o terminal com o gh.",
-      claude: "Inicializa o OpenSpec, com o verify ligado no perfil, e o CodeGraph, e confere tudo com scripts/check.sh.",
-      git: "git init e o primeiro commit, com a linha de coautoria da IA.",
+      voce: "Uma vez por máquina: instala as ferramentas, cria a conta no GitHub, autoriza o terminal com o gh e liga o verify no perfil do OpenSpec. Por projeto: cria a pasta com o kit.py novo.",
+      claude: "Preenche o que é do projeto (CLAUDE.md, ANDAMENTO.md, o contexto do config.yaml), roda o openspec init, instala o plugin no projeto e confere tudo com scripts/check.sh. O CodeGraph é opcional.",
+      git: "O kit.py novo faz o git init, na branch main; o primeiro commit leva a linha de coautoria da IA.",
       gh: "O repositório nasce privado no GitHub e recebe o primeiro commit. A verificação do kit (.github/workflows/verificacao.yml, que o kit copia) roda a cada envio.",
-      cmd: "gh auth login\ngit init && git commit -m \"chore: kit Trilha AI\"\ngh repo create <nome> --private --source . --push" },
+      cmd: "python3 ../trilha-ai/ferramentas/kit.py novo <nome>\ncd <nome>\nopenspec init\nclaude plugin install sdd@trilha-ai --scope project\nbash scripts/check.sh\ngit add -A && git commit -m \"chore: kit Trilha AI\"\ngh repo create <nome> --private --source . --push" },
     { id: "prd", nome: "PRD", titulo: "O produto (PRD)", gate: "gate 1",
       voce: "Aprova o PRD bloco a bloco.",
       claude: "Escreve sdd/prd-<nome>.md com a skill sdd:prd. Nenhuma palavra de tecnologia.",
@@ -230,7 +223,7 @@ a { color: var(--pinho); }
       cmd: "git commit -m \"docs(prd): …\"\ngit push" },
     { id: "tdd", nome: "TDD", titulo: "As decisões técnicas (TDD)", gate: "gate 2",
       voce: "Aprova cada decisão técnica, com a consequência de cada opção.",
-      claude: "Escreve sdd/tdd-<nome>.md com a skill sdd:tdd (os ADRs) e preenche a parte da stack do check.sh.",
+      claude: "Escreve sdd/tdd-<nome>.md com a skill sdd:tdd (os ADRs) e leva a stack aos lugares que a esperam: o check.sh, o CI, o Dependabot, o .gitignore e o contexto do config.yaml.",
       git: "Commit na main com o TDD aprovado.",
       gh: "Envio com \"sim\". Daqui em diante o CI roda também o lint e os testes da stack escolhida.",
       cmd: "git commit -m \"docs(tdd): …\"\ngit push" },
@@ -238,7 +231,7 @@ a { color: var(--pinho); }
       voce: "Aprova as changes e a ordem de execução.",
       claude: "Escreve sdd/decomposicao-<nome>.md com a skill sdd:briefing, com a tabela Ciclo.",
       git: "Commit na main com a decomposição.",
-      gh: "Envio com \"sim\". Dali em diante a main só recebe change por pull request, com a verificação verde. Com o GitHub Pro, o próprio GitHub pode barrar o resto.",
+      gh: "Envio com \"sim\". Dali em diante, cada change chega à main por pull request, com a verificação verde; o trabalho fora de change e o fechamento do ANDAMENTO.md continuam indo direto à main. Com o GitHub Pro, a proteção da main pode exigir a verificação, deixando o dono passar.",
       cmd: "git commit -m \"docs(decomposicao): …\"\ngit push" },
     { id: "briefing", nome: "Briefing", titulo: "O briefing da change", gate: "aprovação", ciclo: true,
       voce: "Aprova o briefing da change.",

@@ -409,6 +409,26 @@ class Kit(unittest.TestCase):
             modelo = modelo.split("## Estrutura obrigatória", 1)[1]
             self.assertRegex(modelo, r"(?m)^## \d+\. Histórico de versões$", skill)
 
+    def test_tabela_do_readme_e_a_lista_do_kit(self) -> None:
+        """F11: a tabela do README explica cada arquivo de modelo/; a lista vive no kit.py."""
+        readme = (RAIZ / "README.md").read_text(encoding="utf-8")
+        tabela = {re.match(r"\s*\| `([^`]+)`", l).group(1) for l in readme.splitlines()
+                  if re.match(r"\s*\| `[^`]+` \|", l) and "modelo/" not in l.split("|")[1]}
+        self.assertEqual(tabela, {"trilha/", *FERRAMENTA.A_PREENCHER.values()})
+
+    def test_readme_e_mapa_sem_curso_nem_projeto(self) -> None:
+        """F03 e F14: o kit se instala sozinho, e o mapa explica o método sem histórico."""
+        for nome in ("README.md", "mapa-da-trilha.html"):
+            texto = (RAIZ / nome).read_text(encoding="utf-8")
+            for proibido in ("consulta-publica", "heimdall", r"\bcurso\b", "guia do aluno",
+                             "O que mudou desde a versão 1"):
+                self.assertNotRegex(texto, proibido, nome)
+        readme = (RAIZ / "README.md").read_text(encoding="utf-8")
+        self.assertIn("curl -fsSL https://claude.ai/install.sh | bash", readme)
+        verificacao = (MODELO / ".github/workflows/verificacao.yml").read_text(encoding="utf-8")
+        openspec = re.search(r"@fission-ai/openspec@[\d.]+", verificacao).group(0)
+        self.assertIn(f"npm install -g {openspec}", readme)
+
     def test_regras_cabem_no_projeto_sem_prd(self) -> None:
         """O comum admite a correção vinda de um spec, sem PRD; as regras que pedem RF dizem o que vale."""
         config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
