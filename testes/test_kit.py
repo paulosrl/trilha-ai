@@ -161,6 +161,7 @@ class Kit(unittest.TestCase):
         self.assertIn("sha256sum -c -", ci)
         self.assertIn("gitleaks\" detect --source . --no-banner --redact", ci)
         self.assertIn("fetch-depth: 0", ci)
+        self.assertIn("branches: [main, master]", ci)  # o hubia e o heimdall usam master
         for arquivo in ("github-dependabot.yml", ".github/dependabot.yml"):
             self.assertIn("package-ecosystem: github-actions", (RAIZ / arquivo).read_text())
         self.assertIn("o CI os procura no histórico (gitleaks)", comum)

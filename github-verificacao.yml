@@ -7,7 +7,7 @@ name: verificacao
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]  # a branch principal; repositórios antigos usam master
   pull_request:
 
 permissions:
