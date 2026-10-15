@@ -12,7 +12,7 @@ claude plugin install sdd@trilha-ai --scope project  # uma vez por máquina, na 
 claude plugin list        # deve listar sdd@trilha-ai, escopo project, na versão do kit
 ```
 
-O plugin vale por projeto: o `.claude/settings.json` que o kit escreve o declara, e as descrições das skills só entram nas sessões dos repositórios do método. A instalação para o usuário inteiro, que o kit ensinava até a 2.1, sai com `claude plugin uninstall sdd@trilha-ai` depois que todos os projetos da máquina tiverem o plugin instalado no projeto; até lá, ela continua valendo em todo repositório.
+O plugin vale por projeto: o `.claude/settings.json` que o kit escreve o declara, e as descrições das skills só entram nas sessões dos repositórios do método. A instalação para o usuário inteiro, que o kit ensinava até a 2.1, sai com `claude plugin uninstall sdd@trilha-ai` depois que todos os projetos da máquina tiverem o plugin instalado no projeto; até lá, ela continua valendo em todo repositório e pode ser a versão que a sessão carrega, mesmo num projeto com a sua (a conferência do método confere as duas).
 
 Para atualizar: `claude plugin marketplace update trilha-ai` e, na pasta do projeto, `claude plugin update sdd@trilha-ai`, depois uma sessão nova.
 

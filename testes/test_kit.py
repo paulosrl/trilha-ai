@@ -810,13 +810,17 @@ class Kit(unittest.TestCase):
         self.assertIn("plugin sdd não instalado", saida.stderr)
         self.assertIn("claude plugin install sdd@trilha-ai --scope project", saida.stderr)
 
-    def test_instalacao_do_projeto_vale_sobre_a_do_usuario(self) -> None:
+    def test_instalacao_do_usuario_atras_da_do_projeto_avisa(self) -> None:
+        """Com as duas, a sessão pode carregar a do usuário (a execução manual da change 04 o viu)."""
         saida = self._aviso_do_plugin(
             [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": True},
              {"id": "sdd@trilha-ai", "version": "2.2.0", "scope": "project", "enabled": True,
               "projectPath": "<projeto>"}], versao_do_comum="2.2")
         self.assertEqual(saida.returncode, 0, saida.stderr)
-        self.assertNotIn("plugin sdd", saida.stderr)
+        aviso = [l for l in saida.stderr.splitlines() if "plugin sdd" in l]
+        self.assertEqual(len(aviso), 1, saida.stderr)
+        for trecho in ("1.35.0", "2.2", "claude plugin update sdd@trilha-ai --scope user"):
+            self.assertIn(trecho, aviso[0])
 
     def test_instalacao_do_projeto_atras_avisa(self) -> None:
         saida = self._aviso_do_plugin(
@@ -827,8 +831,8 @@ class Kit(unittest.TestCase):
         self.assertEqual(saida.returncode, 0, saida.stderr)
         aviso = [l for l in saida.stderr.splitlines() if "plugin sdd" in l]
         self.assertEqual(len(aviso), 1, saida.stderr)
-        self.assertIn("2.1.0", aviso[0])
-        self.assertIn("2.2", aviso[0])
+        for trecho in ("2.1.0", "2.2", "claude plugin update sdd@trilha-ai --scope project"):
+            self.assertIn(trecho, aviso[0])
 
     def test_lista_de_plugins_roda_na_pasta_do_projeto(self) -> None:
         """O "ligado" da lista segue o settings.json da pasta em que ela roda: a do projeto."""

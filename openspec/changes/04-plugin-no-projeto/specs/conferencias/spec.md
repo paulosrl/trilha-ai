@@ -22,12 +22,12 @@ A conferência do método SHALL consultar a lista de plugins do Claude Code com 
 - **WHEN** a conferência do método de um projeto é chamada a partir de outra pasta
 - **THEN** a lista de plugins do Claude Code roda na pasta do projeto
 
-### Requirement: Instalação que vale no projeto
-Das instalações do plugin `sdd` que a lista traz, a conferência do método SHALL julgar só a que vale no projeto: a de escopo `local` ou `project` cuja pasta é a do projeto e, sem ela, a de escopo `user`. A instalação de escopo `local` ou `project` de outra pasta MUST NOT contar.
+### Requirement: Instalações que podem valer no projeto
+Das instalações do plugin `sdd` que a lista traz, a conferência do método SHALL julgar todas as que podem valer no projeto: as sem pasta (escopo `user` ou outro da máquina inteira) e as de escopo `local` ou `project` cuja pasta é a do projeto. A de escopo `local` ou `project` de outra pasta MUST NOT contar. O aviso de versão SHALL dizer o escopo da instalação e trazer o comando de atualização com esse escopo.
 
-#### Scenario: Instalação do projeto e do usuário em versões diferentes
+#### Scenario: Instalação do usuário atrás da do projeto
 - **WHEN** o comum do projeto diz "Versão 2.2" e a lista traz o `sdd@trilha-ai` de escopo `project` na pasta do projeto, na versão `2.2.0`, e o de escopo `user` na versão `1.35.0`
-- **THEN** a conferência não imprime aviso sobre o plugin
+- **THEN** a conferência imprime um só aviso de versão, que cita `1.35.0`, `2.2` e `claude plugin update sdd@trilha-ai --scope user`
 
 #### Scenario: Só a instalação do usuário
 - **WHEN** a lista traz só o `sdd@trilha-ai` de escopo `user`, na versão do comum
@@ -35,4 +35,4 @@ Das instalações do plugin `sdd` que a lista traz, a conferência do método SH
 
 #### Scenario: Instalação do projeto atrás da versão
 - **WHEN** o comum do projeto diz "Versão 2.2" e a lista traz o `sdd@trilha-ai` de escopo `project` na pasta do projeto, na versão `2.1.0`, e o de escopo `user` na versão `2.2.0`
-- **THEN** a conferência imprime um aviso que cita `2.1.0` e `2.2`
+- **THEN** a conferência imprime um só aviso de versão, que cita `2.1.0`, `2.2` e `claude plugin update sdd@trilha-ai --scope project`

@@ -20,7 +20,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 - [x] 3.1 O `INSTALAR` do `confere_metodo.py` passa a `claude plugin install sdd@trilha-ai --scope project`, ainda separado do `marketplace add`; o `test_plugin_ausente_avisa` passa a exigir o `--scope project` e comprova o cenário "Claude Code sem o plugin" (`-k test_plugin_ausente_avisa`), e o `test_aviso_do_plugin_com_comandos_separados` continua passando
 - [x] 3.2 A lista de plugins roda com a pasta do projeto como `cwd` (design, decisão 3); o teste `test_lista_de_plugins_roda_na_pasta_do_projeto`, com um `claude` falso que só responde na pasta do projeto e a conferência chamada de outra pasta, comprova o cenário "Conferência chamada de outra pasta" (`-k test_lista_de_plugins_roda_na_pasta_do_projeto`)
 - [x] 3.3 A conferência julga, por id, só a instalação que vale (design, decisão 4); o teste `test_plugin_de_outro_projeto_avisa_o_install` comprova o cenário "Plugin instalado só para outro projeto" (`-k test_plugin_de_outro_projeto_avisa_o_install`)
-- [x] 3.4 O teste `test_instalacao_do_projeto_vale_sobre_a_do_usuario` comprova o cenário "Instalação do projeto e do usuário em versões diferentes" (`-k test_instalacao_do_projeto_vale_sobre_a_do_usuario`)
+- [x] 3.4 O teste `test_instalacao_do_projeto_vale_sobre_a_do_usuario` comprova o cenário "Instalação do projeto e do usuário em versões diferentes" (`-k test_instalacao_do_projeto_vale_sobre_a_do_usuario`); substituído na 7.1, depois que a execução manual desmentiu o cenário
 - [x] 3.5 O `test_plugin_com_versao_igual_nao_avisa` continua passando e comprova o cenário "Só a instalação do usuário" (`-k test_plugin_com_versao_igual_nao_avisa`)
 - [x] 3.6 O teste `test_instalacao_do_projeto_atras_avisa` comprova o cenário "Instalação do projeto atrás da versão" (`-k test_instalacao_do_projeto_atras_avisa`)
 
@@ -38,6 +38,15 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 - [x] 5.1 O `README.md` do kit e o `plugins/sdd/README.md` ensinam a instalação por projeto (`claude plugin marketplace add paulosrl/trilha-ai`, depois `claude plugin install sdd@trilha-ai --scope project` em cada projeto) e como tirar a do usuário quando todos os projetos da máquina declararem o plugin; conferido lendo os dois
 - [x] 5.2 O comum vai a "Versão 2.2, de <data do commit>." e o plugin a `2.2.0`; o `test_versao_do_plugin_igual_a_do_kit` passa, e o `openspec validate --all --no-interactive` também
 - [x] 5.3 O conjunto de testes e o ruff (check e format), cada um sozinho, sem erro
+
+## 7. A correção da execução manual
+
+Cada teste é ajustado antes do código e falha antes dele.
+
+- [x] 7.1 A conferência julga todas as instalações que podem valer no projeto, descartando só as de outra pasta (design, decisão 4); o aviso de versão diz o escopo e dá `claude plugin update sdd@trilha-ai --scope <escopo>`; o teste `test_instalacao_do_usuario_atras_da_do_projeto_avisa` (no lugar do `test_instalacao_do_projeto_vale_sobre_a_do_usuario`) comprova o cenário "Instalação do usuário atrás da do projeto" (`-k test_instalacao_do_usuario_atras_da_do_projeto_avisa`)
+- [x] 7.2 O `test_instalacao_do_projeto_atras_avisa` passa a exigir o `--scope project` no comando e comprova o cenário "Instalação do projeto atrás da versão" (`-k test_instalacao_do_projeto_atras_avisa`); o `test_plugin_com_versao_igual_nao_avisa` e o `test_plugin_de_outro_projeto_avisa_o_install` continuam passando
+- [x] 7.3 O `README.md` do kit e o `plugins/sdd/README.md` dizem que, enquanto a instalação do usuário existir, ela pode ser a versão que a sessão carrega; conferido lendo os dois
+- [x] 7.4 O conjunto de testes, o ruff (check e format), cada um sozinho, e o `openspec validate --all --no-interactive`, sem erro
 
 ## 6. Execução manual
 

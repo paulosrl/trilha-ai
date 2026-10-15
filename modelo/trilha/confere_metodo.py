@@ -37,7 +37,7 @@ INSTALAR = (
     "`claude plugin marketplace add paulosrl/trilha-ai` (se ainda não estiver) e "
     f"`claude plugin install {PLUGIN_SDD} --scope project`"
 )
-# Do escopo mais específico ao mais geral, como nas configurações do Claude Code.
+# Os escopos de uma instalação que vale numa pasta só, a que a lista traz em projectPath.
 ESCOPOS_DO_PROJETO = ("local", "project")
 # Quanto esperar pela lista de plugins do Claude Code; sem resposta nele, segue sem aviso.
 PRAZO_DO_CLAUDE = 10
@@ -138,8 +138,8 @@ def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
 
 
 def _instalacoes_do_sdd() -> list[dict] | None:
-    """As instalações do plugin sdd que valem no projeto, pela lista do Claude Code lida na pasta
-    dele (o "ligado" segue o settings.json da pasta); None se ela não responder."""
+    """As instalações do plugin sdd que podem valer no projeto, pela lista do Claude Code lida na
+    pasta dele (o "ligado" segue o settings.json da pasta); None se ela não responder."""
     try:
         saida = subprocess.run(
             ["claude", "plugin", "list", "--json"],
@@ -155,29 +155,18 @@ def _instalacoes_do_sdd() -> list[dict] | None:
     if not isinstance(lista, list):
         return None
     sdd = [p for p in lista if isinstance(p, dict) and str(p.get("id", "")).startswith("sdd@")]
-    return _que_valem(sdd)
+    return [plugin for plugin in sdd if _pode_valer(plugin)]
 
 
-def _que_valem(instalacoes: list[dict]) -> list[dict]:
-    """Por plugin, a instalação mais específica que vale aqui: a local deste projeto, a de projeto
-    dele ou a da máquina inteira (sem pasta). A de outra pasta aparece na lista, mas não vale."""
-
-    def ordem(plugin: dict) -> int | None:
-        pasta = plugin.get("projectPath")
-        if not pasta:
-            return len(ESCOPOS_DO_PROJETO)
-        if Path(str(pasta)).resolve() != RAIZ.resolve():
-            return None
-        escopo = plugin.get("scope")
-        return ESCOPOS_DO_PROJETO.index(escopo) if escopo in ESCOPOS_DO_PROJETO else None
-
-    melhores: dict[str, tuple[int, dict]] = {}
-    for plugin in instalacoes:
-        posicao = ordem(plugin)
-        atual = melhores.get(plugin["id"])
-        if posicao is not None and (atual is None or posicao < atual[0]):
-            melhores[plugin["id"]] = (posicao, plugin)
-    return [plugin for _, plugin in melhores.values()]
+def _pode_valer(plugin: dict) -> bool:
+    """A instalação da máquina inteira (sem pasta) ou a deste projeto. A de outra pasta aparece na
+    lista, até como ligada, mas não vale aqui. Com a do usuário e a do projeto, não se sabe qual a
+    sessão carrega (a do usuário, quando instalada antes): as duas são conferidas."""
+    pasta = plugin.get("projectPath")
+    if not pasta:
+        return True
+    deste_projeto = Path(str(pasta)).resolve() == RAIZ.resolve()
+    return deste_projeto and plugin.get("scope") in ESCOPOS_DO_PROJETO
 
 
 def _versao_do_comum() -> str:
@@ -206,9 +195,13 @@ def avisar_plugin() -> list[str]:
                 f"plugin {PLUGIN_SDD} desligado: rode `claude plugin enable {PLUGIN_SDD}`"
             )
         if versao and plugin.get("version") != f"{versao}.0":
+            escopo = plugin.get("scope")
+            qual = f" (instalação {escopo})" if escopo else ""
+            opcao = f" --scope {escopo}" if escopo else ""
             avisos.append(
-                f"plugin sdd na {plugin.get('version')} e o CLAUDE-comum.md na {versao}: atualize "
-                f"o que estiver atrás (`claude plugin update {PLUGIN_SDD}` ou o kit.py atualizar)"
+                f"plugin sdd na {plugin.get('version')}{qual} e o CLAUDE-comum.md na {versao}: "
+                f"atualize o que estiver atrás (`claude plugin update {PLUGIN_SDD}{opcao}` ou o "
+                "kit.py atualizar)"
             )
     return avisos
 
