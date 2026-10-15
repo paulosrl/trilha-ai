@@ -754,13 +754,20 @@ class Kit(unittest.TestCase):
             )
 
     def _aviso_do_plugin(self, lista: object, versao_do_comum: str = "1.35",
-                         vizinho: bool = False) -> subprocess.CompletedProcess[str]:
+                         vizinho: bool = False, configuracoes: dict | None = None
+                         ) -> subprocess.CompletedProcess[str]:
         """A conferência num projeto feito do kit, com o comum na versão dada e um `claude` falso
         que lista os plugins dados (o "<projeto>" da lista vira a pasta do projeto); com vizinho,
-        uma pasta pipeline-prd-tdd-openspec ao lado."""
+        uma pasta pipeline-prd-tdd-openspec ao lado. As configurações (caminho: conteúdo) trocam
+        as do projeto; o conteúdo None apaga o arquivo."""
         with tempfile.TemporaryDirectory() as tmp:
             destino = Path(tmp) / "projeto"
             _copia_do_kit(destino)
+            for nome, conteudo in (configuracoes or {}).items():
+                if conteudo is None:
+                    (destino / nome).unlink()
+                else:
+                    (destino / nome).write_text(json.dumps(conteudo), encoding="utf-8")
             comum = destino / "trilha/CLAUDE-comum.md"
             comum.write_text(re.sub(r"^Versão [\d.]+,", f"Versão {versao_do_comum},",
                                     comum.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
@@ -773,7 +780,8 @@ class Kit(unittest.TestCase):
             return self._confere_metodo(destino, claude=f"printf '%s' '{texto}'")
 
     def test_plugin_conferido_sem_a_pasta_vizinha(self) -> None:
-        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": True}]
+        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "project", "enabled": True,
+                  "projectPath": "<projeto>"}]
         com, sem = self._aviso_do_plugin(lista, vizinho=True), self._aviso_do_plugin(lista)
         self.assertEqual((com.returncode, com.stderr), (sem.returncode, sem.stderr))
         self.assertNotIn("plugin sdd", com.stderr)
@@ -787,12 +795,13 @@ class Kit(unittest.TestCase):
     def test_plugin_com_versao_diferente_avisa(self) -> None:
         saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.34.0"}])
         self.assertEqual(saida.returncode, 0, saida.stderr)
-        aviso = next(l for l in saida.stderr.splitlines() if "plugin sdd" in l)
+        aviso = next(l for l in saida.stderr.splitlines() if "plugin sdd na" in l)
         self.assertIn("1.34.0", aviso)
         self.assertIn("1.35", aviso)
 
     def test_plugin_com_versao_igual_nao_avisa(self) -> None:
-        saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.35.0"}])
+        saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "project",
+                                        "projectPath": "<projeto>"}])
         self.assertEqual(saida.returncode, 0, saida.stderr)
         self.assertNotIn("plugin sdd", saida.stderr)
 
@@ -867,10 +876,60 @@ class Kit(unittest.TestCase):
             self.assertIn("`claude plugin install sdd@trilha-ai --scope project`", avisos[0])
             self.assertNotIn("&&", avisos[0])
 
-    def test_plugin_desligado_avisa(self) -> None:
-        saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.35.0", "enabled": False}])
+    def _desligado(self, lista: list, configuracoes: dict) -> list[str]:
+        saida = self._aviso_do_plugin(lista, configuracoes=configuracoes)
         self.assertEqual(saida.returncode, 0, saida.stderr)
-        self.assertIn("claude plugin enable sdd@trilha-ai", saida.stderr)
+        return [l for l in saida.stderr.splitlines() if "desligado" in l]
+
+    def test_plugin_desligado_pelo_projeto_avisa_uma_vez_no_escopo(self) -> None:
+        """A instalação de projeto vem ligada na lista mesmo desligada pelo settings.json da pasta;
+        com a do usuário junto, o aviso sai uma vez, no escopo que desliga."""
+        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": False},
+                 {"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "project", "enabled": True,
+                  "projectPath": "<projeto>"}]
+        avisos = self._desligado(lista, {".claude/settings.json": {"enabledPlugins": {"sdd@trilha-ai": False}}})
+        self.assertEqual(len(avisos), 1, avisos)
+        self.assertIn("`claude plugin enable sdd@trilha-ai --scope project`", avisos[0])
+
+    def test_plugin_desligado_pela_configuracao_local(self) -> None:
+        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": False}]
+        local = {"enabledPlugins": {"sdd@trilha-ai": False}}
+        avisos = self._desligado(lista, {".claude/settings.local.json": local})
+        self.assertEqual(len(avisos), 1, avisos)
+        self.assertIn("`claude plugin enable sdd@trilha-ai --scope local`", avisos[0])
+
+    def test_plugin_ligado_pela_configuracao_local_nao_avisa(self) -> None:
+        """A configuração local prevalece sobre o settings.json do projeto."""
+        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "project", "enabled": True,
+                  "projectPath": "<projeto>"}]
+        avisos = self._desligado(lista, {
+            ".claude/settings.json": {"enabledPlugins": {"sdd@trilha-ai": False}},
+            ".claude/settings.local.json": {"enabledPlugins": {"sdd@trilha-ai": True}}})
+        self.assertEqual(avisos, [])
+
+    def test_plugin_desligado_pelo_usuario(self) -> None:
+        """Sem declaração no projeto, vale o "ligado" da lista, que segue o settings do usuário."""
+        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": False}]
+        avisos = self._desligado(lista, {".claude/settings.json": None})
+        self.assertEqual(len(avisos), 1, avisos)
+        self.assertIn("`claude plugin enable sdd@trilha-ai --scope user`", avisos[0])
+
+    def test_plugin_declarado_e_so_na_maquina_avisa_o_install_no_projeto(self) -> None:
+        """A máquina que recebe o projeto pelo git não roda o kit.py: a conferência a avisa."""
+        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": True}]
+        saida = self._aviso_do_plugin(lista)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        avisos = [l for l in saida.stderr.splitlines() if "plugin sdd" in l]
+        self.assertEqual(len(avisos), 1, saida.stderr)
+        self.assertIn("declarado no projeto", avisos[0])
+        self.assertIn("`claude plugin install sdd@trilha-ai --scope project`", avisos[0])
+
+    def test_so_a_instalacao_do_usuario_sem_declaracao_nao_avisa(self) -> None:
+        """O projeto de antes da 2.2, que não declara o plugin, segue com a do usuário."""
+        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": True}]
+        saida = self._aviso_do_plugin(lista, configuracoes={".claude/settings.json": None})
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("plugin sdd", saida.stderr)
 
     def test_trava_do_commit_nao_consulta_o_claude(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -948,6 +1007,7 @@ class Kit(unittest.TestCase):
             saida = self._confere_metodo(destino, "--vizinho", "outro")
             self.assertEqual(saida.returncode, 0, saida.stderr)
             self.assertIn("sem a pasta sdd/: crie-a com `mkdir sdd`", saida.stderr)
+            self.assertIn("modelo/sdd/padroes-tecnicos.md", saida.stderr)
             self.assertNotIn("sem sdd/decomposicao", saida.stderr)
             (destino / "sdd").mkdir()
             saida = self._confere_metodo(destino)
@@ -1251,9 +1311,10 @@ class Kit(unittest.TestCase):
             self.assertEqual(padroes.read_text(encoding="utf-8"), "# Padrões técnicos\n\nGo com SQLite.\n")
 
     def test_atualizar_cria_os_padroes_que_faltam(self) -> None:
+        """O projeto de antes da 2.2 recebe os padrões na passagem para ela."""
         with tempfile.TemporaryDirectory() as tmp:
-            pasta = self._projeto_novo(tmp)
-            (pasta / "sdd/padroes-tecnicos.md").unlink()
+            pasta = self._projeto_velho(tmp)
+            shutil.rmtree(pasta / "sdd")
             self._commit_tudo(pasta, "sem os padrões")
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
@@ -1268,11 +1329,101 @@ class Kit(unittest.TestCase):
         self.assertIn("claude plugin install sdd@trilha-ai --scope project",
                       saida.stdout.split("próximos passos", 1)[1])
 
-    def test_atualizar_imprime_o_comando_de_instalacao(self) -> None:
+    def test_atualizar_respeita_os_padroes_apagados(self) -> None:
+        """Desde a 2.2, o projeto sem os padrões escolheu ficar sem eles."""
         with tempfile.TemporaryDirectory() as tmp:
-            saida = self._ferramenta("atualizar", str(self._projeto_novo(tmp)))
+            pasta = self._projeto_novo(tmp)
+            (pasta / "sdd/padroes-tecnicos.md").unlink()
+            self._commit_tudo(pasta, "sem os padrões")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertFalse((pasta / "sdd/padroes-tecnicos.md").exists())
+            self.assertNotIn("padroes-tecnicos.md", saida.stdout)
+
+    def test_atualizar_so_regera_a_pagina_que_existe(self) -> None:
+        """A página nasce ao fechar uma etapa; a atualização não a cria vazia."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            pagina = pasta / "sdd/documentacao.html"
+            self.assertEqual(self._ferramenta("atualizar", str(pasta)).returncode, 0)
+            self.assertFalse(pagina.exists())
+            pagina.write_text("a página de antes\n", encoding="utf-8")
+            self._commit_tudo(pasta, "a página")
+            self.assertEqual(self._ferramenta("atualizar", str(pasta)).returncode, 0)
+            self.assertNotEqual(pagina.read_text(encoding="utf-8"), "a página de antes\n")
+
+    def _atualizar_com_claude(self, lista: list) -> subprocess.CompletedProcess:
+        """O kit.py atualizar num projeto novo, com um `claude` falso que lista os plugins dados (o
+        "<projeto>" da lista vira a pasta do projeto)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            falsos = Path(tmp) / "falsos"
+            falsos.mkdir()
+            texto = json.dumps(lista).replace("<projeto>", str(pasta.resolve()))
+            _claude_falso(falsos, f"printf '%s' '{texto}'")
+            return self._ferramenta("atualizar", str(pasta),
+                                    env={**os.environ, "PATH": f"{falsos}:{os.environ['PATH']}"})
+
+    def test_atualizar_cita_o_install_so_quando_falta_no_projeto(self) -> None:
+        """Quem diz a instalação que falta é a conferência, que roda também nas outras máquinas."""
+        instalar = "claude plugin install sdd@trilha-ai --scope project"
+        do_usuario = {"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": True}
+        saida = self._atualizar_com_claude([do_usuario])
         self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
-        self.assertIn("claude plugin install sdd@trilha-ai --scope project", saida.stdout)
+        self.assertIn(instalar, saida.stdout)
+        do_projeto = {**do_usuario, "scope": "project", "projectPath": "<projeto>"}
+        saida = self._atualizar_com_claude([do_usuario, do_projeto])
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        self.assertNotIn(instalar, saida.stdout)
+
+    def test_atualizar_recusa_o_settings_que_nao_entende_sem_mudar_nada(self) -> None:
+        for texto in ('{"enabledPlugins": null}', '{"hooks": {"PreToolUse": {}}}', "[]", "{"):
+            with tempfile.TemporaryDirectory() as tmp:
+                pasta = self._projeto_velho(tmp)
+                (pasta / ".claude/settings.json").write_text(texto, encoding="utf-8")
+                self._commit_tudo(pasta, "settings estranho")
+                saida = self._ferramenta("atualizar", str(pasta))
+                self.assertEqual(saida.returncode, 1, texto)
+                self.assertIn("recusado: .claude/settings.json", saida.stderr, texto)
+                status = subprocess.run(["git", "status", "--porcelain"], cwd=pasta,
+                                        capture_output=True, text=True, check=True).stdout
+                self.assertEqual(status, "", texto)
+
+    def test_soma_traz_toda_chave_do_modelo_sem_trocar_as_do_projeto(self) -> None:
+        """A soma lê o modelo inteiro: uma chave nova nele chega aos projetos na atualização."""
+        atual = {"enabledPlugins": {"sdd@trilha-ai": False}, "lista": [{"a": 1, "b": 2}]}
+        modelo = {"enabledPlugins": {"sdd@trilha-ai": True, "outro@x": True},
+                  "permissions": {"allow": ["Bash(ls:*)"]}, "lista": [{"a": 1}, {"c": 3}]}
+        FERRAMENTA._somar(atual, modelo)
+        self.assertEqual(atual, {"enabledPlugins": {"sdd@trilha-ai": False, "outro@x": True},
+                                 "permissions": {"allow": ["Bash(ls:*)"]},
+                                 "lista": [{"a": 1, "b": 2}, {"c": 3}]})
+        modelo["permissions"]["allow"].append("mudou")
+        self.assertEqual(atual["permissions"], {"allow": ["Bash(ls:*)"]})  # cópia, não o do modelo
+
+    def test_trava_de_outra_versao_troca_pela_do_modelo(self) -> None:
+        """A trilha/guarda.py chamada de outro jeito sai; o gancho próprio do grupo fica."""
+        modelo = FERRAMENTA._modelo_do_settings()
+        proprio = {"type": "command", "command": "echo do projeto"}
+        atual = {"hooks": {"PreToolUse": [
+            {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 trilha/guarda.py"},
+                                          proprio]},
+            {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 scripts/guarda.py"}]},
+        ]}}
+        FERRAMENTA._sem_guardas_antigas(atual, modelo)
+        FERRAMENTA._somar(atual, modelo)
+        grupos = atual["hooks"]["PreToolUse"]
+        self.assertEqual(grupos, [{"matcher": "Bash", "hooks": [proprio]},
+                                  *modelo["hooks"]["PreToolUse"]])
+
+    def test_trava_do_modelo_num_grupo_do_projeto_nao_se_repete(self) -> None:
+        modelo = FERRAMENTA._modelo_do_settings()
+        grupo = json.loads(json.dumps(modelo["hooks"]["PreToolUse"][0]))
+        grupo["hooks"].append({"type": "command", "command": "echo do projeto"})
+        atual = {"hooks": {"PreToolUse": [grupo]}}
+        FERRAMENTA._sem_guardas_antigas(atual, modelo)
+        FERRAMENTA._somar(atual, modelo)
+        self.assertEqual(atual["hooks"]["PreToolUse"], [grupo])
 
     def test_comando_de_instalacao_igual_no_kit_e_na_conferencia(self) -> None:
         """O confere_metodo.py roda no projeto, sem o kit.py: cada um tem a sua constante."""
@@ -1280,10 +1431,10 @@ class Kit(unittest.TestCase):
         self.assertEqual(FERRAMENTA.INSTALAR_NO_PROJETO, "claude plugin install sdd@trilha-ai --scope project")
         self.assertIn(f'f"`claude plugin install {{PLUGIN_SDD}} --scope project`"', metodo)
 
-    def _ferramenta(self, *args: str) -> subprocess.CompletedProcess:
+    def _ferramenta(self, *args: str, env: dict | None = None) -> subprocess.CompletedProcess:
         return subprocess.run(
             [sys.executable, "-I", str(RAIZ / "ferramentas/kit.py"), *args],
-            capture_output=True, text=True, check=False,
+            capture_output=True, text=True, check=False, env=env,
         )
 
     def _projeto_velho(self, tmp: str) -> Path:

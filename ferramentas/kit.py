@@ -12,6 +12,7 @@ ferramentas/, é só do kit e não se copia.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import re
 import shutil
@@ -60,6 +61,9 @@ A_PREENCHER = {
     ".github/dependabot.yml": ".github/dependabot.yml",
     "sdd/padroes-tecnicos.md": "sdd/padroes-tecnicos.md",
 }
+# Dos preenchidos, os que o projeto pode apagar (a falta deles é uma escolha), com a versão do kit
+# que os trouxe: a atualização só os cria na passagem de uma versão anterior a ela.
+APAGAVEIS = {"sdd/padroes-tecnicos.md": (2, 2)}
 # Antes da 2.0, o que hoje está em trilha/ ficava solto; as versões antigas são lidas assim. É
 # também o que a migração de um projeto antigo tira da raiz, de scripts/ e de .githooks/.
 ANTES_DA_2_0 = {
@@ -100,8 +104,8 @@ LINGUA = (
 # O plugin vale por projeto: o settings.json o declara, e cada máquina o instala uma vez nele. O
 # trilha/confere_metodo.py, que roda no projeto sem este arquivo, cita o mesmo comando.
 INSTALAR_NO_PROJETO = "claude plugin install sdd@trilha-ai --scope project"
-# As chaves do modelo do settings.json que o projeto recebe entrada por entrada, sem perder as dele.
-DECLARACOES = ("enabledPlugins", "extraKnownMarketplaces")
+# A trava do Claude Code em cada versão do kit: antes da 2.0, em scripts/; depois, em trilha/.
+GUARDAS = ("scripts/guarda.py", "trilha/guarda.py")
 
 
 class Recusa(Exception):
@@ -148,7 +152,6 @@ def novo(pasta: Path) -> None:
     _copiar_trilha(pasta)
     for nome, origem in A_PREENCHER.items():
         _copiar(pasta, nome, origem)
-    (pasta / "sdd").mkdir(exist_ok=True)
     _ligar_travas(pasta)
     print(f"criado: {pasta}, com o kit (comum {_versao(MODELO / 'trilha' / 'CLAUDE-comum.md')})")
     print("próximos passos (README do kit, passos 3 a 6):")
@@ -211,19 +214,22 @@ def atualizar(pasta: Path) -> int:
             "a pasta trilha/ já existe e não é a do método (não tem o CLAUDE-comum.md); "
             "renomeie-a antes de atualizar"
         )
+    _ler_settings(pasta)  # o settings.json que a soma não entende recusa antes de mudar algo
 
     comum = pasta / "trilha" / "CLAUDE-comum.md"
     antes = _versao(comum if comum.is_file() else pasta / "CLAUDE-comum.md")
     migrou = _migrar(pasta)
     _copiar_trilha(pasta)
     for nome, origem in A_PREENCHER.items():
-        if not (pasta / nome).exists():
-            _copiar(pasta, nome, origem)
-            print(f"aviso: {nome} não existia e foi criado do modelo do kit; confira-o")
+        if (pasta / nome).exists() or not _anterior(antes, APAGAVEIS.get(nome)):
+            continue
+        _copiar(pasta, nome, origem)
+        print(f"aviso: {nome} não existia e foi criado do modelo do kit; confira-o")
     _ligar_travas(pasta)
     _sincronizar_regras(pasta)
     _avisar_parte_fixa(pasta, antes)
-    if (pasta / "sdd").is_dir():
+    # A página nasce ao fechar uma etapa (o comum); aqui, só a que já existe ganha o modelo novo.
+    if (pasta / "sdd" / "documentacao.html").is_file():
         _rodar(pasta, [sys.executable, "-I", "trilha/gerar_pagina_sdd.py"])
 
     regras = ["trilha/confere_regras.py", ".", "--fonte", str(KIT)]
@@ -234,7 +240,6 @@ def atualizar(pasta: Path) -> int:
     depois = _versao(MODELO / "trilha" / "CLAUDE-comum.md")
     mudou = _git(pasta, "status", "--short")
     print(mudou or "nada mudou: o projeto já está na versão do kit")
-    print(f"uma vez por máquina, se o plugin ainda não estiver no projeto: {INSTALAR_NO_PROJETO}")
     if not migrou:
         print("FALHA: o scripts/check.sh ainda chama os scripts/confere_*, que saíram; troque-os")
         return 1
@@ -326,37 +331,108 @@ def _migrar_check(pasta: Path) -> bool:
     return False
 
 
-def _ligar_travas(pasta: Path) -> None:
-    """A trava do commit (core.hooksPath, do clone) e a do Claude Code, somada ao settings.json com
-    a declaração do plugin."""
-    _git(pasta, "config", "core.hooksPath", "trilha/hooks")
-    modelo = json.loads((MODELO / "claude-settings.json").read_text(encoding="utf-8"))
-    entrada = modelo["hooks"]["PreToolUse"][0]
+def _anterior(antes: str, versao: tuple[int, int] | None) -> bool:
+    """O projeto vem de antes da versão dada do kit, ou de versão desconhecida; sem versão, sim."""
+    if versao is None or antes == "?":
+        return True
+    return tuple(int(parte) for parte in antes.split(".")) < versao
+
+
+def _modelo_do_settings() -> dict:
+    return json.loads((MODELO / "claude-settings.json").read_text(encoding="utf-8"))
+
+
+def _ler_settings(pasta: Path) -> dict:
+    """O .claude/settings.json do projeto ({} sem ele), recusado quando a soma do modelo não o
+    entende: JSON inválido ou, onde o modelo tem um objeto ou uma lista, outro tipo (até null)."""
     settings = pasta / ".claude" / "settings.json"
-    atual = json.loads(settings.read_text(encoding="utf-8")) if settings.is_file() else {}
-    lista = atual.setdefault("hooks", {}).setdefault("PreToolUse", [])
-    antes = json.dumps(lista)
-    # O hook de antes da 2.0 (scripts/guarda.py) sai; o da pasta trilha/ entra uma vez só.
-    for grupo in lista:
-        grupo["hooks"] = [
-            gancho
-            for gancho in grupo.get("hooks", [])
-            if "scripts/guarda.py" not in str(gancho.get("command", ""))
-        ]
-    lista[:] = [grupo for grupo in lista if grupo["hooks"]]
-    if "trilha/guarda.py" not in json.dumps(lista):
-        lista.append(entrada)
-    # O que o projeto já declarou fica, inclusive o plugin que ele desligou.
-    declarado = json.dumps([atual.get(chave) for chave in DECLARACOES])
-    for chave in DECLARACOES:
-        proprias = atual.setdefault(chave, {})
-        for nome, valor in modelo[chave].items():
-            proprias.setdefault(nome, valor)
-    mudou = declarado != json.dumps([atual.get(chave) for chave in DECLARACOES])
-    if mudou or json.dumps(lista) != antes or not settings.is_file():
+    if not settings.is_file():
+        return {}
+    try:
+        atual = json.loads(settings.read_text(encoding="utf-8"))
+    except ValueError as erro:
+        raise Recusa(f".claude/settings.json não é JSON válido ({erro}); corrija-o antes") from erro
+    errado = _tipo_diferente(atual, _modelo_do_settings(), "")
+    if errado:
+        raise Recusa(
+            f".claude/settings.json: {errado} não é do tipo que o modelo do kit tem ali (objeto "
+            "ou lista); corrija-o antes"
+        )
+    return atual
+
+
+def _tipo_diferente(atual: object, modelo: object, caminho: str) -> str:
+    """O primeiro caminho em que o projeto tem outro tipo onde o modelo tem objeto ou lista."""
+    if isinstance(modelo, list):
+        return "" if isinstance(atual, list) else caminho
+    if not isinstance(modelo, dict):
+        return ""
+    if not isinstance(atual, dict):
+        return caminho or "a raiz"
+    for chave in modelo.keys() & atual.keys():
+        errado = _tipo_diferente(atual[chave], modelo[chave], f"{caminho}.{chave}".lstrip("."))
+        if errado:
+            return errado
+    return ""
+
+
+def _ligar_travas(pasta: Path) -> None:
+    """A trava do commit (core.hooksPath, do clone) e o settings.json com o que o modelo tem: a
+    trava do Claude Code e a declaração do plugin. O arquivo só é escrito quando algo muda."""
+    _git(pasta, "config", "core.hooksPath", "trilha/hooks")
+    settings = pasta / ".claude" / "settings.json"
+    atual, modelo = _ler_settings(pasta), _modelo_do_settings()
+    antes = json.dumps(atual, sort_keys=True)
+    _sem_guardas_antigas(atual, modelo)
+    _somar(atual, modelo)
+    if json.dumps(atual, sort_keys=True) != antes or not settings.is_file():
         settings.parent.mkdir(parents=True, exist_ok=True)
         texto = json.dumps(atual, ensure_ascii=False, indent=2) + "\n"
         settings.write_text(texto, encoding="utf-8")
+
+
+def _sem_guardas_antigas(atual: dict, modelo: dict) -> None:
+    """Sai a trava do Claude Code de outra versão do kit (a de scripts/, de antes da 2.0, ou a de
+    trilha/ chamada de outro jeito), e o grupo que só a tinha; a soma põe a do modelo."""
+    do_modelo = [gancho for grupo in modelo["hooks"]["PreToolUse"] for gancho in grupo["hooks"]]
+
+    def antiga(gancho: object) -> bool:
+        comando = str(gancho.get("command", "")) if isinstance(gancho, dict) else ""
+        return gancho not in do_modelo and any(guarda in comando for guarda in GUARDAS)
+
+    lista = atual.get("hooks", {}).get("PreToolUse", [])
+    esvaziados = []
+    for grupo in lista:
+        ganchos = grupo.get("hooks") if isinstance(grupo, dict) else None
+        if isinstance(ganchos, list) and any(antiga(gancho) for gancho in ganchos):
+            grupo["hooks"] = [gancho for gancho in ganchos if not antiga(gancho)]
+            if not grupo["hooks"]:
+                esvaziados.append(grupo)
+    lista[:] = [grupo for grupo in lista if all(grupo is not vazio for vazio in esvaziados)]
+
+
+def _somar(atual: dict, modelo: dict) -> None:
+    """Põe no settings.json do projeto o que o modelo tem e ele não: a chave que falta e o item de
+    lista que nenhum dos dele contém. O valor que o projeto deu fica, até o plugin desligado."""
+    for chave, valor in modelo.items():
+        if chave not in atual:
+            atual[chave] = copy.deepcopy(valor)
+        elif isinstance(valor, dict):
+            _somar(atual[chave], valor)
+        elif isinstance(valor, list):
+            faltam = [item for item in valor if not any(_contido(item, n) for n in atual[chave])]
+            atual[chave] += copy.deepcopy(faltam)
+
+
+def _contido(parte: object, todo: object) -> bool:
+    """A parte está no todo: as chaves dela com valores contidos, os itens dela cada um num item."""
+    if isinstance(parte, dict):
+        return isinstance(todo, dict) and all(
+            chave in todo and _contido(valor, todo[chave]) for chave, valor in parte.items()
+        )
+    if isinstance(parte, list):
+        return isinstance(todo, list) and all(any(_contido(p, t) for t in todo) for p in parte)
+    return parte == todo
 
 
 def _caminhos(origem: str) -> list[str]:

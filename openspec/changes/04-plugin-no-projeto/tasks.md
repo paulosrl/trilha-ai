@@ -12,7 +12,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 ## 2. O comando de instalação por máquina
 
 - [x] 2.1 O `kit.py` ganha a constante do comando `claude plugin install sdd@trilha-ai --scope project`; o `novo` a põe nos próximos passos e o teste `test_novo_imprime_o_comando_de_instalacao` comprova o cenário "Comando no projeto novo" (`-k test_novo_imprime_o_comando_de_instalacao`)
-- [x] 2.2 O `atualizar` imprime o comando ao fim, sem recusa; o teste `test_atualizar_imprime_o_comando_de_instalacao` comprova o cenário "Comando na atualização" (`-k test_atualizar_imprime_o_comando_de_instalacao`)
+- [x] 2.2 O `atualizar` imprime o comando ao fim, sem recusa; o teste `test_atualizar_imprime_o_comando_de_instalacao` comprova o cenário "Comando na atualização" (`-k test_atualizar_imprime_o_comando_de_instalacao`); substituído na 9.4, depois da revisão de código
 - [x] 2.3 O teste `test_comando_de_instalacao_igual_no_kit_e_na_conferencia` confere que o `kit.py` e o `confere_metodo.py` citam o mesmo comando (design, decisão 2) (`-k test_comando_de_instalacao_igual_no_kit_e_na_conferencia`)
 
 ## 3. A conferência do plugin no projeto
@@ -30,7 +30,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 - [x] 4.2 A seção 4 e o princípio 4 da skill `tdd` passam a ler o `sdd/padroes-tecnicos.md` (design, decisão 6); o teste `test_skill_tdd_le_os_padroes_do_projeto` comprova o cenário "Skill sem padrões próprios" (`-k test_skill_tdd_le_os_padroes_do_projeto`)
 - [x] 4.3 O `sdd/padroes-tecnicos.md` entra no `A_PREENCHER` do `kit.py` e o `novo` aceita a pasta `sdd/` já criada; os testes que criam `sdd/` numa cópia do kit passam a aceitá-la existente, e o do aviso "sem a pasta sdd/" a apaga antes (design, decisão 8); o teste `test_novo_traz_os_padroes_tecnicos` comprova o cenário "Projeto novo com os padrões" (`-k test_novo_traz_os_padroes_tecnicos`), com o `test_verifica_aprova_o_projeto_novo` passando
 - [x] 4.4 O teste `test_atualizar_preserva_os_padroes_do_projeto` comprova o cenário "Padrões ajustados pelo projeto" (`-k test_atualizar_preserva_os_padroes_do_projeto`)
-- [x] 4.5 O teste `test_atualizar_cria_os_padroes_que_faltam` comprova o cenário "Projeto sem os padrões" (`-k test_atualizar_cria_os_padroes_que_faltam`)
+- [x] 4.5 O teste `test_atualizar_cria_os_padroes_que_faltam` comprova o cenário "Projeto sem os padrões" (`-k test_atualizar_cria_os_padroes_que_faltam`); ajustado na 9.5
 - [x] 4.6 A linha de `sdd/` do `modelo/esqueleto-CLAUDE.md` cita o `padroes-tecnicos.md` (design, decisão 7); o `test_verificador_aprova_um_repositorio_feito_do_kit` continua passando
 
 ## 5. A instalação nos READMEs e a versão
@@ -52,6 +52,18 @@ Cada teste é ajustado antes do código e falha antes dele.
 
 - [x] 8.1 O aviso do plugin de fora do kit dá `claude plugin uninstall <id> --scope <escopo>` quando a lista traz o escopo; o teste `test_plugin_de_fora_do_kit_desinstala_no_escopo` o comprova, e o `test_plugin_de_outro_marketplace_avisa` continua passando (`-k test_plugin_de_fora_do_kit_desinstala_no_escopo`)
 - [x] 8.2 A docstring do `confere_metodo.py` fala das instalações que podem valer no projeto; o conjunto de testes e o ruff (check e format), cada um sozinho, sem erro
+
+## 9. A revisão de código
+
+Cada teste é ajustado ou escrito antes do código e falha antes dele.
+
+- [x] 9.1 A soma do settings.json lê o modelo inteiro, com uma só comparação de antes e depois, e tira a trava de outra versão do kit (design, decisão 1); os testes `test_soma_traz_toda_chave_do_modelo_sem_trocar_as_do_projeto`, `test_trava_de_outra_versao_troca_pela_do_modelo` e `test_trava_do_modelo_num_grupo_do_projeto_nao_se_repete` comprovam os cenários "Chave nova no modelo", "Trava de outra versão" e "Trava do modelo num grupo do projeto"; os testes do settings.json da seção 1 continuam passando
+- [x] 9.2 O `atualizar` recusa, antes de mudar algo, o settings.json que a soma não entende; o teste `test_atualizar_recusa_o_settings_que_nao_entende_sem_mudar_nada` comprova o cenário "Settings.json que a soma não entende" (`-k test_atualizar_recusa_o_settings_que_nao_entende_sem_mudar_nada`)
+- [x] 9.3 O aviso de desligado sai uma vez, com o escopo da configuração que desliga (design, decisão 10); os testes `test_plugin_desligado_pelo_usuario`, `test_plugin_desligado_pelo_projeto_avisa_uma_vez_no_escopo`, `test_plugin_desligado_pela_configuracao_local` e `test_plugin_ligado_pela_configuracao_local_nao_avisa` comprovam os quatro cenários de "Aviso do plugin desligado" (`-k desligado -k ligado_pela`)
+- [x] 9.4 O `atualizar` deixa de imprimir o comando de instalação, e a conferência avisa a instalação que falta no projeto que declara o plugin (design, decisões 2 e 9); o teste `test_atualizar_cita_o_install_so_quando_falta_no_projeto` comprova os cenários "Comando na atualização" e "Atualização com o plugin já no projeto", e os testes `test_plugin_declarado_e_so_na_maquina_avisa_o_install_no_projeto`, `test_plugin_com_versao_igual_nao_avisa` e `test_so_a_instalacao_do_usuario_sem_declaracao_nao_avisa` comprovam "Projeto declarado e plugin só do usuário", "Plugin instalado no projeto" e "Só a instalação do usuário"
+- [x] 9.5 O `atualizar` só cria os padrões na passagem de uma versão anterior à 2.2 (design, decisão 5); o `test_atualizar_cria_os_padroes_que_faltam` passa a partir de um projeto da 1.19 e comprova "Projeto sem os padrões", e o `test_atualizar_respeita_os_padroes_apagados` comprova "Padrões apagados pelo projeto"; o modelo e o README dizem que o arquivo pode sair
+- [x] 9.6 O `atualizar` só gera de novo a página que existe, o `novo` perde o `mkdir` de `sdd/` e o aviso "sem a pasta sdd/" cita o modelo dos padrões (design, decisões 5 e 8); o `test_atualizar_so_regera_a_pagina_que_existe` comprova os cenários de "Página regenerada só quando existe", e o `test_metodo_aprova_um_repositorio_feito_do_kit` passa a exigir o `modelo/sdd/padroes-tecnicos.md` no aviso
+- [x] 9.7 O conjunto de testes, o ruff (check e format), cada um sozinho, e o `openspec validate --all --no-interactive`, sem erro
 
 ## 6. Execução manual
 

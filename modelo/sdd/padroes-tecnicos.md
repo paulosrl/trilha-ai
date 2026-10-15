@@ -1,6 +1,6 @@
 # Padrões técnicos
 
-O ponto de partida da skill `sdd:tdd` quando a entrevista chega a estas decisões: ela os confirma com o usuário, nunca os impõe, e o desvio vira ADR com a justificativa. Os padrões são do projeto: ajuste-os aqui antes do TDD, ou apague o que não valer.
+O ponto de partida da skill `sdd:tdd` quando a entrevista chega a estas decisões: ela os confirma com o usuário, nunca os impõe, e o desvio vira ADR com a justificativa. Os padrões são do projeto: ajuste-os aqui antes do TDD e apague o que não valer; sem ponto de partida nenhum, apague o arquivo, que a atualização do kit não o recria.
 
 **Banco de dados (quando a topologia pedir servidor):** PostgreSQL com extensão **pgvector** habilitada. Desvio (NoSQL, embarcado) exige razão registrada no ADR.
 

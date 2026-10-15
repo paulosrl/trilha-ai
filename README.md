@@ -19,7 +19,7 @@ Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do
    | `ANDAMENTO.md` | preencher a etapa e a hora; nasce "nada em andamento" |
    | `openspec/config.yaml` | preencher o contexto; as regras por artefato ficam como estão |
    | `scripts/check.sh` | a parte fixa (`bash trilha/verifica.sh`) já funciona; os repositórios ao lado entram nela, um `--vizinho` por nome; a parte da stack entra na etapa 2 |
-   | `sdd/padroes-tecnicos.md` | copiar no mesmo caminho: os padrões técnicos de partida que a skill `sdd:tdd` lê; ajustá-los antes do TDD. Na pasta `sdd/` nascem também o PRD, o TDD, a decomposição e os briefings |
+   | `sdd/padroes-tecnicos.md` | copiar no mesmo caminho: os padrões técnicos de partida que a skill `sdd:tdd` lê; ajustá-los antes do TDD, ou apagar o arquivo, se o projeto não os quiser. Na pasta `sdd/` nascem também o PRD, o TDD, a decomposição e os briefings |
    | `.github/workflows/verificacao.yml` | copiar no mesmo caminho: a cada envio, o GitHub roda o `check.sh` (que inclui o `openspec validate`) e a busca de senhas e chaves no histórico (gitleaks); as ações vão fixadas pelo commit; a parte da stack entra na etapa 2 |
    | `.github/dependabot.yml` | copiar no mesmo caminho: o Dependabot (gratuito) abre um pull request a cada versão nova das ações e, depois da etapa 2, das dependências da stack |
    | `claude-settings.json` | copiar como `.claude/settings.json`, ou somar o que ele traz ao que já existir: liga o `trilha/guarda.py` e declara o plugin `sdd@trilha-ai` (`enabledPlugins`) e o marketplace dele (`extraKnownMarketplaces`) |
