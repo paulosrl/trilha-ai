@@ -159,6 +159,28 @@ class Kit(unittest.TestCase):
         self.assertIn("nunca o valor literal que o código já usa", config)
         self.assertIn("Marcar a tarefa de um cenário só quando o teste que o comprova passar", config)
 
+    def test_regras_cabem_no_projeto_sem_prd(self) -> None:
+        """O comum admite a correção vinda de um spec, sem PRD; as regras que pedem RF dizem o que vale."""
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        regras = config.split("\nrules:\n", 1)[1].split("\noperations:\n", 1)[0]
+        for artefato in ("proposal", "specs", "tasks"):
+            bloco = re.split(r"\n  (?=\w)", regras.split(f"  {artefato}:\n", 1)[1], maxsplit=1)[0]
+            self.assertIn("no projeto ainda sem prd", bloco.lower(), artefato)
+
+    def test_apply_registra_a_verificacao(self) -> None:
+        """A regra do design só é lida no propose; quem preenche a Verificação é o apply, com ou sem design.md."""
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        apply = config.split("  apply:", 1)[1].split("  archive:", 1)[0]
+        self.assertIn('na seção "Verificação" do design.md', apply)
+        self.assertIn("no notas.md da pasta da change quando não houver design.md", apply)
+        self.assertIn("nenhum cenário fica comprovado só pela execução manual", apply)
+
+    def test_confere_metodo_se_declara_trava(self) -> None:
+        """Desde a 1.27 ele roda na trava do commit e no CI; o texto dele diz isso."""
+        texto = (RAIZ / "scripts" / "confere_metodo.py").read_text(encoding="utf-8")
+        self.assertNotIn("portão de publicação", texto)
+        self.assertIn("na trava do commit (.githooks/pre-commit)", texto)
+
     def test_ci_com_acoes_fixadas_e_busca_de_segredos(self) -> None:
         """v1.29: ações pelo commit, gitleaks conferido pela soma, Dependabot e a regra dos segredos."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")

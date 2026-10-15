@@ -8,11 +8,11 @@ Confere, na raiz do repositório:
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
 - o plugin `sdd` instalado é o da fonte (`../pipeline-prd-tdd-openspec`): só aviso, nunca falha.
 
-Fica fora de qualquer bateria que seja portão de publicação: o estado dos documentos e das
-ferramentas da máquina não pode impedir o sistema de ir ao ar. Sem a pasta `sdd/`, avisa que ela
-falta; sem a decomposição ou o TDD (o repositório que ainda não os escreveu), a conferência deles é
-pulada com aviso. Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema;
-"ok" se nada falhar.
+Roda no check.sh (e, por ele, no CI) e na trava do commit (.githooks/pre-commit): documento do
+método fora do formato barra o commit e o merge; o que depende da máquina (o plugin) só avisa.
+Sem a pasta `sdd/`, avisa que ela falta; sem a decomposição ou o TDD (o repositório que ainda não
+os escreveu), a conferência deles é pulada com aviso. Só python3, sem dependências. Sai com 1 e
+imprime "FALHA: ..." por problema; "ok" se nada falhar.
 """
 
 from __future__ import annotations
