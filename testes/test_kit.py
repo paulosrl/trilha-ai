@@ -1,6 +1,8 @@
 """O kit é coerente: a versão, o esqueleto, o verificador e o gerador da página (Python 3 puro)."""
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import re
@@ -8,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -117,22 +120,47 @@ class Kit(unittest.TestCase):
         self.assertIn("1.35.0", erro)
         self.assertIn("1.36", erro)
 
-    def test_esqueleto_da_decomposicao_passa_na_conferencia(self) -> None:
-        """F02: o formato que a skill briefing ensina é o que a trava do commit lê, com ou sem retirada."""
+    @staticmethod
+    def _esqueleto_da_decomposicao() -> str:
         skill = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
         esqueleto = next(b for b in skill.split("```markdown\n")[1:] if "## 1. Mapa de changes" in b)
-        esqueleto = esqueleto.split("\n```", 1)[0]
+        return esqueleto.split("\n```", 1)[0]
+
+    def _confere_decomposicao(self, texto: str) -> subprocess.CompletedProcess[str]:
+        with tempfile.TemporaryDirectory() as tmp:
+            _copia_do_kit(Path(tmp))
+            (Path(tmp) / "sdd").mkdir()
+            (Path(tmp) / "sdd/decomposicao-x.md").write_text(texto, encoding="utf-8")
+            return self._confere_metodo(Path(tmp))
+
+    def test_esqueleto_da_decomposicao_passa_na_conferencia(self) -> None:
+        """F02: o formato que a skill briefing ensina é o que a trava do commit lê, com ou sem retirada."""
+        esqueleto = self._esqueleto_da_decomposicao()
         retirada = esqueleto.replace("<por que depende da 01> |", "<por que depende da 01>; retirada em 2026-10-16: motivo |")
         retirada = retirada.replace("| 02 | — | — | — |", "| 02 | — | — | retirada em 2026-10-16 |")
         self.assertNotEqual(retirada, esqueleto)
         for texto in (esqueleto, retirada):
-            with tempfile.TemporaryDirectory() as tmp:
-                _copia_do_kit(Path(tmp))
-                (Path(tmp) / "sdd").mkdir()
-                (Path(tmp) / "sdd/decomposicao-x.md").write_text(texto, encoding="utf-8")
-                saida = self._confere_metodo(Path(tmp))
+            saida = self._confere_decomposicao(texto)
             self.assertEqual(saida.returncode, 0, saida.stderr)
             self.assertNotIn("FALHA", saida.stderr)
+
+    def test_decomposicao_com_titulo_so_dentro_do_texto_reprova(self) -> None:
+        """F02: o título vale no começo da linha; `### 1.` não é o `## 1.` do esqueleto."""
+        texto = self._esqueleto_da_decomposicao().replace("## 1. Mapa de changes", "### 1. Mapa de changes")
+        saida = self._confere_decomposicao(texto)
+        self.assertEqual(saida.returncode, 1, saida.stderr)
+        falha = next(l for l in saida.stderr.splitlines() if l.startswith("FALHA: decomposição"))
+        self.assertIn("`## 1.`", falha)
+        self.assertNotIn("`## 2.`", falha)
+        self.assertIn("sdd:briefing", falha)
+
+    def test_decomposicao_sem_a_secao_2_reprova(self) -> None:
+        texto = self._esqueleto_da_decomposicao().replace("## 2. Regras de convivência", "## Regras de convivência")
+        saida = self._confere_decomposicao(texto)
+        self.assertEqual(saida.returncode, 1, saida.stderr)
+        falha = next(l for l in saida.stderr.splitlines() if l.startswith("FALHA: decomposição"))
+        self.assertIn("`## 2.`", falha)
+        self.assertNotIn("`## 1.`", falha)
 
     def test_briefing_seguinte_depois_do_merge(self) -> None:
         """F06: a change fecha no merge (comum, passo 7); o briefing da próxima espera por ele."""
@@ -175,6 +203,14 @@ class Kit(unittest.TestCase):
         for arquivo in ("trilha/CLAUDE-comum.md",):
             texto = (MODELO / arquivo).read_text(encoding="utf-8")
             self.assertIsNotNone(re.search(r"^Versão \d+\.\d+, de \d{4}-\d\d-\d\d\.", texto, re.M), arquivo)
+
+    def test_comum_cabe_em_metade_do_teto(self) -> None:
+        """F09: o comum fica em 16 KB, metade do teto que a conferência cobra; a outra é do projeto."""
+        spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha/confere_regras.py")
+        regras = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(regras)
+        tamanho = len((MODELO / "trilha/CLAUDE-comum.md").read_bytes())
+        self.assertLessEqual(tamanho, regras.LIMITE_DE_BYTES // 2)
 
     def test_comum_nao_cita_curso(self) -> None:
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
@@ -557,6 +593,19 @@ class Kit(unittest.TestCase):
             self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
             return saida.stderr
 
+    def test_regras_largas_demais_reprovam(self) -> None:
+        """F09: abaixo das 200 linhas, mas acima dos 32 KB, a conferência reprova pelos bytes."""
+        tamanho = len((MODELO / "trilha/CLAUDE-comum.md").read_bytes()) + len((MODELO / "esqueleto-CLAUDE.md").read_bytes())
+        largas = "- " + "x" * (32_768 - tamanho) + "\n"
+        erro = self._verifica_com_defeito("CLAUDE.md", "- Nenhuma.\n", f"- Nenhuma.\n{largas}")
+        self.assertIn("bytes", erro)
+        self.assertIn("32768", erro)
+
+    def test_regras_com_linhas_demais_reprovam(self) -> None:
+        erro = self._verifica_com_defeito("CLAUDE.md", "- Nenhuma.\n", "- Nenhuma.\n" + "- x\n" * 120)
+        self.assertIn("linhas", erro)
+        self.assertIn("200", erro)
+
     def test_verificador_reprova_andamento_sem_hora(self) -> None:
         erro = self._verifica_com_defeito("ANDAMENTO.md", "<AAAA-MM-DD HH:MM>", "2026-10-14")
         self.assertIn("sem a hora", erro)
@@ -619,6 +668,52 @@ class Kit(unittest.TestCase):
             for achado in re.finditer(r"<[^<>]+>", texto):
                 self.assertTrue(any(a < achado.end() and achado.start() < b for a, b in trechos),
                                 f"{nome}: {achado.group()} fora de CAMPOS_DO_MODELO")
+
+    def test_marcadores_da_stack_sao_os_dos_modelos(self) -> None:
+        """F04: um marcador por lugar da stack que o comum nomeia no gate 2, e cada um está no modelo."""
+        spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha/confere_regras.py")
+        regras = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(regras)
+        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        gate_2 = next(l for l in comum.splitlines() if l.startswith("- Ao fechar o gate 2"))
+        lugares = sorted(c for c in re.findall(r"`([^`]+)`", gate_2.split("Até lá")[0]) if "." in c)
+        self.assertEqual(sorted(regras.STACK_DO_MODELO), lugares)
+        for nome, marcador in regras.STACK_DO_MODELO.items():
+            self.assertIn(marcador, (MODELO / ORIGEM[nome]).read_text(encoding="utf-8"), nome)
+
+    def _avisos_da_stack(self, com_tdd: bool, preenchida: bool = False) -> list[str]:
+        """As linhas de aviso da stack da conferência das regras num projeto feito do kit."""
+        spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha/confere_regras.py")
+        regras = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(regras)
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp)
+            _copia_do_kit(destino)
+            (destino / "sdd").mkdir()
+            if com_tdd:
+                (destino / "sdd/tdd-x.md").write_text("# TDD\n", encoding="utf-8")
+            if preenchida:
+                for nome, marcador in regras.STACK_DO_MODELO.items():
+                    alvo = destino / nome
+                    linhas = alvo.read_text(encoding="utf-8").splitlines(keepends=True)
+                    alvo.write_text("".join(l for l in linhas if marcador not in l), encoding="utf-8")
+            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_regras.py"), tmp],
+                                   capture_output=True, text=True, check=False)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        return [l for l in saida.stderr.splitlines() if l.startswith("aviso:") and "parte da stack" in l]
+
+    def test_tdd_com_a_stack_do_modelo_avisa(self) -> None:
+        avisos = self._avisos_da_stack(com_tdd=True)
+        self.assertEqual(len(avisos), 1, avisos)
+        for lugar in ("scripts/check.sh", ".github/workflows/verificacao.yml", ".github/dependabot.yml",
+                      ".gitignore", "openspec/config.yaml"):
+            self.assertIn(lugar, avisos[0])
+
+    def test_stack_preenchida_nao_avisa(self) -> None:
+        self.assertEqual(self._avisos_da_stack(com_tdd=True, preenchida=True), [])
+
+    def test_projeto_sem_tdd_nao_avisa_a_stack(self) -> None:
+        self.assertEqual(self._avisos_da_stack(com_tdd=False), [])
 
     def _confere_metodo(self, destino: Path, *args: str, claude: str | None = "exit 1"
                         ) -> subprocess.CompletedProcess[str]:
@@ -744,6 +839,28 @@ class Kit(unittest.TestCase):
         nao_json = self._aviso_do_plugin("isto não é json")
         self.assertEqual(nao_json.returncode, 0, nao_json.stderr)
         self.assertNotIn("plugin sdd", nao_json.stderr)
+
+    def test_lista_de_plugins_sem_resposta_no_prazo_nao_avisa(self) -> None:
+        """Um `claude` que não responde no prazo: a conferência não espera mais, sem aviso nem falha."""
+        spec = importlib.util.spec_from_file_location("metodo", MODELO / "trilha/confere_metodo.py")
+        metodo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(metodo)
+        metodo.PRAZO_DO_CLAUDE = 0.3  # o de verdade é de segundos; o teste não espera por ele
+        erro = io.StringIO()
+        with tempfile.TemporaryDirectory() as falsos:
+            _claude_falso(Path(falsos), "exec sleep 5")
+            antes = os.environ["PATH"]
+            os.environ["PATH"] = f"{falsos}:{antes}"
+            try:
+                inicio = time.monotonic()
+                with contextlib.redirect_stderr(erro), contextlib.redirect_stdout(io.StringIO()):
+                    codigo = metodo.main([])
+                duracao = time.monotonic() - inicio
+            finally:
+                os.environ["PATH"] = antes
+        self.assertEqual(codigo, 0, erro.getvalue())
+        self.assertNotIn("plugin sdd", erro.getvalue())
+        self.assertLess(duracao, 3)
 
     def test_metodo_aprova_um_repositorio_feito_do_kit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1140,6 +1257,44 @@ class Kit(unittest.TestCase):
             saida = self._verifica(pasta, path=str(sem_openspec), ci=True)
         self.assertNotEqual(saida.returncode, 0)
         self.assertIn("o openspec falta", saida.stderr)
+
+    def _novo_com_openspec(self, perfil: dict | None) -> subprocess.CompletedProcess:
+        """O kit.py novo com um `openspec` falso que responde o perfil dado ao `config list --json`;
+        com None, sem o openspec no PATH."""
+        with tempfile.TemporaryDirectory() as tmp:
+            falsos = Path(tmp) / "falsos"
+            falsos.mkdir()
+            (falsos / "git").symlink_to(shutil.which("git"))  # o PATH tem só esta pasta
+            if perfil is not None:
+                falso = falsos / "openspec"
+                falso.write_text(f"#!/bin/sh\nprintf '%s' '{json.dumps(perfil)}'\n", encoding="utf-8")
+                falso.chmod(0o755)
+            env = {**os.environ, "PATH": str(falsos)}
+            return subprocess.run([sys.executable, "-I", str(RAIZ / "ferramentas/kit.py"), "novo", f"{tmp}/novo"],
+                                  capture_output=True, text=True, check=False, env=env)
+
+    def test_novo_avisa_o_perfil_sem_o_verify(self) -> None:
+        """F32: no perfil core o OpenSpec ignora a lista e não traz o verify; no custom, só se a lista o tiver."""
+        for perfil in ({"profile": "core", "workflows": ["propose", "verify"]},
+                       {"profile": "custom", "workflows": ["propose", "apply", "archive"]}):
+            saida = self._novo_com_openspec(perfil)
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            aviso = [l for l in saida.stdout.splitlines() if l.startswith("aviso: o perfil do OpenSpec")]
+            self.assertEqual(len(aviso), 1, (perfil, saida.stdout))
+            self.assertIn("verify", aviso[0])
+            self.assertIn("openspec config profile", aviso[0])
+
+    def test_novo_com_o_verify_no_perfil_nao_avisa(self) -> None:
+        saida = self._novo_com_openspec({"profile": "custom", "workflows": ["propose", "apply", "verify", "archive"]})
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("aviso:", saida.stdout)
+        passos = saida.stdout.split("próximos passos", 1)[1]
+        self.assertIn("openspec config profile", passos)
+
+    def test_novo_sem_openspec_avisa(self) -> None:
+        saida = self._novo_com_openspec(None)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("aviso: o openspec não está instalado", saida.stdout)
 
     def test_novo_cria_a_pasta_trilha_e_liga_as_travas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

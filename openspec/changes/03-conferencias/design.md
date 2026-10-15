@@ -44,3 +44,7 @@ Desde a 2.0, as conferências que os projetos rodam estão em `modelo/trilha/`: 
 2. Execução manual: um projeto novo pelo `kit.py novo` com o perfil real da máquina, e um clone descartável do heimdall (com TDD) conferido pelas conferências novas.
 3. Depois do merge: os projetos recebem as conferências na próxima atualização, cada um sob a ordem do usuário nomeando-o.
 4. Volta atrás: reverter o merge devolve o kit à 2.0; os projetos não atualizados não mudam.
+
+## Revisão dos artefatos
+
+A revisão do fim do propose, pelo checklist da skill `sdd:briefing` adaptado ao kit (a descrição aprovada no lugar do PRD; o `CLAUDE.md` do kit e os specs atuais no lugar dos ADRs), deu o laudo APROVADO, aprovado pelo usuário em 2026-10-15. Duas observações, resolvidas no apply: o texto do topo do `confere_regras.py`, que lista o que ele confere, ganha o aviso da stack e o teto de 32 KB; e, com TDD e a linha "Stack" ainda por preencher, o aviso da stack e o dos campos `< >` saem juntos, de propósito, porque cada um diz uma coisa.

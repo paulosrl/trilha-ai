@@ -147,9 +147,40 @@ def novo(pasta: Path) -> None:
     print(f"criado: {pasta}, com o kit (comum {_versao(MODELO / 'trilha' / 'CLAUDE-comum.md')})")
     print("próximos passos (README do kit, passos 3 a 6):")
     print("  1. preencha o que está entre < e > no CLAUDE.md, no ANDAMENTO.md e no config.yaml;")
-    print("  2. openspec init (sem sobrescrever o config.yaml) e codegraph init;")
+    print("  2. uma vez por máquina, openspec config profile, com o verify marcado (o passo 5")
+    print("     do ciclo o usa); depois, openspec init (sem sobrescrever o config.yaml) e")
+    print("     codegraph init;")
     print("  3. bash scripts/check.sh, que deve terminar com ok;")
     print("  4. o primeiro commit e: gh repo create <nome> --private --source . --push")
+    aviso = _aviso_do_perfil()
+    if aviso:
+        print(f"aviso: {aviso}")
+
+
+def _aviso_do_perfil() -> str:
+    """O verify que falta no perfil do OpenSpec desta máquina; vazio com ele. Só lê o perfil: no
+    `core`, o OpenSpec ignora a lista de workflows e usa a dele, sem o verify (core/profiles.js)."""
+    try:
+        saida = subprocess.run(
+            ["openspec", "config", "list", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+        perfil = json.loads(saida.stdout)
+    except OSError:
+        return "o openspec não está instalado; instale-o e ligue o verify no perfil (README do kit)"
+    except (subprocess.TimeoutExpired, json.JSONDecodeError):
+        perfil = None
+    if not isinstance(perfil, dict):
+        return "o openspec não respondeu ao openspec config list --json; confira o perfil nele"
+    if perfil.get("profile") == "custom" and "verify" in (perfil.get("workflows") or []):
+        return ""
+    return (
+        "o perfil do OpenSpec desta máquina não traz o verify, que o ciclo usa no passo 5: rode "
+        "openspec config profile e marque-o"
+    )
 
 
 def atualizar(pasta: Path) -> int:
