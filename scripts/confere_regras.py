@@ -104,7 +104,8 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
         falhas.append("CLAUDE-comum.md sem a linha 'Versão X.Y, de AAAA-MM-DD.'")
     if "@CLAUDE-comum.md" not in linhas_proprio:
         falhas.append("CLAUDE.md não importa o comum (falta a linha @CLAUDE-comum.md)")
-    regras_do_comum = {linha.strip() for linha in linhas_comum if linha.startswith(("- ", "1. "))}
+    item = re.compile(r"^(- |\d+\. )")
+    regras_do_comum = {linha.strip() for linha in linhas_comum if item.match(linha)}
     for linha in linhas_proprio:
         if linha.strip() in regras_do_comum:
             falhas.append(f"CLAUDE.md repete regra do comum: {linha.strip()[:70]}")

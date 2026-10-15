@@ -42,6 +42,19 @@ class Kit(unittest.TestCase):
     def test_comum_nao_cita_curso(self) -> None:
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("curso", comum.lower().replace("em curso", ""))
+        # O config.yaml vai a todo projeto: também não cita um.
+        self.assertNotIn("Consulta Pública", (RAIZ / "openspec/config.yaml").read_text(encoding="utf-8"))
+
+    def test_comum_sem_repetir_o_openspec_nem_a_si_mesmo(self) -> None:
+        """v1.32: a instrução do propose já manda ler o projeto e os specs; o pkill -f num lugar só."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("Antes de propor, rode `openspec list`", comum)
+        self.assertNotIn("leia o spec da capability", comum)
+        self.assertEqual(comum.count("`pkill -f`"), 1)
+        # A trava confere o --merge e a verificação verde, não o passo em que se está.
+        self.assertIn("o merge sem `--merge` ou sem a verificação verde", comum)
+        self.assertNotIn("merge fora do passo 7", comum)
+        self.assertIn("a trava `guarda.py` e o `.githooks/pre-commit`) dispensam change", comum)
 
     def test_comum_fecha_a_porta_do_briefing_curto(self) -> None:
         """v1.8: sem decomposição, o passo do ciclo fica no ANDAMENTO.md; com PRD e TDD, a decomposição vem antes."""
@@ -406,6 +419,12 @@ class Kit(unittest.TestCase):
         self.assertIn("ANDAMENTO.md", erro)
         self.assertIn("openspec/config.yaml", erro)
 
+    def test_verificador_reprova_passo_numerado_do_comum_repetido(self) -> None:
+        passo = next(linha for linha in (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8").splitlines()
+                     if linha.startswith("2. "))
+        erro = self._verifica_com_defeito("CLAUDE.md", "- Nenhuma.", f"- Nenhuma.\n\n{passo}")
+        self.assertIn("repete regra do comum: 2. ", erro)
+
     def test_verificador_avisa_os_campos_do_modelo_por_preencher(self) -> None:
         """Cada campo < > dos modelos é cobrado como aviso, e só ele: o projeto pode usar < > no texto."""
         with tempfile.TemporaryDirectory() as tmp:
@@ -726,6 +745,7 @@ class Kit(unittest.TestCase):
                 self.assertEqual((pasta / nome).read_bytes(), (RAIZ / nome).read_bytes())
             self.assertTrue((pasta / "sdd").is_dir())
             self.assertIn("gh repo create", saida.stdout)
+            self.assertIn("README do kit, passos 3 a 6", saida.stdout)
             self.assertEqual(self._ferramenta("novo", str(pasta)).returncode, 1)
 
     def test_ferramenta_atualiza_so_o_que_se_copia_sem_mudar(self) -> None:

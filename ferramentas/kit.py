@@ -99,7 +99,7 @@ def novo(pasta: Path) -> None:
     (pasta / "sdd").mkdir()
     _ligar_travas(pasta)
     print(f"criado: {pasta}, com o kit (comum {_versao(KIT / 'CLAUDE-comum.md')})")
-    print("próximos passos (README do kit, a partir do passo 4):")
+    print("próximos passos (README do kit, passos 3 a 6):")
     print("  1. preencha o que está entre < e > no CLAUDE.md, no ANDAMENTO.md e no config.yaml;")
     print("  2. openspec init (sem sobrescrever o config.yaml) e codegraph init;")
     print("  3. bash scripts/check.sh, que deve terminar com ok;")

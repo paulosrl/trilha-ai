@@ -12,8 +12,8 @@ context: |
   deste repositório (os nomes dos documentos, os dados a proteger, as exceções) estão no
   CLAUDE-comum.md e no CLAUDE.md, que o agente já carrega; este contexto não as repete.
 
-# Regras por artefato. Vieram das exigências dos briefings e dos commits de correção do
-# projeto Consulta Pública; valem para todo repositório que segue o método. Só o que é do método:
+# Regras por artefato. Vieram das exigências dos briefings e dos commits de correção dos
+# projetos que seguem o método; valem para todos eles. Só o que é do método:
 # o que o modelo do OpenSpec já pede (o porquê, as alternativas, os cenários WHEN/THEN, o formato
 # das tarefas) fica nas instruções dele, que o OpenSpec dá junto com estas.
 rules:

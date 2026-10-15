@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.31, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.32, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -20,7 +20,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 - PRD e spec em desacordo: vale o PRD aprovado, e uma change corrige o comportamento e o spec; se o certo for o spec, o PRD ganha versão nova. O usuário escolhe qual dos dois está certo.
 - Para contrariar ou estender um ADR, pare e pergunte. Mudança de decisão técnica é uma nova versão do TDD, aprovada antes do código.
 - Projeto que nasceu sem PRD ou TDD escreve o que falta antes da próxima change que toque requisito ou tecnologia. Até lá, uma correção de comportamento que um spec já descreve nasce de um briefing curto, escrito a partir desse spec (o requisito e o cenário corrigidos, o defeito, o esperado, o que já existe), sem requisito novo nem decisão técnica, aprovado pelo usuário; o resto do ciclo é o mesmo. Nesse caso, o passo do ciclo de cada change fica no `ANDAMENTO.md`, e a change arquivada entra na tabela "Ciclo" quando a decomposição nascer. Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.
-- Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito, ajuste de teste e a cópia nova dos arquivos que o método manda copiar sem mudar (este arquivo e os scripts de conferência e da página) dispensam change.
+- Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito, ajuste de teste e a cópia nova dos arquivos que o método manda copiar sem mudar (este arquivo, os scripts de conferência e da página, a trava `guarda.py` e o `.githooks/pre-commit`) dispensam change.
 
 ## O ciclo de cada change (OpenSpec)
 
@@ -33,7 +33,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 7. o merge, só com a verificação do GitHub verde no PR (`gh pr checks`) e com um "sim" só para ele: `gh pr merge --merge --delete-branch` (merge commit, nunca squash nem rebase, que apagariam os pontos de retomada ou a fronteira da change). De volta à main atualizada, o `ANDAMENTO.md` vai a "nada em andamento" num commit, enviado sob o mesmo "sim". A change fecha aqui, não no archive; a próxima abre outra branch.
 
 - O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele, e o que se sobrepuser muda no método, não no OpenSpec. O ciclo acima usa todos os passos que ele oferece; quando um comando oferece pular um (arquivar sem o verify, aplicar antes da revisão, arquivar sem atualizar os specs), quem escolhe é o usuário, com a recomendação de não pular.
-- Antes de propor, leia o spec da capability em `openspec/specs/` e rode `openspec list`: evita change duplicada ou em colisão. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
+- Antes de propor, rode `openspec list`: evita change duplicada ou em colisão com outra change ativa. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
 - Os specs em `openspec/specs/` mudam pelos caminhos do OpenSpec: o delta, que o archive aplica, e a edição direta que as instruções dele pedem (o Purpose de um spec existente). Fora disso, à mão, só typo ou link; outra edição à mão pede uma change retroativa.
 - Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
 - Espere a escolha do usuário antes de ampliar o escopo de uma change aprovada. Achado fora do escopo vira outra change ou revisão do PRD ou do TDD; achado que o spec já cobre é correção dentro da change, com o teste que falha escrito antes.
@@ -75,8 +75,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 
 ## Armadilhas
 
-- As travas do kit não se contornam: o `.githooks/pre-commit` (ligado por `git config core.hooksPath .githooks`) confere as regras e o método antes de cada commit, e o `scripts/guarda.py`, hook do Claude Code no `.claude/settings.json`, barra o envio forçado, o `--no-verify`, o `pkill -f` e o merge fora do passo 7. Trava que barrar algo legítimo volta ao usuário.
-- Nunca use `pkill -f` ou `pgrep -f` com um padrão que possa casar o próprio shell; encerre processos pelo PID guardado.
+- As travas do kit não se contornam: o `.githooks/pre-commit` (ligado por `git config core.hooksPath .githooks`) confere as regras e o método antes de cada commit, e o `scripts/guarda.py`, hook do Claude Code no `.claude/settings.json`, barra o envio forçado, o `--no-verify`, o `pkill -f` e o `pgrep -f` (o padrão casa o próprio shell: encerre processos pelo PID guardado) e o merge sem `--merge` ou sem a verificação verde. Trava que barrar algo legítimo volta ao usuário.
 - Nunca pare, remova ou mate processo ou container de outro projeto sem ordem explícita.
 - Senha, chave ou token nunca entram no git; o CI os procura no histórico (gitleaks). Achado real: troque a chave antes de qualquer outra coisa, porque apagá-la do git não a desfaz no histórico; falso positivo vai ao `.gitleaksignore`, com a escolha do usuário.
 - Dado real nunca serve a teste manual: use uma cópia descartável e prove, antes e depois, que o real não mudou.
