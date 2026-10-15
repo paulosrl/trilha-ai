@@ -40,7 +40,7 @@ def _motivo(comando: str) -> str:
         alvo = [t for t in tokens if not t.startswith("-")]
         try:
             checks = subprocess.run(
-                ["gh", "pr", "checks", *alvo[:1]], capture_output=True, text=True
+                ["gh", "pr", "checks", *alvo[:1]], capture_output=True, text=True, check=False
             )
         except OSError:
             return "o gh não está instalado; sem ele, a verificação do PR não foi conferida"

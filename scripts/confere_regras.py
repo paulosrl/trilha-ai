@@ -127,7 +127,10 @@ def avisos_das_travas(raiz: Path) -> list[str]:
     avisos = []
     if (raiz / ".git").exists():
         saida = subprocess.run(
-            ["git", "-C", str(raiz), "config", "core.hooksPath"], capture_output=True, text=True
+            ["git", "-C", str(raiz), "config", "core.hooksPath"],
+            capture_output=True,
+            text=True,
+            check=False,
         )
         if saida.stdout.strip() != ".githooks":
             avisos.append("trava do commit desligada: rode git config core.hooksPath .githooks")

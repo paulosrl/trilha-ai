@@ -49,7 +49,9 @@ class Recusa(Exception):
 
 
 def _git(pasta: Path, *args: str) -> str:
-    saida = subprocess.run(["git", "-C", str(pasta), *args], capture_output=True, text=True)
+    saida = subprocess.run(
+        ["git", "-C", str(pasta), *args], capture_output=True, text=True, check=False
+    )
     if saida.returncode != 0:
         raise Recusa(f"git {' '.join(args)} falhou em {pasta}: {saida.stderr.strip()}")
     return saida.stdout.strip()
@@ -67,7 +69,7 @@ def _principal(pasta: Path) -> str:
 def _versao(comum: Path) -> str:
     if not comum.is_file():
         return "?"
-    achado = re.search(r"^Versão (\d+\.\d+)", comum.read_text(encoding="utf-8"), re.M)
+    achado = re.search(r"^Versão (\d+\.\d+)", comum.read_text(encoding="utf-8"), re.MULTILINE)
     return achado.group(1) if achado else "?"
 
 
@@ -111,7 +113,7 @@ def atualizar(pasta: Path) -> int:
     if andamento.is_file() and re.search(
         r"\*\*Estado:\*\*\s*em andamento", andamento.read_text(encoding="utf-8")
     ):
-        raise Recusa("o ANDAMENTO.md diz \"em andamento\"; termine a unidade em curso antes")
+        raise Recusa('o ANDAMENTO.md diz "em andamento"; termine a unidade em curso antes')
 
     antes = _versao(pasta / "CLAUDE-comum.md")
     for nome in SEM_MUDAR:
@@ -136,7 +138,7 @@ def atualizar(pasta: Path) -> int:
         print("FALHA: a conferência reprovou; os arquivos ficaram copiados, sem commit")
         return 1
     if mudou:
-        print(f'commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {antes} → {depois}')
+        print(f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {antes} → {depois}")
     return 0
 
 
@@ -156,7 +158,7 @@ def _ligar_travas(pasta: Path) -> None:
 
 
 def _rodar(pasta: Path, comando: list[str]) -> bool:
-    saida = subprocess.run(comando, cwd=pasta, capture_output=True, text=True)
+    saida = subprocess.run(comando, cwd=pasta, capture_output=True, text=True, check=False)
     for linha in (saida.stdout + saida.stderr).splitlines():
         print(f"  {linha}")
     return saida.returncode == 0

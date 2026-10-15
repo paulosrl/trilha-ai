@@ -71,7 +71,9 @@ def conferir_decomposicao(texto: str) -> list[str]:
 
 def conferir_tdd(texto: str) -> list[str]:
     # O histórico de versões descreve o passado e pode citar o que já saiu.
-    corpo = re.split(r"^## (?:\d+\. )?Histórico de versões", texto, maxsplit=1, flags=re.M)[0]
+    corpo = re.split(r"^## (?:\d+\. )?Histórico de versões", texto, maxsplit=1, flags=re.MULTILINE)[
+        0
+    ]
     falhas = [
         f"TDD: número de linha na evidência: {achado}"
         for achado in re.findall(r"\(linhas? \d[^)]*\)", corpo)

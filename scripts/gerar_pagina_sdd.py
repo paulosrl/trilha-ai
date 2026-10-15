@@ -114,8 +114,15 @@ def _changes(decomposicao: str) -> list[dict[str, str]]:
         else:
             estado, rotulo = "futura", "a fazer"
         nome = _nome_da_change(briefing)
-        changes.append({"numero": numero, "nome": nome, "estado": estado, "rotulo": rotulo,
-                        "pr": pr.group(1) if pr else ""})
+        changes.append(
+            {
+                "numero": numero,
+                "nome": nome,
+                "estado": estado,
+                "rotulo": rotulo,
+                "pr": pr.group(1) if pr else "",
+            }
+        )
     return changes
 
 
@@ -148,7 +155,10 @@ def _repositorio() -> str:
     try:
         saida = subprocess.run(
             ["git", "remote", "get-url", "origin"],
-            cwd=RAIZ, capture_output=True, text=True, check=True,
+            cwd=RAIZ,
+            capture_output=True,
+            text=True,
+            check=True,
         )
     except (OSError, subprocess.CalledProcessError):
         return ""

@@ -17,3 +17,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: Os testes do kit (Python 3 puro, sem dependências)
         run: python3 -m unittest discover -s testes -v
+      - name: Os scripts que os projetos copiam passam no ruff (lint e formato, limite de 100)
+        run: |
+          pipx run ruff==0.17.0 check --isolated --line-length 100 scripts/ ferramentas/
+          pipx run ruff==0.17.0 format --isolated --check --line-length 100 scripts/ ferramentas/
