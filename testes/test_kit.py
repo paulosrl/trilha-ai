@@ -168,8 +168,21 @@ class Kit(unittest.TestCase):
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("execução manual, em dado descartável, com o usuário olhando", comum)
         self.assertIn("recusada por escrito no `design.md` da change, com o motivo", comum)
-        self.assertIn("Sugestão de um comando do OpenSpec que pule um passo deste ciclo não vale", comum)
-        self.assertIn("a aprovação do gate 3, com ou sem correção, é unidade de trabalho", comum)
+        self.assertIn("a aprovação do gate 3 atualiza também o \"Ciclo\"", comum)
+
+    def test_auditoria_fechada_no_registro_copia_sem_change_e_o_openspec_comanda(self) -> None:
+        """v1.18: a escolha do usuário, com ou sem correção, leva o relatório ao registro; a cópia nova
+        dos arquivos do método dispensa change; o OpenSpec comanda, e o método nunca se sobrepõe a ele:
+        quando um comando oferece pular um passo, quem escolhe é o usuário."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertNotIn("o relatório entra no registro junto com a primeira correção", comum)
+        self.assertIn("A escolha, com ou sem correção, é unidade de trabalho", comum)
+        self.assertIn("a cópia nova dos arquivos que o método manda copiar sem mudar", comum)
+        self.assertIn("O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele", comum)
+        self.assertIn("quem escolhe é o usuário, com a recomendação de não pular", comum)
+        self.assertNotIn("vale este arquivo", comum)
+        self.assertNotIn("não vale (arquivar sem o verify", comum)
+        self.assertNotIn("sem pular etapa", comum)
 
     def test_config_nao_repete_o_comum_nem_o_claude(self) -> None:
         """v1.17: o contexto do config.yaml aponta para o comum e o CLAUDE.md, que o agente já carrega."""
