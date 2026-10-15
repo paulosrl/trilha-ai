@@ -1,0 +1,6 @@
+documentar o github no processo (quando entra) parte essencial
+como open spec se liga ao guthub processo
+como é feita a integração e controle com o openspec
+desenhe o processo etapa por etapda
+rever a documentcao em html que esta sendo gerada
+rever os mds, checar que nao há repeticao ou sobresposicao de comandos
