@@ -16,17 +16,17 @@ context: |
 # projeto Consulta Pública; valem para todo repositório que segue o método.
 rules:
   proposal:
-    - Escrever em PT-BR, com acentos.
+    - Escrever em PT-BR, com acentos, mantendo em inglês os títulos do modelo do OpenSpec.
     - Dizer o porquê (a motivação e o RF de origem), não o como.
     - Listar o que fica fora da change.
   design:
-    - Escrever em PT-BR, com acentos.
+    - Escrever em PT-BR, com acentos, mantendo em inglês os títulos do modelo do OpenSpec.
     - Referenciar cada decisão técnica herdada pelo ADR do TDD; nunca redecidir tecnologia.
     - Para cada decisão local, dizer a alternativa rejeitada e o motivo.
     - Listar cada teste existente que muda, com o motivo.
   specs:
     - Manter os títulos estruturais do OpenSpec em inglês (Requirement, Scenario, ADDED, MODIFIED, REMOVED, RENAMED).
-    - Escrever as cláusulas em PT-BR, com a palavra normativa em inglês: SHALL, MUST, SHALL NOT, MUST NOT, MAY (RFC 2119); o `openspec validate` cobra SHALL ou MUST em todo requisito.
+    - Escrever as cláusulas em PT-BR, com a palavra normativa em inglês: SHALL, MUST, SHALL NOT ou MUST NOT; o OpenSpec pede evitar SHOULD e MAY, e o `openspec validate` cobra SHALL ou MUST em todo requisito.
     - Todo requisito novo ou alterado cita o RF de origem do PRD; todo cenário novo ou alterado cita o CA de origem, ou "derivado de <RF>, sem CA"; o que o delta repete sem mudança fica como está.
     - Cada requisito tem pelo menos um cenário com WHEN/THEN, testável.
     - Um requisito renomeado usa RENAMED com FROM e TO, cada um com o título inteiro entre crases.

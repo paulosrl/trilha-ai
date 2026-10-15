@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.18, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.19, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -26,20 +26,20 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 1. briefing aprovado pelo usuário;
 2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código;
-3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist de 8 itens da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, depois da escolha do usuário; a revisão termina com a auditoria aprovada;
+3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist de 8 itens da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, ou pelo caminho que ele indicar (o artefato que falta, uma change nova), depois da escolha do usuário; a revisão termina com a auditoria aprovada;
 4. `/opsx:apply`, no fluxo do OpenSpec; termina na tarefa que a regra das tarefas do `openspec/config.yaml` põe por último;
 5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito no `design.md` da change, com o motivo;
 6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista.
 
 - O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele, e o que se sobrepuser muda no método, não no OpenSpec. O ciclo acima usa todos os passos que ele oferece; quando um comando oferece pular um (arquivar sem o verify, aplicar antes da revisão, arquivar sem atualizar os specs), quem escolhe é o usuário, com a recomendação de não pular.
 - Antes de propor, leia o spec da capability em `openspec/specs/` e rode `openspec list`: evita change duplicada ou em colisão. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
-- Não edite `openspec/specs/` à mão, exceto typo ou link: os specs mudam por delta e archive. Se editou, registre uma change retroativa.
+- Os specs em `openspec/specs/` mudam pelos caminhos do OpenSpec: o delta, que o archive aplica, e a edição direta que as instruções dele pedem (o Purpose de um spec existente). Fora disso, à mão, só typo ou link; outra edição à mão pede uma change retroativa.
 - Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
 - Espere a escolha do usuário antes de ampliar o escopo de uma change aprovada. Achado fora do escopo vira outra change ou revisão do PRD ou do TDD; achado que o spec já cobre é correção dentro da change, com o teste que falha escrito antes.
 
 ## Registrar cada decisão no artefato dono dela
 
-- Decisão de produto: nova versão do PRD. Decisão técnica: nova versão do TDD. Decisão local de uma change: o `design.md` dela. Os marcos de cada change (briefing, auditoria, archive): a tabela "Ciclo" da decomposição; o passo em curso, o `ANDAMENTO.md`. Desvio ou incidente, às claras e nunca escondido: o `design.md` da change em curso, ou a decomposição se estiver fora de change. Nada fica só na conversa.
+- Decisão de produto: nova versão do PRD. Decisão técnica: nova versão do TDD. Decisão local de uma change: o `design.md` dela; o OpenSpec o cria só quando cabe, e, sem ele, o `notas.md` da pasta da change faz as vezes dele em todo lugar do método que cita o `design.md`. Os marcos de cada change (briefing, auditoria, archive): a tabela "Ciclo" da decomposição; o passo em curso, o `ANDAMENTO.md`. Desvio ou incidente, às claras e nunca escondido: o `design.md` da change em curso, ou a decomposição se estiver fora de change. Nada fica só na conversa.
 - Correção de texto no PRD, no TDD ou na decomposição que não muda requisito, decisão nem ordem (redação, erro, referência) não sobe a versão dele nem a linha "de origem" de quem o cita: fica no registro de processo, se houver, ou na mensagem do commit. Só a mudança de sentido é versão nova, aprovada pelo usuário; ela atualiza a linha "de origem" de quem o cita, sem versão nova dele.
 
 ## Trabalho interrompível: saber onde parou

@@ -192,6 +192,21 @@ class Kit(unittest.TestCase):
         self.assertNotIn("Documentos que mandam", config)
         self.assertIn("CLAUDE-comum.md e no CLAUDE.md, que o agente já carrega; este contexto não as repete", config)
 
+    def test_metodo_sem_sobrepor_o_openspec(self) -> None:
+        """v1.19: o design.md é do OpenSpec, que o cria só quando cabe (o notas.md o substitui); os specs
+        mudam também pela edição que o OpenSpec pede; o gate 3 aceita o caminho que o update indicar;
+        as regras do config.yaml sem o MAY e com os títulos do OpenSpec em inglês."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        self.assertIn("o OpenSpec o cria só quando cabe", comum)
+        self.assertIn("o `notas.md` da pasta da change faz as vezes dele", comum)
+        self.assertNotIn("Não edite `openspec/specs/` à mão", comum)
+        self.assertIn("a edição direta que as instruções dele pedem", comum)
+        self.assertIn("ou pelo caminho que ele indicar", comum)
+        self.assertNotIn("MAY (RFC 2119)", config)
+        self.assertIn("o OpenSpec pede evitar SHOULD e MAY", config)
+        self.assertEqual(config.count("mantendo em inglês os títulos do modelo do OpenSpec"), 2)
+
     def test_cenario_mantido_no_delta_fica_como_esta(self) -> None:
         config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("todo cenário novo ou alterado cita o CA de origem", config)
