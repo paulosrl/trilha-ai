@@ -48,6 +48,11 @@ Cada teste é ajustado antes do código e falha antes dele.
 - [x] 7.3 O `README.md` do kit e o `plugins/sdd/README.md` dizem que, enquanto a instalação do usuário existir, ela pode ser a versão que a sessão carrega; conferido lendo os dois
 - [x] 7.4 O conjunto de testes, o ruff (check e format), cada um sozinho, e o `openspec validate --all --no-interactive`, sem erro
 
+## 8. As sugestões do verify
+
+- [x] 8.1 O aviso do plugin de fora do kit dá `claude plugin uninstall <id> --scope <escopo>` quando a lista traz o escopo; o teste `test_plugin_de_fora_do_kit_desinstala_no_escopo` o comprova, e o `test_plugin_de_outro_marketplace_avisa` continua passando (`-k test_plugin_de_fora_do_kit_desinstala_no_escopo`)
+- [x] 8.2 A docstring do `confere_metodo.py` fala das instalações que podem valer no projeto; o conjunto de testes e o ruff (check e format), cada um sozinho, sem erro
+
 ## 6. Execução manual
 
 - [x] 6.1 Com o usuário olhando: um projeto novo pelo `kit.py novo`, numa pasta descartável, com o settings.json declarando o plugin e o `sdd/padroes-tecnicos.md`; nele, `claude plugin install sdd@trilha-ai --scope project` ao lado da instalação do usuário, o `bash scripts/check.sh` sem aviso do plugin, e uma sessão do Claude Code aberta nele para ver qual versão da skill carrega (design, risco 1); depois, a instalação de projeto desfeita e a lista de instalações da máquina igual à de antes

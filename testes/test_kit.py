@@ -852,6 +852,13 @@ class Kit(unittest.TestCase):
         self.assertIn("sdd@meu-fork", aviso)
         self.assertIn("claude plugin install sdd@trilha-ai", aviso)
 
+    def test_plugin_de_fora_do_kit_desinstala_no_escopo(self) -> None:
+        """O uninstall vai ao escopo do usuário sem --scope; o de projeto precisa dele."""
+        saida = self._aviso_do_plugin([{"id": "sdd@meu-fork", "version": "0.3.9", "scope": "project",
+                                        "enabled": True, "projectPath": "<projeto>"}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("`claude plugin uninstall sdd@meu-fork --scope project`", saida.stderr)
+
     def test_aviso_do_plugin_com_comandos_separados(self) -> None:
         for lista in ([{"id": "sdd@pipeline-prd-tdd-openspec", "version": "0.3.9"}], []):
             avisos = [l for l in self._aviso_do_plugin(lista).stderr.splitlines() if "plugin sdd" in l]

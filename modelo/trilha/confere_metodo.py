@@ -7,10 +7,10 @@ Confere, na raiz do repositório:
   da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
-- o plugin `sdd` que vale no projeto, pela lista do Claude Code lida na pasta dele: o do kit,
-  ligado e na versão do trilha/CLAUDE-comum.md; só aviso, nunca falha, e nada sem o Claude Code
-  (o CI), sem a resposta dele no prazo ou com --sem-plugin, que a trava do commit usa para não
-  esperar a cada commit.
+- as instalações do plugin `sdd` que podem valer no projeto, pela lista do Claude Code lida na
+  pasta dele: a do kit, ligada e na versão do trilha/CLAUDE-comum.md; só aviso, nunca falha, e
+  nada sem o Claude Code (o CI), sem a resposta dele no prazo ou com --sem-plugin, que a trava do
+  commit usa para não esperar a cada commit.
 
 Roda no check.sh (e, por ele, no CI) e na trava do commit (trilha/hooks/pre-commit): documento do
 método fora do formato barra o commit e o merge; o que depende da máquina (o plugin) só avisa.
@@ -184,10 +184,12 @@ def avisar_plugin() -> list[str]:
         return [f"plugin sdd não instalado: rode {INSTALAR}"]
     avisos, versao = [], _versao_do_comum()
     for plugin in instalacoes:
+        escopo = plugin.get("scope")
+        opcao = f" --scope {escopo}" if escopo else ""
         if plugin.get("id") != PLUGIN_SDD:
             avisos.append(
                 f"plugin sdd de fora do kit ({plugin.get('id')}): rode "
-                f"`claude plugin uninstall {plugin.get('id')}` e {INSTALAR}"
+                f"`claude plugin uninstall {plugin.get('id')}{opcao}` e {INSTALAR}"
             )
             continue
         if plugin.get("enabled") is False:
@@ -195,9 +197,7 @@ def avisar_plugin() -> list[str]:
                 f"plugin {PLUGIN_SDD} desligado: rode `claude plugin enable {PLUGIN_SDD}`"
             )
         if versao and plugin.get("version") != f"{versao}.0":
-            escopo = plugin.get("scope")
             qual = f" (instalação {escopo})" if escopo else ""
-            opcao = f" --scope {escopo}" if escopo else ""
             avisos.append(
                 f"plugin sdd na {plugin.get('version')}{qual} e o CLAUDE-comum.md na {versao}: "
                 f"atualize o que estiver atrás (`claude plugin update {PLUGIN_SDD}{opcao}` ou o "
