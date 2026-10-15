@@ -1,0 +1,15 @@
+{
+  "name": "trilha-ai",
+  "description": "O método Trilha AI, PRD → TDD → OpenSpec: as skills de produto, de decisão técnica e de ponte para o OpenSpec",
+  "owner": {
+    "name": "Paulo (paulosrl)",
+    "url": "https://github.com/paulosrl"
+  },
+  "plugins": [
+    {
+      "name": "sdd",
+      "source": "./plugins/sdd",
+      "description": "Skills /sdd:prd, /sdd:tdd e /sdd:briefing — da ideia de produto ao briefing pronto para o /opsx:propose do OpenSpec"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 """O kit é coerente: a versão, o esqueleto, o verificador e o gerador da página (Python 3 puro)."""
 
 import importlib.util
+import json
 import os
 import re
 import shutil
@@ -12,6 +13,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 MODELO = RAIZ / "modelo"  # o que vai aos projetos
+PLUGIN = RAIZ / "plugins" / "sdd"  # o plugin que o kit publica
 # A lista dos arquivos do kit vive num lugar só: a ferramenta que cria e atualiza os projetos.
 _spec = importlib.util.spec_from_file_location("kit", RAIZ / "ferramentas" / "kit.py")
 FERRAMENTA = importlib.util.module_from_spec(_spec)
@@ -23,11 +25,53 @@ GIT_TESTE = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_N
 ESQUELETO_DO_CLAUDE = RAIZ / "CLAUDE.md"  # o deste repositório não é o esqueleto; o esqueleto é copiado abaixo
 
 
+def _claude_falso(pasta: Path, corpo: str) -> None:
+    """Um `claude` de mentira em pasta/, que roda o corpo dado (um script de sh)."""
+    falso = pasta / "claude"
+    falso.write_text(f"#!/bin/sh\n{corpo}\n", encoding="utf-8")
+    falso.chmod(0o755)
+
+
+_SEM_CLAUDE = tempfile.TemporaryDirectory()
+_PATH_ORIGINAL = os.environ["PATH"]
+
+
+def setUpModule() -> None:
+    """Toda conferência dos testes vê um `claude` que falha, nunca o da máquina: o aviso do plugin
+    depende do que está instalado nela. Os testes do aviso trocam este por outro."""
+    _claude_falso(Path(_SEM_CLAUDE.name), "exit 1")
+    os.environ["PATH"] = f"{_SEM_CLAUDE.name}:{os.environ['PATH']}"
+
+
+def tearDownModule() -> None:
+    os.environ["PATH"] = _PATH_ORIGINAL
+    _SEM_CLAUDE.cleanup()
+
+
 def _copia_do_kit(destino: Path) -> None:
     for nome in DO_KIT:
         alvo = destino / nome
         alvo.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy(MODELO / ORIGEM.get(nome, nome), alvo)
+
+
+def _divergencia_de_versao(kit: str, manifesto: dict) -> str:
+    """Vazio se o plugin está na versão do kit (X.Y.0 para "Versão X.Y"); senão, as duas."""
+    plugin = manifesto.get("version", "?")
+    return "" if plugin == f"{kit}.0" else f"o plugin está na {plugin} e o kit na {kit}"
+
+
+def _mudou_desde_a_tag(raiz: Path) -> list[str]:
+    """Os arquivos de modelo/ e plugins/ que mudaram desde a tag da versão atual do comum; vazio
+    se a tag ainda não existe (a versão nova em preparo)."""
+    tag = f"v{FERRAMENTA._versao(raiz / 'modelo' / 'CLAUDE-comum.md')}"
+    existe = subprocess.run(["git", "-C", str(raiz), "rev-parse", "-q", "--verify", f"refs/tags/{tag}"],
+                            capture_output=True, text=True, check=False)
+    if existe.returncode != 0:
+        return []
+    saida = subprocess.run(["git", "-C", str(raiz), "diff", "--name-only", tag, "--", "modelo", "plugins"],
+                           capture_output=True, text=True, check=True)
+    return saida.stdout.split()
 
 
 class Kit(unittest.TestCase):
@@ -42,6 +86,56 @@ class Kit(unittest.TestCase):
         # O atalho da raiz serve ao check.sh dos projetos (--fonte ../trilha-ai) até a 2.0.
         self.assertTrue((RAIZ / "CLAUDE-comum.md").is_symlink())
         self.assertEqual((RAIZ / "CLAUDE-comum.md").resolve(), (MODELO / "CLAUDE-comum.md").resolve())
+
+    def test_marketplace_lido_da_raiz_do_kit(self) -> None:
+        marketplace = json.loads((RAIZ / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+        self.assertEqual(marketplace["name"], "trilha-ai")
+        self.assertEqual({p["name"]: p["source"] for p in marketplace["plugins"]}, {"sdd": "./plugins/sdd"})
+        manifesto = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifesto["name"], "sdd")
+
+    def test_as_tres_skills_no_plugin(self) -> None:
+        self.assertEqual(sorted(p.name for p in (PLUGIN / "skills").iterdir()), ["briefing", "prd", "tdd"])
+        for skill in ("prd", "tdd", "briefing"):
+            cabecalho = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8").split("\n---", 1)[0]
+            self.assertRegex(cabecalho, rf"(?m)^name: {skill}$")
+
+    def test_plugin_sem_o_repositorio_antigo(self) -> None:
+        arquivos = [a for pasta in (RAIZ / ".claude-plugin", RAIZ / "plugins") for a in pasta.rglob("*") if a.is_file()]
+        self.assertTrue(arquivos)
+        citam = [str(a.relative_to(RAIZ)) for a in arquivos
+                 if "pipeline-prd-tdd-openspec" in a.read_text(encoding="utf-8")]
+        self.assertEqual(citam, [])
+
+    def test_versao_do_plugin_igual_a_do_kit(self) -> None:
+        """Uma versão para o método: o plugin é X.Y.0 da "Versão X.Y" do comum."""
+        kit = FERRAMENTA._versao(MODELO / "CLAUDE-comum.md")
+        manifesto = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(_divergencia_de_versao(kit, manifesto), "")
+
+    def test_versao_do_plugin_esquecida_reprova(self) -> None:
+        erro = _divergencia_de_versao("1.36", {"version": "1.35.0"})
+        self.assertIn("1.35.0", erro)
+        self.assertIn("1.36", erro)
+
+    def test_mudanca_sem_versao_nova_reprova(self) -> None:
+        env = {**os.environ, **GIT_TESTE}
+        with tempfile.TemporaryDirectory() as tmp:
+            raiz = Path(tmp)
+            (raiz / "modelo").mkdir()
+            (raiz / "modelo/CLAUDE-comum.md").write_text("Versão 1.0, de 2026-10-15.\n", encoding="utf-8")
+            (raiz / "plugins").mkdir()
+            (raiz / "plugins/skill.md").write_text("antes\n", encoding="utf-8")
+            for comando in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "kit"]):
+                subprocess.run(["git", "-C", tmp, *comando], check=True, env=env)
+            (raiz / "plugins/skill.md").write_text("depois\n", encoding="utf-8")
+            self.assertEqual(_mudou_desde_a_tag(raiz), [])  # sem a tag: a versão nova em preparo
+            subprocess.run(["git", "-C", tmp, "tag", "v1.0", "HEAD"], check=True, env=env)
+            self.assertEqual(_mudou_desde_a_tag(raiz), ["plugins/skill.md"])
+
+    def test_kit_sem_mudanca_depois_da_tag(self) -> None:
+        """Mudou modelo/ ou plugins/ depois da tag da versão: suba a versão (CLAUDE.md do kit)."""
+        self.assertEqual(_mudou_desde_a_tag(RAIZ), [])
 
     def test_versao_no_comum(self) -> None:
         for arquivo in ("CLAUDE-comum.md",):
@@ -492,11 +586,128 @@ class Kit(unittest.TestCase):
                 self.assertTrue(any(a < achado.end() and achado.start() < b for a, b in trechos),
                                 f"{nome}: {achado.group()} fora de CAMPOS_DO_MODELO")
 
-    def _confere_metodo(self, destino: Path, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            [sys.executable, "-I", str(destino / "scripts/confere_metodo.py"), *args],
-            capture_output=True, text=True, check=False,
-        )
+    def _confere_metodo(self, destino: Path, *args: str, claude: str | None = "exit 1"
+                        ) -> subprocess.CompletedProcess[str]:
+        """A conferência do método com um `claude` falso que roda o corpo dado; com None, a
+        máquina sem o Claude Code (só a pasta do falso no PATH, vazia)."""
+        with tempfile.TemporaryDirectory() as falsos:
+            if claude is not None:
+                _claude_falso(Path(falsos), claude)
+            return subprocess.run(
+                [sys.executable, "-I", str(destino / "scripts/confere_metodo.py"), *args],
+                capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos},
+            )
+
+    def _aviso_do_plugin(self, lista: object, versao_do_comum: str = "1.35",
+                         vizinho: bool = False) -> subprocess.CompletedProcess[str]:
+        """A conferência num projeto feito do kit, com o comum na versão dada e um `claude` falso
+        que lista os plugins dados; com vizinho, uma pasta pipeline-prd-tdd-openspec ao lado."""
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp) / "projeto"
+            _copia_do_kit(destino)
+            comum = destino / "CLAUDE-comum.md"
+            comum.write_text(re.sub(r"^Versão [\d.]+,", f"Versão {versao_do_comum},",
+                                    comum.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
+            if vizinho:
+                manifesto = Path(tmp) / "pipeline-prd-tdd-openspec/plugins/sdd/.claude-plugin"
+                manifesto.mkdir(parents=True)
+                (manifesto / "plugin.json").write_text('{"name": "sdd", "version": "9.9.9"}')
+            texto = lista if isinstance(lista, str) else json.dumps(lista)
+            return self._confere_metodo(destino, claude=f"printf '%s' '{texto}'")
+
+    def test_plugin_conferido_sem_a_pasta_vizinha(self) -> None:
+        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": True}]
+        com, sem = self._aviso_do_plugin(lista, vizinho=True), self._aviso_do_plugin(lista)
+        self.assertEqual((com.returncode, com.stderr), (sem.returncode, sem.stderr))
+        self.assertNotIn("plugin sdd", com.stderr)
+
+    def test_plugin_do_marketplace_antigo_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@pipeline-prd-tdd-openspec", "version": "0.3.9"}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("de fora do kit (sdd@pipeline-prd-tdd-openspec)", saida.stderr)
+        self.assertIn("claude plugin install sdd@trilha-ai", saida.stderr)
+
+    def test_plugin_com_versao_diferente_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.34.0"}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next(l for l in saida.stderr.splitlines() if "plugin sdd" in l)
+        self.assertIn("1.34.0", aviso)
+        self.assertIn("1.35", aviso)
+
+    def test_plugin_com_versao_igual_nao_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.35.0"}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("plugin sdd", saida.stderr)
+
+    def test_plugin_ausente_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "outro@lugar", "version": "1.0.0"}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("plugin sdd não instalado", saida.stderr)
+        self.assertIn("claude plugin install sdd@trilha-ai", saida.stderr)
+
+    def test_plugin_de_outro_marketplace_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@meu-fork", "version": "0.3.9", "enabled": True}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next(l for l in saida.stderr.splitlines() if "plugin sdd" in l)
+        self.assertIn("sdd@meu-fork", aviso)
+        self.assertIn("claude plugin install sdd@trilha-ai", aviso)
+
+    def test_aviso_do_plugin_com_comandos_separados(self) -> None:
+        for lista in ([{"id": "sdd@pipeline-prd-tdd-openspec", "version": "0.3.9"}], []):
+            avisos = [l for l in self._aviso_do_plugin(lista).stderr.splitlines() if "plugin sdd" in l]
+            self.assertEqual(len(avisos), 1, lista)
+            self.assertIn("`claude plugin marketplace add paulosrl/trilha-ai`", avisos[0])
+            self.assertIn("`claude plugin install sdd@trilha-ai`", avisos[0])
+            self.assertNotIn("&&", avisos[0])
+
+    def test_plugin_desligado_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.35.0", "enabled": False}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("claude plugin enable sdd@trilha-ai", saida.stderr)
+
+    def test_trava_do_commit_nao_consulta_o_claude(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, marca = Path(tmp) / "proj", Path(tmp) / "consultou"
+            self._ferramenta("novo", str(pasta))
+            falsos = Path(tmp) / "falsos"
+            falsos.mkdir()
+            _claude_falso(falsos, f"touch {marca}; printf '[]'")
+            env = {**os.environ, **GIT_TESTE, "PATH": f"{falsos}:{os.environ['PATH']}"}
+            subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
+            commit = subprocess.run(["git", "commit", "-qm", "kit"], cwd=pasta, env=env,
+                                    capture_output=True, text=True)
+            self.assertEqual(commit.returncode, 0, commit.stderr)
+            self.assertFalse(marca.exists(), "a trava do commit consultou o Claude Code")
+
+    def test_check_sh_avisa_o_plugin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = Path(tmp) / "proj"
+            self._ferramenta("novo", str(pasta))
+            falsos = Path(tmp) / "falsos"
+            falsos.mkdir()
+            _claude_falso(falsos, "printf '%s' '[{\"id\": \"sdd@meu-fork\", \"version\": \"0.3.9\"}]'")
+            env = {**os.environ, "PATH": f"{falsos}:{os.environ['PATH']}"}
+            saida = subprocess.run(["bash", "scripts/check.sh"], cwd=pasta, env=env,
+                                   capture_output=True, text=True)
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertIn("sdd@meu-fork", saida.stderr)
+
+    def test_sem_o_claude_code_nao_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _copia_do_kit(Path(tmp))
+            saida = self._confere_metodo(Path(tmp), claude=None)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("plugin sdd", saida.stderr)
+
+    def test_lista_de_plugins_com_erro_nao_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _copia_do_kit(Path(tmp))
+            erro = self._confere_metodo(Path(tmp), claude="echo falhou >&2; exit 2")
+        self.assertEqual(erro.returncode, 0, erro.stderr)
+        self.assertNotIn("plugin sdd", erro.stderr)
+        nao_json = self._aviso_do_plugin("isto não é json")
+        self.assertEqual(nao_json.returncode, 0, nao_json.stderr)
+        self.assertNotIn("plugin sdd", nao_json.stderr)
 
     def test_metodo_aprova_um_repositorio_feito_do_kit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

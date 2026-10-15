@@ -1,12 +1,14 @@
 """Confere os documentos do método de um repositório que segue o kit (chamado pelo check.sh).
 
-Uso: python3 -I scripts/confere_metodo.py [--vizinho <nome>]...
+Uso: python3 -I scripts/confere_metodo.py [--sem-plugin] [--vizinho <nome>]...
 
 Confere, na raiz do repositório:
 - a decomposição tem toda change da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
-- o plugin `sdd` instalado é o da fonte (`../pipeline-prd-tdd-openspec`): só aviso, nunca falha.
+- o plugin `sdd` instalado, pela lista do Claude Code: o do kit, ligado e na versão do
+  CLAUDE-comum.md; só aviso, nunca falha, e nada sem o Claude Code (o CI) ou com --sem-plugin,
+  que a trava do commit usa para não esperar o Claude Code a cada commit.
 
 Roda no check.sh (e, por ele, no CI) e na trava do commit (.githooks/pre-commit): documento do
 método fora do formato barra o commit e o merge; o que depende da máquina (o plugin) só avisa.
@@ -19,17 +21,19 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 SDD = RAIZ / "sdd"
 ANDAMENTO = RAIZ / "ANDAMENTO.md"
-FONTE_DO_PLUGIN = (
-    RAIZ.parent / "pipeline-prd-tdd-openspec" / "plugins" / "sdd" / ".claude-plugin" / "plugin.json"
+PLUGIN_SDD = "sdd@trilha-ai"
+# Dois comandos, não ligados por &&: o install roda mesmo se o marketplace já estiver registrado.
+INSTALAR = (
+    "`claude plugin marketplace add paulosrl/trilha-ai` (se ainda não estiver) e "
+    f"`claude plugin install {PLUGIN_SDD}`"
 )
-PLUGINS_INSTALADOS = Path.home() / ".claude" / "plugins" / "installed_plugins.json"
-PLUGIN_SDD = "sdd@pipeline-prd-tdd-openspec"
 NUMERO = re.compile(r"\d{2,3}")
 
 
@@ -98,20 +102,60 @@ def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
     ]
 
 
-def avisar_plugin() -> str | None:
-    if not (FONTE_DO_PLUGIN.is_file() and PLUGINS_INSTALADOS.is_file()):
+def _instalacoes_do_sdd() -> list[dict] | None:
+    """As instalações do plugin sdd, pela lista do Claude Code; None se ela não responder."""
+    try:
+        saida = subprocess.run(
+            ["claude", "plugin", "list", "--json"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        lista = json.loads(saida.stdout) if saida.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
         return None
-    fonte = json.loads(FONTE_DO_PLUGIN.read_text(encoding="utf-8"))["version"]
-    plugins = json.loads(PLUGINS_INSTALADOS.read_text(encoding="utf-8"))["plugins"]
-    if [instalado["version"] for instalado in plugins.get(PLUGIN_SDD, [])] == [fonte]:
+    if not isinstance(lista, list):
         return None
-    return (
-        f"plugin sdd instalado fora da versão da fonte ({fonte}): "
-        f"rode `claude plugin update {PLUGIN_SDD}` e abra uma sessão nova"
-    )
+    return [p for p in lista if isinstance(p, dict) and str(p.get("id", "")).startswith("sdd@")]
+
+
+def _versao_do_comum() -> str:
+    comum = RAIZ / "CLAUDE-comum.md"
+    texto = comum.read_text(encoding="utf-8") if comum.is_file() else ""
+    achado = re.search(r"^Versão (\d+\.\d+),", texto, re.MULTILINE)
+    return achado.group(1) if achado else ""
+
+
+def avisar_plugin() -> list[str]:
+    instalacoes = _instalacoes_do_sdd()
+    if instalacoes is None:
+        return []
+    if not instalacoes:
+        return [f"plugin sdd não instalado: rode {INSTALAR}"]
+    avisos, versao = [], _versao_do_comum()
+    for plugin in instalacoes:
+        if plugin.get("id") != PLUGIN_SDD:
+            avisos.append(
+                f"plugin sdd de fora do kit ({plugin.get('id')}): rode "
+                f"`claude plugin uninstall {plugin.get('id')}` e {INSTALAR}"
+            )
+            continue
+        if plugin.get("enabled") is False:
+            avisos.append(
+                f"plugin {PLUGIN_SDD} desligado: rode `claude plugin enable {PLUGIN_SDD}`"
+            )
+        if versao and plugin.get("version") != f"{versao}.0":
+            avisos.append(
+                f"plugin sdd na {plugin.get('version')} e o CLAUDE-comum.md na {versao}: atualize "
+                f"o que estiver atrás (`claude plugin update {PLUGIN_SDD}` ou o kit.py atualizar)"
+            )
+    return avisos
 
 
 def main(argv: list[str]) -> int:
+    sem_plugin = "--sem-plugin" in argv
+    argv = [opcao for opcao in argv if opcao != "--sem-plugin"]
     if len(argv) % 2 or any(opcao != "--vizinho" for opcao in argv[::2]):
         print(__doc__, file=sys.stderr)
         return 2
@@ -134,9 +178,8 @@ def main(argv: list[str]) -> int:
         avisos.append("sem sdd/tdd-*.md: as evidências não foram conferidas")
     if ANDAMENTO.is_file():
         falhas += conferir_andamento(ANDAMENTO.read_text(encoding="utf-8"), vizinhos)
-    aviso_do_plugin = avisar_plugin()
-    if aviso_do_plugin:
-        avisos.append(aviso_do_plugin)
+    if not sem_plugin:
+        avisos += avisar_plugin()
 
     for aviso in avisos:
         print(f"aviso: {aviso}", file=sys.stderr)

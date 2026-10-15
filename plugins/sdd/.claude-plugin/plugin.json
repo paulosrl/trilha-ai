@@ -1,0 +1,20 @@
+{
+  "name": "sdd",
+  "version": "1.35.0",
+  "description": "Pipeline PRD → TDD → OpenSpec: três skills que separam a decisão de produto (prd), a decisão técnica assistida por entrevista (tdd) e a ponte auditada para o /opsx:propose do OpenSpec (briefing)",
+  "author": {
+    "name": "Paulo (paulosrl)",
+    "url": "https://github.com/paulosrl"
+  },
+  "homepage": "https://github.com/paulosrl/trilha-ai",
+  "license": "MIT",
+  "keywords": [
+    "prd",
+    "tdd",
+    "openspec",
+    "sdd",
+    "spec-driven-development",
+    "adr",
+    "requisitos"
+  ]
+}
