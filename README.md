@@ -28,6 +28,16 @@ Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do
 6. **Primeiro commit,** com a linha de coautoria da IA.
 7. **Siga para a etapa 1 do guia:** o PRD.
 
+## Os arquivos de regras
+
+O Claude Code lê o `CLAUDE.md` da raiz de cada repositório. No método, as regras se dividem em dois arquivos, para que as comuns fiquem num lugar só e o `CLAUDE.md` de cada projeto fique curto:
+
+| Arquivo | Vale para | Papel |
+|---|---|---|
+| `CLAUDE-comum.md` | todo projeto do método, copiado sem mudar | as regras do método, iguais em todo projeto |
+| `esqueleto-CLAUDE.md` | todo projeto novo, copiado como `CLAUDE.md` | o modelo do que é só daquele projeto (o que ele é, os documentos, os comandos, as armadilhas, as exceções ao comum); já traz a linha `@CLAUDE-comum.md`, que faz o Claude ler o comum |
+| `CLAUDE.md` deste repositório | só este repositório | as regras de manutenção do kit; não importa o comum nem serve de modelo, porque este repositório não é um projeto do método |
+
 ## Ao mudar o padrão
 
 O `CLAUDE-comum.md` muda **aqui**, com a versão e a data novas e o teste verde (`python3 -m unittest discover -s testes`), e só depois são copiados para cada repositório, cada um sob ordem do usuário. Um repositório nunca edita a própria cópia: o que é dele vai no `CLAUDE.md`, em "Exceções ao comum" se contrariar o comum. O `confere_regras.py --fonte` acusa a cópia divergente.
