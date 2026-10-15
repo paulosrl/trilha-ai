@@ -34,7 +34,7 @@ rules:
     - Todo requisito novo ou alterado cita o RF de origem do PRD; todo cenário novo ou alterado cita o CA de origem, ou "derivado de <RF>, sem CA"; o que o delta repete sem mudança fica como está. No projeto ainda sem PRD, que só corrige requisito já existente, a origem fica só no proposal.
     - No RENAMED, o FROM e o TO trazem o título inteiro do requisito entre crases.
   tasks:
-    - Para cada cenário ADDED ou MODIFIED, uma tarefa nomeia o teste que o comprova, com o código do critério de aceite no nome do teste, ou o do requisito quando o cenário não tem critério (no projeto ainda sem PRD, o nome do requisito do spec), e dá o arquivo, o caso e o comando que o roda. Cenário sem teste automatizável diz por quê e qual evidência o substitui.
+    - Cada cenário ADDED ou MODIFIED tem uma tarefa que nomeia o teste que o comprova, com o código do critério de aceite no nome do teste, ou o do requisito quando o cenário não tem critério (no projeto ainda sem PRD, o nome do requisito do spec). Cenário sem teste automatizável diz por quê e qual evidência o substitui.
     - O teste confere o efeito observável (o arquivo existe, a resposta chega, a tela mostra), nunca o valor literal que o código já usa.
     - A última tarefa antes do verify é a execução manual, em dado descartável, com o usuário olhando.
 
@@ -46,3 +46,4 @@ operations:
   archive:
     guidance:
       - 'Depois do archive, validar as specs e conferir o diff de openspec/specs/; atualizar a tabela "Ciclo" da decomposição, com o número do pull request da change na célula do archive ("PR #N"); gerar de novo sdd/documentacao.html.'
+      - 'O design.md que o propose dispensou não é passo pulado: o aviso de artefato incompleto que o archive dá por ele se confirma, e o notas.md da change faz as vezes dele.'

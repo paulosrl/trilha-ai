@@ -1,7 +1,7 @@
 ---
 name: tdd
 description: >
-  Conduz a decisão técnica de um produto (Estágio 2 do pipeline PRD → TDD → OpenSpec), produzindo um Technical Design Document com ADRs leves, arquitetura, modelo físico de dados e ferramental — a partir de um PRD aprovado e agnóstico de tecnologia. Use esta skill SEMPRE que o usuário: tiver um PRD aprovado e perguntar "e agora?", pedir para "decidir a stack", "escolher tecnologia", "definir arquitetura", "escolher banco de dados", "fazer o design técnico", "criar ADRs", ou mencionar TDD/Technical Design Document. Também acione quando, durante a criação de um PRD, o usuário pedir decisões de tecnologia — essa conversa pertence aqui, não ao PRD. A skill foi desenhada para funcionar com usuários SEM profundidade técnica: entrevista por consequências (nunca por jargão) e recomendação única justificada por decisão. Também registra, no modo "como está", as decisões de um sistema que já existe sem TDD, lidas do código, dos specs e dos documentos. Não use para escrever requisitos de produto (skill prd) nem para gerar artefatos OpenSpec (etapa seguinte).
+  Conduz a decisão técnica (Estágio 2 do pipeline PRD → TDD → OpenSpec): o TDD com ADRs, arquitetura, modelo físico de dados e ferramental, em sdd/tdd-<nome>.md, a partir de um PRD aprovado, com entrevista por consequências para quem não é técnico. Use quando o usuário pedir para decidir a stack, a arquitetura ou o banco, criar ADRs ou o TDD, ou perguntar "e agora?" com o PRD aprovado; também no modo "como está", para um sistema que já existe sem TDD.
 ---
 
 # Skill: Decisão Técnica — TDD (Estágio 2)
@@ -20,7 +20,7 @@ Estágio 3 — skill briefing     → EM QUE ORDEM. Decomposição e o briefing 
 
 **Pré-condição:** um PRD aprovado (gate 1). Se não existir, ofereça a skill `prd` primeiro. Se o usuário insistir em decidir tecnologia sem PRD, aceite, mas registre no TDD: `⚠️ TDD emitido sem PRD aprovado — decisões sujeitas a revisão quando os requisitos forem formalizados`.
 
-**Pós-condição (gate 2):** TDD aprovado pelo usuário. Só então o pipeline segue para a skill `briefing`, que decompõe o escopo em changes e escreve o briefing de cada uma para o `/opsx:propose`; o `design.md` de cada change, quando o OpenSpec o cria, referencia os ADRs deste documento em vez de redecidir tecnologia, e mudança de decisão técnica é versão nova do TDD, aprovada antes do código. Essas regras ficam aqui e não no documento: o kit Trilha AI as traz no `CLAUDE-comum.md` e no `openspec/config.yaml`.
+**Pós-condição (gate 2):** TDD aprovado pelo usuário. Só então o pipeline segue para a skill `briefing`, que decompõe o escopo em changes e escreve o briefing de cada uma para o `/opsx:propose`. Como cada change usa os ADRs e como uma decisão técnica muda são regras do kit Trilha AI (`CLAUDE-comum.md` e `openspec/config.yaml`), que prevalece; esta skill não as repete, nem o documento.
 
 ## Princípios
 
@@ -142,7 +142,7 @@ O que muda em relação ao modo assistido:
 2. **Cabeçalho:** `**Modo de elaboração:** "como está"`, com a versão do produto analisada.
 3. **ADR:** Estado, Decisão e **Evidência** (onde a decisão está no repositório, por arquivo e pelo nome do símbolo ou da seção, nunca por número de linha, que envelhece). Contexto, Opções, Justificativa e Consequências entram quando há o que dizer além do código; decisão sem alternativa considerada não as inventa.
 4. **Teste da cadeia:** a origem "código" vale como causa, desde que a evidência a aponte; resposta do usuário e RNF do PRD continuam valendo.
-5. **Seções a mais:** "Dívidas conhecidas" (cada uma resolvida por change, riscada com a change que a fechou) e "Histórico de versões", as duas depois do handoff, nesta ordem.
+5. **Seção a mais:** "Dívidas conhecidas" (cada uma resolvida por change, riscada com a change que a fechou), entre o handoff e o "Histórico de versões".
 6. **Aprovação:** os mesmos três blocos do modo assistido, cada um com o **teste da fidelidade**: toda decisão tem evidência no repositório, e nada descreve o que o sistema não faz.
 
 ---
@@ -213,6 +213,12 @@ do empacotamento local]
 ## 9. Handoff ao Estágio 3
 
 Este TDD, junto ao PRD de origem, é insumo da skill `briefing`, que decompõe o escopo em changes e escreve o briefing de cada uma para o `/opsx:propose`.
+
+## 10. Histórico de versões
+
+| Versão | Data | O que mudou de sentido |
+|--------|------|------------------------|
+| 0.1 | [data] | Primeira versão |
 ```
 
 ---

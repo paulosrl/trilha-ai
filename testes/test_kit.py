@@ -377,9 +377,37 @@ class Kit(unittest.TestCase):
         """Cada cenário com teste nomeado e evidência; tarefa marcada só com o teste passando."""
         config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn('Terminar com a seção "Verificação"', config)
-        self.assertIn("dá o arquivo, o caso e o comando que o roda", config)
+        self.assertIn("tem uma tarefa que nomeia o teste que o comprova", config)
         self.assertIn("nunca o valor literal que o código já usa", config)
         self.assertIn("Marcar a tarefa de um cenário só quando o teste que o comprova passar", config)
+
+    def test_revisao_de_texto_da_auditoria(self) -> None:
+        """Item 8 da auditoria: a precedência inteira no comum, o Purpose só do spec novo, a revisão
+        de código numa sessão nova e o design dispensado no archive."""
+        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        ordem = ["as travas do kit", "a escolha do usuário", "o OpenSpec", '"Exceções ao comum"',
+                 "este arquivo", "o `openspec/config.yaml`", "as skills `sdd:*`"]
+        linha = next(l for l in comum.splitlines() if l.startswith("Regras comuns"))
+        posicoes = [linha.find(trecho, linha.find("Em conflito")) for trecho in ordem]
+        self.assertNotIn(-1, posicoes, linha)
+        self.assertEqual(posicoes, sorted(posicoes))
+        self.assertIn("(o Purpose de um spec novo)", comum)
+        self.assertIn("numa sessão nova, depois do `/clear`", comum)
+        config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        self.assertIn("O design.md que o propose dispensou não é passo pulado", config)
+
+    def test_skills_curtas_subordinadas_ao_kit_e_com_historico(self) -> None:
+        """As descrições entram em toda sessão com o plugin ligado: curtas. Cada skill cede ao kit,
+        e os modelos de PRD e de TDD têm onde registrar a versão nova."""
+        for skill in ("prd", "tdd", "briefing"):
+            texto = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+            descricao = texto.split("\n---", 1)[0].split("description: >\n", 1)[1]
+            self.assertLess(len(descricao), 500, skill)
+            self.assertIn("kit Trilha AI (`CLAUDE-comum.md`", texto, skill)
+        for skill in ("prd", "tdd"):
+            modelo = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+            modelo = modelo.split("## Estrutura obrigatória", 1)[1]
+            self.assertRegex(modelo, r"(?m)^## \d+\. Histórico de versões$", skill)
 
     def test_regras_cabem_no_projeto_sem_prd(self) -> None:
         """O comum admite a correção vinda de um spec, sem PRD; as regras que pedem RF dizem o que vale."""
@@ -422,7 +450,7 @@ class Kit(unittest.TestCase):
         self.assertIn("o CI os procura no histórico (gitleaks)", comum)
 
     def test_revisao_independente_no_verify(self) -> None:
-        """v1.28: no passo 5, o /code-review por um agente sem o contexto da sessão."""
+        """v1.28: no passo 5, o /code-review, desde a 2.3 numa sessão nova, depois do /clear."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         # Com o alvo: sem ele, o /code-review revisa só o que não foi commitado, vazio depois do commit.
         self.assertIn("5. `/opsx:verify` e a revisão independente do código, o `/code-review <número do PR>`",

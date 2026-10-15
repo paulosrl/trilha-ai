@@ -266,7 +266,7 @@ a { color: var(--pinho); }
       cmd: "/opsx:apply\ngit commit -m \"feat(...): tarefas 1.1 a 2.3\"\ngit push" },
     { id: "verify", nome: "Verify", titulo: "A conferência (verify)", gate: "", ciclo: true,
       voce: "Decide cada sugestão: aplicar ou recusar.",
-      claude: "Roda /opsx:verify e o /code-review do PR, uma revisão por um agente sem o contexto da sessão. Cada sugestão dos dois vai ao design.md, aplicada ou recusada, com o motivo.",
+      claude: "Roda /opsx:verify e o /code-review do PR, rodado numa sessão nova, depois do /clear, sem o contexto de quem escreveu. Cada sugestão dos dois vai ao design.md, aplicada ou recusada, com o motivo.",
       git: "Commit, na branch.",
       gh: "Envio da branch. CI verde.",
       cmd: "/opsx:verify\n/code-review <número do PR>\ngit commit -m \"fix(...): sugestões do verify e da revisão\"\ngit push" },

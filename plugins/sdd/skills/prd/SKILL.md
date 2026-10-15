@@ -1,7 +1,7 @@
 ---
 name: prd
 description: >
-  Cria Product Requirements Documents (PRDs) de produto, agnósticos de tecnologia, prontos para alimentar a etapa de decisão técnica (skill tdd) e, na sequência, a skill briefing e o OpenSpec. Use esta skill SEMPRE que o usuário mencionar: PRD, Product Requirements Document, "escrever requisitos de produto", "documentar uma feature", "criar especificação de produto", "preciso de um PRD para X", "quero documentar esse sistema", ou qualquer variante. Também acione quando o usuário descrever um produto ou funcionalidade e pedir para estruturar, documentar, especificar ou preparar para desenvolvimento — mesmo sem usar a palavra "PRD". O PRD desta skill define O QUE o produto faz e POR QUÊ; ele NÃO decide stack, arquitetura nem modelo físico de dados — essas decisões pertencem à skill tdd (estágio 2). Se o usuário pedir decisão de tecnologia, arquitetura ou banco de dados, direcione para a skill tdd. Também escreve, no modo "como está", o PRD de um sistema que já existe sem PRD, lido dos specs, do README e do código.
+  Escreve o PRD (Estágio 1 do pipeline PRD → TDD → OpenSpec): o que o produto faz e por quê, sem tecnologia, em sdd/prd-<nome>.md. Use quando o usuário pedir um PRD ou requisitos de produto, ou quiser estruturar, documentar ou especificar um produto ou funcionalidade, mesmo sem dizer "PRD"; também no modo "como está", para um sistema que já existe sem PRD. Decisão de tecnologia é da skill tdd.
 ---
 
 # Skill: Criar PRD (Estágio 1 — Produto)
@@ -16,6 +16,8 @@ Estágio 2 — TDD (skill tdd)    → COM O QUÊ. Stack, arquitetura, modelo fí
 Estágio 3 — skill briefing     → EM QUE ORDEM. Decomposição e o briefing de cada change.
             /opsx:propose      → COMO. Uma change por vez: specs, design, tasks.
 ```
+
+As regras comuns do repositório (o ciclo, as pastas, a versão dos documentos) vêm do kit Trilha AI (`CLAUDE-comum.md`), que prevalece; esta skill as cita e não as repete.
 
 Esta skill produz exclusivamente o artefato do Estágio 1. O PRD gerado deve ser a fonte de verdade sobre o produto, legível e aprovável por quem **não** tem profundidade técnica, e estável diante de qualquer troca de tecnologia: o mesmo PRD deve servir intacto a um protótipo local ou a um sistema web multiusuário.
 
@@ -262,6 +264,12 @@ ENTAO [resultado observável]
 | ESC-001 | RF-001... |
 | RF-001 | CA-RF-001-01 |
 | RN-001 | RF-XXX |
+
+## 15. Histórico de versões
+
+| Versão | Data | O que mudou de sentido |
+|--------|------|------------------------|
+| 0.1 | [data] | Primeira versão |
 ```
 
 ---

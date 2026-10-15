@@ -1,7 +1,7 @@
 ---
 name: briefing
 description: >
-  Adaptador do Estágio 3 do pipeline PRD → TDD → OpenSpec. NÃO gera artefatos OpenSpec — isso é trabalho do comando nativo /opsx:propose, dentro do repositório. Esta skill faz o que o OpenSpec não faz: valida o par PRD aprovado + TDD aprovado (relatório de recepção), decompõe o escopo total em changes ordenadas com aprovação do usuário, emite um BRIEFING por change pronto para colar no /opsx:propose, e fornece o checklist de auditoria da rastreabilidade dos artefatos gerados. Use esta skill SEMPRE que o usuário: tiver PRD e TDD aprovados e perguntar "e agora?", pedir para "preparar o OpenSpec", "decompor em changes", "gerar o briefing do propose", "auditar o propose", ou mencionar a ponte entre PRD/TDD e OpenSpec. Não use para escrever requisitos (skill prd), decidir tecnologia (skill tdd), nem para gerar proposal/spec/design/tasks (comando nativo do OpenSpec).
+  Estágio 3 do pipeline PRD → TDD → OpenSpec, antes do /opsx:propose: confere o PRD e o TDD aprovados, decompõe o escopo em changes ordenadas (sdd/decomposicao-<nome>.md), escreve o briefing de cada change para o propose e audita os artefatos que ele gerou. Use quando o usuário, com PRD e TDD aprovados, pedir para decompor em changes, preparar o OpenSpec, gerar ou auditar o briefing. Nunca escreve proposal, spec, design nem tasks.
 ---
 
 # Skill: Ponte para o OpenSpec (Estágio 3 — adaptador)
@@ -113,7 +113,7 @@ Decisão local legítima = organização interna de código que o TDD não cobre
 [Para a change 02 em diante: o que as changes arquivadas entregaram e esta change toca.]
 ```
 
-As regras por artefato (a língua, a origem citada de cada requisito e cenário, um teste por cenário, a execução manual como última tarefa) estão no `openspec/config.yaml` do repositório, que o OpenSpec lê ao gerar cada artefato: o briefing não as repete.
+O `context` (a língua) e as regras por artefato (a origem citada de cada requisito e cenário, um teste por cenário, a execução manual como última tarefa) estão no `openspec/config.yaml` do repositório, que o OpenSpec lê ao gerar cada artefato: o briefing não as repete.
 
 Entregue com as instruções de uso:
 

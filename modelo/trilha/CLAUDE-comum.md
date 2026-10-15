@@ -1,8 +1,8 @@
 # CLAUDE-comum.md
 
-Versão 2.2, de 2026-10-15. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
+Versão 2.3, de 2026-10-15. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
 
-Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o guarda na pasta `trilha/`, com o resto do que o método copia sem mudar, e o importa no seu `CLAUDE.md` com `@trilha/CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
+Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o guarda na pasta `trilha/`, com o resto do que o método copia sem mudar, e o importa no seu `CLAUDE.md` com `@trilha/CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Em conflito, vale nesta ordem: as travas do kit; a escolha do usuário; o OpenSpec (fluxo e formato); a regra do `CLAUDE.md` do repositório declarada em "Exceções ao comum", com o motivo (fora dessa seção, regra contrária a esta não vale); este arquivo, que conta como parte do `CLAUDE.md` que o importa; o `openspec/config.yaml`; as skills `sdd:*`.
 
 ## O método: documentos que mandam, nesta ordem
 
@@ -10,8 +10,8 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 1. `sdd/prd-<nome>.md`: o quê e o porquê. Nenhuma palavra de tecnologia, salvo a restrição que o usuário declara imposta de fora, que a skill registra à parte. Escrito com a skill `sdd:prd` e aprovado bloco a bloco pelo usuário, como a skill pede (gate 1).
 2. `sdd/tdd-<nome>.md`: as decisões técnicas, como ADRs. Escrito com a skill `sdd:tdd` e aprovado bloco a bloco pelo usuário, como a skill pede (gate 2).
-3. `sdd/decomposicao-<nome>.md`: as changes, a ordem de execução com a razão, as regras de convivência e a tabela "Ciclo". Vem da skill `sdd:briefing`, que também escreve cada briefing e audita o gate 3.
-4. `sdd/briefing-openspec/briefing-change-NN-<nome>.md`: a entrada de cada change, autossuficiente: requisitos, regras, critérios de aceite e ADRs na íntegra, mais "o que já existe".
+3. `sdd/decomposicao-<nome>.md`: as changes em ordem, com a tabela "Ciclo". Vem da skill `sdd:briefing`, que também escreve cada briefing e audita o gate 3.
+4. `sdd/briefing-openspec/briefing-change-NN-<nome>.md`: a entrada de cada change, no formato da skill `sdd:briefing`.
 5. `openspec/specs/`: o comportamento já entregue. O `openspec/config.yaml` traz o contexto do projeto, com a língua, e as regras por artefato (a origem citada de cada requisito e cenário, um teste por cenário); o OpenSpec o lê ao gerar cada artefato, e o briefing não repete o que está nele.
 
 - `sdd/documentacao.html` é a documentação do projeto, gerada por `python3 trilha/gerar_pagina_sdd.py` ao fechar cada etapa (PRD, TDD, decomposição, change arquivada); não se edita à mão.
@@ -29,13 +29,13 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código; commit, envio e pull request em rascunho (`gh pr create --draft`), que mostra o plano antes do código;
 3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, ou pelo caminho que ele indicar, depois da escolha do usuário; a revisão termina com a auditoria aprovada, em commit e envio;
 4. `/opsx:apply`, no fluxo do OpenSpec; termina na tarefa que a regra das tarefas do `openspec/config.yaml` põe por último; commit e envio a cada parada, nunca um só no fim;
-5. `/opsx:verify` e a revisão independente do código, o `/code-review <número do PR>` do Claude Code, feita por um agente sem o contexto da sessão: quem escreveu não é o único a revisar. Cada sugestão dos dois é aplicada ou recusada por escrito no `design.md` da change, com o motivo; commit e envio;
+5. `/opsx:verify` e a revisão independente do código, o `/code-review <número do PR>` do Claude Code, rodado numa sessão nova, depois do `/clear` (o `ANDAMENTO.md` guarda o ponto de volta): quem escreveu não é o único a revisar, nem com o contexto de quem escreveu. Cada sugestão dos dois é aplicada ou recusada por escrito no `design.md` da change, com o motivo; commit e envio;
 6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista; commit e envio, e o PR sai do rascunho (`gh pr ready`): código, specs e página chegam juntos à main;
 7. o merge, só com a verificação do GitHub verde no PR (`gh pr checks`) e com um "sim" só para ele: `gh pr merge --merge --delete-branch` (merge commit, nunca squash nem rebase, que apagariam os pontos de retomada ou a fronteira da change). De volta à main atualizada, o `ANDAMENTO.md` vai a "nada em andamento" num commit, enviado sob o mesmo "sim". A change fecha aqui, não no archive; a próxima abre outra branch.
 
 - O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele, e o que se sobrepuser muda no método, não no OpenSpec. O ciclo acima usa todos os passos que ele oferece; quando um comando oferece pular um (arquivar sem o verify, aplicar antes da revisão, arquivar sem atualizar os specs), quem escolhe é o usuário, com a recomendação de não pular.
 - Antes de propor, rode `openspec list`: evita change duplicada ou em colisão com outra change ativa. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
-- Os specs em `openspec/specs/` mudam pelos caminhos do OpenSpec: o delta, que o archive aplica, e a edição direta que as instruções dele pedem (o Purpose de um spec existente). Fora disso, à mão, só typo ou link; outra edição à mão pede uma change retroativa.
+- Os specs em `openspec/specs/` mudam pelos caminhos do OpenSpec: o delta, que o archive aplica, e a edição direta que as instruções dele pedem (o Purpose de um spec novo). Fora disso, à mão, só typo ou link; outra edição à mão pede uma change retroativa.
 - Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
 - Espere a escolha do usuário antes de ampliar o escopo de uma change aprovada. Achado fora do escopo vira outra change ou revisão do PRD ou do TDD; achado que o spec já cobre é correção dentro da change, com o teste que falha escrito antes.
 
@@ -72,7 +72,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 ## Convenções
 
 - Commits em Conventional Commits, em PT-BR, com escopo quando o commit toca uma parte nomeável (`feat(web): …`), e a linha de coautoria da IA.
-- Temporários só no scratchpad da sessão, nunca em arquivo rastreado, nem por um minuto.
+- Temporário nunca vai a arquivo rastreado, nem por um minuto.
 
 ## Armadilhas
 
