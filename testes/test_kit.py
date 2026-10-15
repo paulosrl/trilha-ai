@@ -1660,6 +1660,21 @@ class Kit(unittest.TestCase):
         passos = saida.stdout.split("próximos passos", 1)[1]
         self.assertIn("openspec config profile", passos)
 
+    def test_novo_cita_o_codegraph_como_opcional(self) -> None:
+        """F36: o CodeGraph é opcional no método; o item dele diz isso e fica fora do openspec."""
+        saida = self._novo_com_openspec(None)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        passos = saida.stdout.split("próximos passos", 1)[1].split("\naviso:", 1)[0]
+        # Os passos vêm com 2 espaços e os itens do passo 4 com 5; a continuação de uma linha, com 7.
+        itens = re.split(r"\n(?:  \d+\.|     -) ", passos)
+        openspec = [i for i in itens if "openspec init" in i]
+        self.assertEqual(len(openspec), 1, itens)
+        self.assertNotIn("codegraph", openspec[0])
+        codegraph = [i for i in itens if "codegraph init" in i]
+        self.assertEqual(len(codegraph), 1, itens)
+        self.assertIn("se usar o CodeGraph", codegraph[0])
+        self.assertIn("em cada clone", codegraph[0])
+
     def test_novo_sem_openspec_avisa(self) -> None:
         saida = self._novo_com_openspec(None)
         self.assertEqual(saida.returncode, 0, saida.stderr)
