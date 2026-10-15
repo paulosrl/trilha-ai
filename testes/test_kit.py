@@ -1,6 +1,7 @@
 """O kit é coerente: a versão, o esqueleto, o verificador e o gerador da página (Python 3 puro)."""
 
 import importlib.util
+import json
 import os
 import re
 import shutil
@@ -12,6 +13,7 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
 MODELO = RAIZ / "modelo"  # o que vai aos projetos
+PLUGIN = RAIZ / "plugins" / "sdd"  # o plugin que o kit publica
 # A lista dos arquivos do kit vive num lugar só: a ferramenta que cria e atualiza os projetos.
 _spec = importlib.util.spec_from_file_location("kit", RAIZ / "ferramentas" / "kit.py")
 FERRAMENTA = importlib.util.module_from_spec(_spec)
@@ -30,6 +32,14 @@ def _copia_do_kit(destino: Path) -> None:
         shutil.copy(MODELO / ORIGEM.get(nome, nome), alvo)
 
 
+def _divergencia_de_versao(comum: str, manifesto: dict) -> str:
+    """Vazio se o plugin está na versão do kit (X.Y.0 para "Versão X.Y"); senão, as duas."""
+    achado = re.search(r"^Versão (\d+\.\d+),", comum, re.M)
+    kit = achado.group(1) if achado else "?"
+    plugin = manifesto.get("version", "?")
+    return "" if plugin == f"{kit}.0" else f"o plugin está na {plugin} e o kit na {kit}"
+
+
 class Kit(unittest.TestCase):
     def test_arquivos_existem(self) -> None:
         faltam = [n for n in DO_KIT if not (MODELO / ORIGEM.get(n, n)).is_file()]
@@ -42,6 +52,37 @@ class Kit(unittest.TestCase):
         # O atalho da raiz serve ao check.sh dos projetos (--fonte ../trilha-ai) até a 2.0.
         self.assertTrue((RAIZ / "CLAUDE-comum.md").is_symlink())
         self.assertEqual((RAIZ / "CLAUDE-comum.md").resolve(), (MODELO / "CLAUDE-comum.md").resolve())
+
+    def test_marketplace_lido_da_raiz_do_kit(self) -> None:
+        marketplace = json.loads((RAIZ / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+        self.assertEqual(marketplace["name"], "trilha-ai")
+        self.assertEqual({p["name"]: p["source"] for p in marketplace["plugins"]}, {"sdd": "./plugins/sdd"})
+        manifesto = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(manifesto["name"], "sdd")
+
+    def test_as_tres_skills_no_plugin(self) -> None:
+        self.assertEqual(sorted(p.name for p in (PLUGIN / "skills").iterdir()), ["briefing", "prd", "tdd"])
+        for skill in ("prd", "tdd", "briefing"):
+            cabecalho = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8").split("\n---", 1)[0]
+            self.assertRegex(cabecalho, rf"(?m)^name: {skill}$")
+
+    def test_plugin_sem_o_repositorio_antigo(self) -> None:
+        arquivos = [a for pasta in (RAIZ / ".claude-plugin", RAIZ / "plugins") for a in pasta.rglob("*") if a.is_file()]
+        self.assertTrue(arquivos)
+        citam = [str(a.relative_to(RAIZ)) for a in arquivos
+                 if "pipeline-prd-tdd-openspec" in a.read_text(encoding="utf-8")]
+        self.assertEqual(citam, [])
+
+    def test_versao_do_plugin_igual_a_do_kit(self) -> None:
+        """Uma versão para o método: o plugin é X.Y.0 da "Versão X.Y" do comum."""
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        manifesto = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+        self.assertEqual(_divergencia_de_versao(comum, manifesto), "")
+
+    def test_versao_do_plugin_esquecida_reprova(self) -> None:
+        erro = _divergencia_de_versao("Versão 1.36, de 2026-10-16.\n", {"version": "1.35.0"})
+        self.assertIn("1.35.0", erro)
+        self.assertIn("1.36", erro)
 
     def test_versao_no_comum(self) -> None:
         for arquivo in ("CLAUDE-comum.md",):

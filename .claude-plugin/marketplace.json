@@ -1,6 +1,6 @@
 {
-  "name": "pipeline-prd-tdd-openspec",
-  "description": "Pipeline em 3 estágios para desenvolvimento assistido por IA: PRD (produto) → TDD (decisão técnica) → OpenSpec (implementação)",
+  "name": "trilha-ai",
+  "description": "O método Trilha AI, PRD → TDD → OpenSpec: as skills de produto, de decisão técnica e de ponte para o OpenSpec",
   "owner": {
     "name": "Paulo (paulosrl)",
     "url": "https://github.com/paulosrl"
