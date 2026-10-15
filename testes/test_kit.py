@@ -86,6 +86,25 @@ class Kit(unittest.TestCase):
         self.assertNotIn("changes e specs seguem `AAAA-MM-DD-NN-nome`", comum)
         self.assertNotIn("spec novo recebe o próximo número e a data do dia", comum)
 
+    def test_auditoria_nao_e_unidade_de_trabalho(self) -> None:
+        """v1.12: até a escolha do usuário, a auditoria não muda o ANDAMENTO.md nem o registro de processo."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("Até a escolha, a auditoria não é unidade de trabalho", comum)
+
+    def test_archive_gera_a_pagina(self) -> None:
+        """v1.12: a página do método está no passo do archive, no comum e no config.yaml, e só lá."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        esqueleto = (RAIZ / "esqueleto-CLAUDE.md").read_text(encoding="utf-8")
+        self.assertIn('a tabela "Ciclo" atualizada e a página do método gerada de novo', comum)
+        self.assertIn("gerar de novo sdd/documentacao.html", config)
+        self.assertNotIn("gerar_pagina_sdd", esqueleto)
+
+    def test_tarefas_nomeiam_o_requisito_sem_criterio(self) -> None:
+        """v1.12: a regra de tarefas do config.yaml diz o mesmo que o comum para cenário sem critério."""
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        self.assertIn("ou o do requisito quando o cenário não tem critério", config)
+
     def test_regras_falam_do_usuario(self) -> None:
         for arquivo in ("CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
@@ -157,6 +176,25 @@ class Kit(unittest.TestCase):
             pagina = (destino / "sdd/documentacao.html").read_text(encoding="utf-8")
             self.assertIn('"prd": ""', pagina)
             self.assertIn("Trilha AI", pagina)
+
+    def test_pagina_mostra_change_retirada(self) -> None:
+        """Change retirada antes do archive tem linha no "Ciclo" e aparece como retirada, não em andamento."""
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp)
+            _copia_do_kit(destino)
+            (destino / "sdd").mkdir()
+            (destino / "sdd/decomposicao-x.md").write_text(
+                "# Decomposição\n\n## Ciclo\n\n| NN | briefing | auditoria | archive |\n|---|---|---|---|\n"
+                "| 01 | briefing-change-01-icone.md (aprovado 2026-10-13) | — | retirada em 2026-10-13 |\n",
+                encoding="utf-8",
+            )
+            subprocess.run(
+                [sys.executable, "-I", str(destino / "scripts/gerar_pagina_sdd.py")],
+                capture_output=True, text=True, check=True,
+            )
+            pagina = (destino / "sdd/documentacao.html").read_text(encoding="utf-8")
+            self.assertIn('"estado": "retirada"', pagina)
+            self.assertIn(".selo.retirada", pagina)
 
 
 if __name__ == "__main__":

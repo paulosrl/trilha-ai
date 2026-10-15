@@ -19,7 +19,6 @@ Regras só deste repositório. As comuns a todo projeto (o método SDD, o ciclo 
 ```bash
 <instalar as dependências>
 scripts/check.sh    # as regras (confere_regras.py) e, depois da etapa 2, lint, tipos e testes
-python3 scripts/gerar_pagina_sdd.py    # sdd/documentacao.html, ao fechar cada etapa
 <rodar>
 ```
 

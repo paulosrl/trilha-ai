@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.11, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.12, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -28,7 +28,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, com os 8 itens: todo requisito virou spec; todo critério virou cenário; nada sem origem no PRD; ADRs citados, não redecididos; decisões locais que não contrariam ADR; nada fora do escopo; tarefas com teste; pendências contornadas, sem improviso. O que reprovar se corrige com `/opsx:update`, depois da escolha do usuário; a revisão termina com a auditoria aprovada;
 4. `/opsx:apply`, no fluxo do OpenSpec; a última tarefa do `tasks.md` é a execução manual, em dado descartável, com o usuário olhando (regra das tarefas no `openspec/config.yaml`);
 5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito, com o motivo;
-6. `/opsx:archive`; em seguida, `openspec validate`, o diff de `openspec/specs/` conferido e a tabela "Ciclo" atualizada.
+6. `/opsx:archive`; em seguida, `openspec validate`, o diff de `openspec/specs/` conferido, a tabela "Ciclo" atualizada e a página do método gerada de novo.
 
 - Não edite `openspec/specs/` à mão, exceto typo ou link: os specs mudam por delta e archive. Se editou, registre uma change retroativa.
 - Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
@@ -56,7 +56,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - Pedido curto, com erro de digitação ou com mais de uma leitura: diga a leitura adotada antes de agir.
 - Pedido que contraria requisito ou ADR volta ao usuário com opções; nunca é atendido em silêncio.
 - Delegação ("escolha o melhor") não dispensa o gate: siga a recomendação já apresentada e registre a delegação.
-- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada.
+- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho: não muda o `ANDAMENTO.md` nem o registro de processo; o relatório entra no registro junto com a primeira correção.
 - Ao fechar trabalho seu, releia o diff inteiro e corrija antes de entregar.
 - Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração.
 - Não escreva em outro repositório nem troque de projeto sem ordem explícita nomeando-o.

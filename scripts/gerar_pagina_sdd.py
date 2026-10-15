@@ -90,6 +90,8 @@ def _changes(decomposicao: str) -> list[dict[str, str]]:
         numero, briefing, _auditoria, archive = celulas
         if archive.startswith("arquivada"):
             estado, rotulo = "arquivada", "arquivada"
+        elif archive.startswith("retirada"):
+            estado, rotulo = "retirada", "retirada"
         elif briefing not in ("—", ""):
             estado, rotulo = "andamento", "em andamento"
         else:

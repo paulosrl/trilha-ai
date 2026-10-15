@@ -41,10 +41,10 @@ rules:
   tasks:
     - Escrever em PT-BR, com acentos.
     - Formato de caixa de marcação, "- [ ] N.M Descrição", em ordem de dependência.
-    - Para cada cenário ADDED ou MODIFIED, uma tarefa nomeia o teste que o comprova, com o código do critério de aceite no nome do teste.
+    - Para cada cenário ADDED ou MODIFIED, uma tarefa nomeia o teste que o comprova, com o código do critério de aceite no nome do teste, ou o do requisito quando o cenário não tem critério.
     - A última tarefa antes do verify é a execução manual, em dado descartável, com o usuário olhando.
 
 operations:
   archive:
     guidance:
-      - Depois do archive, validar as specs e conferir o diff de openspec/specs/; atualizar a tabela "Ciclo" da decomposição.
+      - Depois do archive, validar as specs e conferir o diff de openspec/specs/; atualizar a tabela "Ciclo" da decomposição; gerar de novo sdd/documentacao.html.
