@@ -9,9 +9,10 @@ Confere, na raiz do repositório:
 - o plugin `sdd` instalado é o da fonte (`../pipeline-prd-tdd-openspec`): só aviso, nunca falha.
 
 Fica fora de qualquer bateria que seja portão de publicação: o estado dos documentos e das
-ferramentas da máquina não pode impedir o sistema de ir ao ar. Sem a decomposição ou o TDD (o
-repositório que ainda não os escreveu), a conferência deles é pulada com aviso. Só python3, sem
-dependências. Sai com 1 e imprime "FALHA: ..." por problema; "ok" se nada falhar.
+ferramentas da máquina não pode impedir o sistema de ir ao ar. Sem a pasta `sdd/`, avisa que ela
+falta; sem a decomposição ou o TDD (o repositório que ainda não os escreveu), a conferência deles é
+pulada com aviso. Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema;
+"ok" se nada falhar.
 """
 
 from __future__ import annotations
@@ -116,13 +117,18 @@ def main(argv: list[str]) -> int:
     falhas: list[str] = []
     avisos: list[str] = []
     decomposicao, tdd = _unico("decomposicao-*.md"), _unico("tdd-*.md")
+    if not SDD.is_dir():
+        avisos.append(
+            "sem a pasta sdd/: crie-a com `mkdir sdd`; o PRD, o TDD, a decomposição e os "
+            "briefings nascem nela"
+        )
     if decomposicao:
         falhas += conferir_decomposicao(decomposicao.read_text(encoding="utf-8"))
-    else:
+    elif SDD.is_dir():
         avisos.append("sem sdd/decomposicao-*.md: a tabela Ciclo não foi conferida")
     if tdd:
         falhas += conferir_tdd(tdd.read_text(encoding="utf-8"))
-    else:
+    elif SDD.is_dir():
         avisos.append("sem sdd/tdd-*.md: as evidências não foram conferidas")
     if ANDAMENTO.is_file():
         falhas += conferir_andamento(ANDAMENTO.read_text(encoding="utf-8"), vizinhos)

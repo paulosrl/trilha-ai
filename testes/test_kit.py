@@ -304,6 +304,12 @@ class Kit(unittest.TestCase):
             _copia_do_kit(destino)
             saida = self._confere_metodo(destino, "--vizinho", "outro")
             self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertIn("sem a pasta sdd/: crie-a com `mkdir sdd`", saida.stderr)
+            self.assertNotIn("sem sdd/decomposicao", saida.stderr)
+            (destino / "sdd").mkdir()
+            saida = self._confere_metodo(destino)
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertNotIn("sem a pasta sdd/", saida.stderr)
             self.assertIn("sem sdd/decomposicao", saida.stderr)
 
     def test_metodo_reprova_ciclo_divergente_andamento_vizinho_e_linha_no_tdd(self) -> None:
