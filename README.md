@@ -18,12 +18,13 @@ Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do
    | `openspec/config.yaml` | preencher o contexto; as regras por artefato ficam como estão |
    | `scripts/check.sh` | a parte das regras já funciona; a parte da stack entra na etapa 2 |
    | `scripts/confere_regras.py` | copiar sem mudar nada |
+   | `scripts/confere_metodo.py` | copiar sem mudar nada; confere a decomposição, o TDD e o `ANDAMENTO.md`; os repositórios ao lado entram no `check.sh`, um `--vizinho` por nome |
    | `scripts/gerar_pagina_sdd.py` e `scripts/pagina_sdd_modelo.html` | copiar sem mudar nada; geram `sdd/documentacao.html` |
    | `sdd/` | criar vazia (`mkdir sdd`): o PRD, o TDD, a decomposição e os briefings nascem nela |
    | `.gitignore` | apagar o bloco da stack que não for a sua, depois da etapa 2 |
 
 4. **Inicialize as ferramentas no repositório:** `openspec init` (ele mantém o `config.yaml` copiado; se perguntar, não o sobrescreva) e `codegraph init`.
-5. **Confira:** `bash scripts/check.sh` deve terminar com `ok` na parte das regras. Para conferir também que o comum é cópia idêntica deste kit: `python3 -I scripts/confere_regras.py . --fonte <caminho desta pasta>`.
+5. **Confira:** `bash scripts/check.sh` deve terminar com `ok` na parte das regras e na do método. Com este kit em `../trilha-ai` (ou em `TRILHA_AI`), ele confere também que o comum é cópia idêntica do daqui; sem ele, avisa.
 6. **Primeiro commit,** com a linha de coautoria da IA.
 7. **Siga para a etapa 1 do guia:** o PRD.
 

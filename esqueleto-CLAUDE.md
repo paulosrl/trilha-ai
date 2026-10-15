@@ -18,7 +18,7 @@ Regras só deste repositório. As comuns a todo projeto (o método SDD, o ciclo 
 
 ```bash
 <instalar as dependências>
-scripts/check.sh    # as regras (confere_regras.py) e, depois da etapa 2, lint, tipos e testes
+scripts/check.sh    # as regras (confere_regras.py), o método (confere_metodo.py) e, depois da etapa 2, lint, tipos e testes
 <rodar>
 ```
 

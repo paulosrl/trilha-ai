@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.12, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.13, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -25,14 +25,13 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 1. briefing aprovado pelo usuário;
 2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código;
-3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, com os 8 itens: todo requisito virou spec; todo critério virou cenário; nada sem origem no PRD; ADRs citados, não redecididos; decisões locais que não contrariam ADR; nada fora do escopo; tarefas com teste; pendências contornadas, sem improviso. O que reprovar se corrige com `/opsx:update`, depois da escolha do usuário; a revisão termina com a auditoria aprovada;
+3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist de 8 itens da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, depois da escolha do usuário; a revisão termina com a auditoria aprovada;
 4. `/opsx:apply`, no fluxo do OpenSpec; a última tarefa do `tasks.md` é a execução manual, em dado descartável, com o usuário olhando (regra das tarefas no `openspec/config.yaml`);
 5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito, com o motivo;
-6. `/opsx:archive`; em seguida, `openspec validate`, o diff de `openspec/specs/` conferido, a tabela "Ciclo" atualizada e a página do método gerada de novo.
+6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista.
 
 - Não edite `openspec/specs/` à mão, exceto typo ou link: os specs mudam por delta e archive. Se editou, registre uma change retroativa.
 - Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
-- Cada cenário de spec vira um teste com o código do critério de aceite no nome, ou o do requisito quando o cenário não tem critério.
 - Espere a escolha do usuário antes de ampliar o escopo de uma change aprovada. Achado fora do escopo vira outra change ou revisão do PRD ou do TDD; achado que o spec já cobre é correção dentro da change, com o teste que falha escrito antes.
 
 ## Registrar cada decisão no artefato dono dela
@@ -43,8 +42,8 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não está em disco se perde, e o que não está anotado precisa ser adivinhado. Por isso:
 
-- `ANDAMENTO.md`, na raiz, existe sempre e diz, em até dez linhas: o estado ("em andamento" ou "nada em andamento"), a etapa (PRD, TDD, decomposição, ou a change e o passo do ciclo), a unidade em curso (o artefato, ou o apply, cujo progresso é o `tasks.md`), o que já está feito nela, o próximo passo exato e a hora. Escreva-o **antes** de começar cada unidade de trabalho e reescreva-o ao terminá-la; ao fechar a etapa, volte a "nada em andamento". É versionado e vai no commit de cada unidade.
-- Durante o apply, o ponto de retomada é o `tasks.md`, que o OpenSpec marca tarefa a tarefa. Faça um commit ao fim do propose, outro depois da auditoria do gate 3 e outro a cada parada do apply, nunca um só commit no fim: o commit é o ponto de retomada que sobrevive a qualquer queda.
+- `ANDAMENTO.md`, na raiz, existe sempre e diz, em até dez linhas: o estado ("em andamento" ou "nada em andamento"), a etapa (PRD, TDD, decomposição, a change e o passo do ciclo, ou o trabalho fora de change), a unidade em curso (o artefato, ou o apply, cujo progresso é o `tasks.md`), o que já está feito nela, o próximo passo exato e a hora; não guarda o estado do envio ao remoto, que o `git status` mostra. Escreva-o **antes** de começar cada unidade de trabalho e reescreva-o ao terminá-la; ao fechar a etapa, volte a "nada em andamento". É versionado e vai no commit de cada unidade.
+- Durante o apply, o ponto de retomada é o `tasks.md`, que o OpenSpec marca tarefa a tarefa. Faça um commit ao fim do propose, outro quando a auditoria do gate 3 for aprovada e outro a cada parada do apply, nunca um só commit no fim: o commit é o ponto de retomada que sobrevive a qualquer queda.
 - Ao fechar uma etapa, diga ao usuário quantos commits estão por enviar ao remoto; envie só com "sim".
 - Ao começar qualquer sessão, antes de agir: leia `ANDAMENTO.md`, `git status`, `git log -3` e, se houver change ativa, `openspec list`; diga onde parou, o que está por commitar e qual é o próximo passo. Trabalho não commitado que você encontrar só é continuado ou descartado com a escolha do usuário.
 
@@ -56,7 +55,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - Pedido curto, com erro de digitação ou com mais de uma leitura: diga a leitura adotada antes de agir.
 - Pedido que contraria requisito ou ADR volta ao usuário com opções; nunca é atendido em silêncio.
 - Delegação ("escolha o melhor") não dispensa o gate: siga a recomendação já apresentada e registre a delegação.
-- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho: não muda o `ANDAMENTO.md` nem o registro de processo; o relatório entra no registro junto com a primeira correção.
+- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho (a do gate 3 também não): não muda o `ANDAMENTO.md` nem o registro de processo; o relatório entra no registro junto com a primeira correção.
 - Ao fechar trabalho seu, releia o diff inteiro e corrija antes de entregar.
 - Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração.
 - Não escreva em outro repositório nem troque de projeto sem ordem explícita nomeando-o.
@@ -81,4 +80,4 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 
 ## O `CLAUDE.md` de cada repositório
 
-Só o que não se deduz lendo o código, neste esqueleto: **O que é** · **Documentos** (os nomes reais do PRD, do TDD e da decomposição, em `sdd/`; o `openspec/config.yaml` e o `ANDAMENTO.md`) · **Comandos** (rodar, testar, publicar; a verificação chama o `confere_regras.py`) · **Regras de código** · **Dados a proteger** · **Armadilhas próprias** · **Exceções ao comum**, cada uma com o motivo. O `CLAUDE.md` e o `CLAUDE-comum.md` somados têm no máximo 200 linhas.
+Só o que não se deduz lendo o código, neste esqueleto: **O que é** · **Documentos** (os nomes reais do PRD, do TDD e da decomposição, em `sdd/`; o `openspec/config.yaml` e o `ANDAMENTO.md`) · **Comandos** (rodar, testar, publicar; a verificação chama o `confere_regras.py` e o `confere_metodo.py`) · **Regras de código** · **Dados a proteger** · **Armadilhas próprias** · **Exceções ao comum**, cada uma com o motivo. O `CLAUDE.md` e o `CLAUDE-comum.md` somados têm no máximo 200 linhas.

@@ -16,6 +16,7 @@ DO_KIT = (
     "openspec/config.yaml",
     "scripts/check.sh",
     "scripts/confere_regras.py",
+    "scripts/confere_metodo.py",
     "scripts/gerar_pagina_sdd.py",
     "scripts/pagina_sdd_modelo.html",
     ".gitignore",
@@ -92,16 +93,36 @@ class Kit(unittest.TestCase):
         self.assertIn("Até a escolha, a auditoria não é unidade de trabalho", comum)
 
     def test_archive_gera_a_pagina(self) -> None:
-        """v1.12: a página do método está no passo do archive, no comum e no config.yaml, e só lá."""
+        """v1.13: os passos depois do archive vivem só no config.yaml; o comum aponta para lá."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
         esqueleto = (RAIZ / "esqueleto-CLAUDE.md").read_text(encoding="utf-8")
-        self.assertIn('a tabela "Ciclo" atualizada e a página do método gerada de novo', comum)
+        self.assertIn("os passos que o `operations.archive` do `openspec/config.yaml` lista", comum)
+        self.assertNotIn("página do método gerada de novo", comum)
         self.assertIn("gerar de novo sdd/documentacao.html", config)
         self.assertNotIn("gerar_pagina_sdd", esqueleto)
 
+    def test_regras_do_metodo_num_lugar_so(self) -> None:
+        """v1.13: o teste por cenário fica no config.yaml e os 8 itens da auditoria, na skill."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertNotIn("Cada cenário de spec vira um teste", comum)
+        self.assertNotIn("todo requisito virou spec", comum)
+        self.assertIn("pelo checklist de 8 itens da skill `sdd:briefing`", comum)
+
+    def test_andamento_sem_o_envio_e_com_trabalho_fora_de_change(self) -> None:
+        """v1.13: o envio ao remoto não vai ao ANDAMENTO.md; a etapa admite trabalho fora de change."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("não guarda o estado do envio ao remoto", comum)
+        self.assertIn("ou o trabalho fora de change)", comum)
+        self.assertIn("quando a auditoria do gate 3 for aprovada", comum)
+
+    def test_cenario_mantido_no_delta_fica_como_esta(self) -> None:
+        config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
+        self.assertIn("todo cenário novo ou alterado cita o CA de origem", config)
+        self.assertIn("o que o delta repete sem mudança fica como está", config)
+
     def test_tarefas_nomeiam_o_requisito_sem_criterio(self) -> None:
-        """v1.12: a regra de tarefas do config.yaml diz o mesmo que o comum para cenário sem critério."""
+        """A regra de tarefas do config.yaml (a única que há) cobre o cenário sem critério."""
         config = (RAIZ / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("ou o do requisito quando o cenário não tem critério", config)
 
@@ -163,6 +184,49 @@ class Kit(unittest.TestCase):
         )
         self.assertIn("ANDAMENTO.md", erro)
         self.assertIn("openspec/config.yaml", erro)
+
+    def _confere_metodo(self, destino: Path, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            [sys.executable, "-I", str(destino / "scripts/confere_metodo.py"), *args],
+            capture_output=True, text=True, check=False,
+        )
+
+    def test_metodo_aprova_um_repositorio_feito_do_kit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp)
+            _copia_do_kit(destino)
+            saida = self._confere_metodo(destino, "--vizinho", "outro")
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertIn("sem sdd/decomposicao", saida.stderr)
+
+    def test_metodo_reprova_ciclo_divergente_andamento_vizinho_e_linha_no_tdd(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp)
+            _copia_do_kit(destino)
+            (destino / "sdd").mkdir()
+            (destino / "sdd/decomposicao-x.md").write_text(
+                "## 1. Changes\n\n| NN | Change |\n|---|---|\n| 01 | a |\n| 02 | b |\n\n## 2. Regras\n\n"
+                "## Ciclo\n\n| NN | briefing | auditoria | archive |\n|---|---|---|---|\n"
+                "| 01 | — | — | — |\n",
+                encoding="utf-8",
+            )
+            (destino / "sdd/tdd-x.md").write_text(
+                "- **Evidência:** `app/nao_existe.py` (linhas 3 a 9)\n", encoding="utf-8"
+            )
+            andamento = destino / "ANDAMENTO.md"
+            andamento.write_text(andamento.read_text(encoding="utf-8") + "outro\n", encoding="utf-8")
+            saida = self._confere_metodo(destino, "--vizinho", "outro")
+            self.assertEqual(saida.returncode, 1, saida.stdout)
+            self.assertIn("tabela Ciclo diferem", saida.stderr)
+            self.assertIn("número de linha", saida.stderr)
+            self.assertIn("não existe: app/nao_existe.py", saida.stderr)
+            self.assertIn("cita outro repositório: outro", saida.stderr)
+
+    def test_metodo_recusa_argumento_errado(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp)
+            _copia_do_kit(destino)
+            self.assertEqual(self._confere_metodo(destino, "--outro").returncode, 2)
 
     def test_gerador_da_pagina_nao_inventa_etapas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
