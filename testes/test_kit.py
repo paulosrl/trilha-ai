@@ -165,7 +165,6 @@ class Kit(unittest.TestCase):
     def test_briefing_seguinte_depois_do_merge(self) -> None:
         """F06: a change fecha no merge (comum, passo 7); o briefing da próxima espera por ele."""
         skill = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
-        self.assertNotIn("anterior estiver arquivada", skill)
         self.assertIn("quando a change anterior estiver com o merge feito", skill)
         self.assertIn("Depois do merge da change", skill)
 
@@ -227,11 +226,9 @@ class Kit(unittest.TestCase):
         """v1.32: a instrução do propose já manda ler o projeto e os specs; o pkill -f num lugar só."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Antes de propor, rode `openspec list`", comum)
-        self.assertNotIn("leia o spec da capability", comum)
         self.assertEqual(comum.count("`pkill -f`"), 1)
         # A trava confere o --merge e a verificação verde, não o passo em que se está.
         self.assertIn("o merge sem `--merge` ou sem a verificação verde", comum)
-        self.assertNotIn("merge fora do passo 7", comum)
         self.assertIn("a cópia nova do kit (a pasta `trilha/` e o que o `kit.py atualizar` escreve) dispensam change", comum)
 
     def test_comum_fecha_a_porta_do_briefing_curto(self) -> None:
@@ -249,13 +246,11 @@ class Kit(unittest.TestCase):
         """A skill do plugin chama-se sdd:briefing, para não colidir com a openspec-propose nativa do OpenSpec."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("`sdd:briefing`", comum)
-        self.assertNotIn("openspec-propose", comum)
 
     def test_comum_poe_a_auditoria_na_revisao_do_openspec(self) -> None:
         """v1.9: a auditoria do gate 3 é a revisão que o OpenSpec pede ao fim do propose, não um passo à parte."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3", comum)
-        self.assertNotIn("3. auditoria do gate 3, antes de qualquer código", comum)
 
     def test_metodo_nao_forca_o_apply(self) -> None:
         """v1.10: o apply segue o fluxo do OpenSpec; nem commit por tarefa nem parada forçada."""
@@ -263,9 +258,6 @@ class Kit(unittest.TestCase):
         config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("4. `/opsx:apply`, no fluxo do OpenSpec;", comum)
         self.assertIn("Durante o apply, o ponto de retomada é o `tasks.md`", comum)
-        self.assertNotIn("um por tarefa concluída", comum)
-        self.assertNotIn("o apply para nela", comum)
-        self.assertNotIn("commit por tarefa", config)
         # O apply pode ter instrução, mas nunca a que força parada ou commit (a decisão da v1.10).
         apply = config.split("  apply:", 1)[1].split("  archive:", 1)[0] if "  apply:" in config else ""
         for proibido in ("commit", "pare", "parada"):
@@ -275,8 +267,6 @@ class Kit(unittest.TestCase):
         """v1.11: só as changes levam número e data; os specs seguem o nome que o OpenSpec dá."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Os specs seguem o nome que o OpenSpec dá", comum)
-        self.assertNotIn("changes e specs seguem `AAAA-MM-DD-NN-nome`", comum)
-        self.assertNotIn("spec novo recebe o próximo número e a data do dia", comum)
 
     def test_auditoria_nao_e_unidade_de_trabalho(self) -> None:
         """v1.12: até a escolha do usuário, a auditoria não muda o ANDAMENTO.md nem o registro de processo."""
@@ -370,7 +360,6 @@ class Kit(unittest.TestCase):
     def test_confere_metodo_se_declara_trava(self) -> None:
         """Desde a 1.27 ele roda na trava do commit e no CI; o texto dele diz isso."""
         texto = (MODELO / "trilha" / "confere_metodo.py").read_text(encoding="utf-8")
-        self.assertNotIn("portão de publicação", texto)
         self.assertIn("na trava do commit (trilha/hooks/pre-commit)", texto)
 
     def test_ci_com_acoes_fixadas_e_busca_de_segredos(self) -> None:
@@ -408,7 +397,6 @@ class Kit(unittest.TestCase):
         self.assertIn("A change fecha aqui, não no archive", comum)
         self.assertIn("numa branch `change/…`, `gh pr view` e `gh pr checks`", comum)
         self.assertIn("change com o merge feito", comum)
-        self.assertNotIn("change arquivada, conferência", comum)
         self.assertIn("fora de change (o PRD, o TDD, a decomposição e o trabalho que dispensa change), o commit vai direto à main", comum)
         self.assertEqual(comum.count("envie só com \"sim\""), 1)
         self.assertIn("o envio ao GitHub segue a regra dos envios", comum)
@@ -421,7 +409,6 @@ class Kit(unittest.TestCase):
 
     def test_ciclo_guarda_os_marcos_e_o_andamento_o_passo(self) -> None:
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertNotIn("O passo do ciclo em que cada change está: a tabela", comum)
         self.assertIn("Os marcos de cada change (briefing, auditoria, archive): a tabela \"Ciclo\"", comum)
 
     def test_auditoria_tem_criterio_de_fechamento(self) -> None:
@@ -438,17 +425,13 @@ class Kit(unittest.TestCase):
         config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         esqueleto = (MODELO / "esqueleto-CLAUDE.md").read_text(encoding="utf-8")
         self.assertIn("os passos que o `operations.archive` do `openspec/config.yaml` lista", comum)
-        self.assertNotIn("página do método gerada de novo", comum)
         self.assertIn("gerar de novo sdd/documentacao.html", config)
         self.assertNotIn("gerar_pagina_sdd", esqueleto)
 
     def test_regras_do_metodo_num_lugar_so(self) -> None:
         """v1.13: o teste por cenário fica no config.yaml e os 8 itens da auditoria, na skill."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertNotIn("Cada cenário de spec vira um teste", comum)
-        self.assertNotIn("todo requisito virou spec", comum)
         self.assertIn("pelo checklist da skill `sdd:briefing`", comum)
-        self.assertNotIn("checklist de 8 itens", comum)  # v1.30: a contagem é da skill
 
     def test_andamento_sem_o_envio_e_com_trabalho_fora_de_change(self) -> None:
         """v1.13: o envio ao remoto não vai ao ANDAMENTO.md; a etapa admite trabalho fora de change."""
@@ -460,7 +443,6 @@ class Kit(unittest.TestCase):
     def test_gates_aprovados_como_as_skills_pedem(self) -> None:
         """v1.17: PRD e TDD são aprovados bloco a bloco, como as skills pedem; a restrição imposta é exceção."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertNotIn("seção por seção", comum)
         self.assertIn("aprovado bloco a bloco pelo usuário, como a skill pede (gate 1)", comum)
         self.assertIn("aprovado bloco a bloco pelo usuário, como a skill pede (gate 2)", comum)
         self.assertIn("salvo a restrição que o usuário declara imposta de fora", comum)
@@ -478,14 +460,10 @@ class Kit(unittest.TestCase):
         dos arquivos do método dispensa change; o OpenSpec comanda, e o método nunca se sobrepõe a ele:
         quando um comando oferece pular um passo, quem escolhe é o usuário."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertNotIn("o relatório entra no registro junto com a primeira correção", comum)
         self.assertIn("A escolha, com ou sem correção, é unidade de trabalho", comum)
         self.assertIn("a cópia nova do kit (a pasta `trilha/`", comum)
         self.assertIn("O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele", comum)
         self.assertIn("quem escolhe é o usuário, com a recomendação de não pular", comum)
-        self.assertNotIn("vale este arquivo", comum)
-        self.assertNotIn("não vale (arquivar sem o verify", comum)
-        self.assertNotIn("sem pular etapa", comum)
 
     def test_config_nao_repete_o_comum_nem_o_claude(self) -> None:
         """v1.17: o contexto do config.yaml aponta para o comum e o CLAUDE.md, que o agente já carrega."""
@@ -503,17 +481,14 @@ class Kit(unittest.TestCase):
         config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("o OpenSpec o cria só quando cabe", comum)
         self.assertIn("o `notas.md` da pasta da change faz as vezes dele", comum)
-        self.assertNotIn("Não edite `openspec/specs/` à mão", comum)
         self.assertIn("a edição direta que as instruções dele pedem", comum)
         self.assertIn("ou pelo caminho que ele indicar", comum)
-        self.assertNotIn("MAY (RFC 2119)", config)
         self.assertIn("um DEVE em português o reprova", config)
         # v1.30: o que o modelo do OpenSpec já pede fica nas instruções dele.
         for repetido in ("não o como", "alternativa rejeitada", "cenário com WHEN/THEN", '"- [ ] N.M'):
             self.assertNotIn(repetido, config)
         # v1.33: a língua fica no context, no bloco que o openspec init --language escreve.
         self.assertNotIn("PT-BR", config[config.find("\nrules:"):])
-        self.assertNotIn("títulos", config)
 
     def test_lingua_no_context_como_o_openspec_escreve(self) -> None:
         """O bloco de formatLanguageContext (core/init.js do OpenSpec): o init --language o reconhece."""
@@ -1011,20 +986,16 @@ class Kit(unittest.TestCase):
         self.assertNotIn("</script", modelo.split("marked v12.0.2", 1)[1].split("\n</script>", 1)[0])
         self.assertIn('f"{nome}: documentação"', gerador)
         self.assertIn("é a documentação do projeto, gerada", comum)
-        for texto in (modelo, gerador, comum):
-            self.assertNotIn("página do método", texto)
 
     def test_modelo_da_pagina_tem_teclado_celular_e_rodape_corretos(self) -> None:
         modelo = (MODELO / "trilha/pagina_sdd_modelo.html").read_text(encoding="utf-8")
         self.assertIn("ArrowRight", modelo)
         self.assertIn('document.getElementById("aba-" + chave).focus()', modelo)
         self.assertIn(".briefings > li {", modelo)
-        self.assertNotIn(".briefings li {", modelo)
         self.assertIn("grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }", modelo)
         self.assertIn("article.doc { overflow-wrap: break-word; }", modelo)  # palavra longa no celular
         self.assertIn("article.doc a { overflow-wrap: anywhere; }", modelo)  # URL longa no celular
         self.assertIn("os documentos mudaram por último em", modelo)
-        self.assertNotIn('", em " + dados.atualizado', modelo)
 
 
     def _guarda(self, comando: str, gh_sai_com: int = 0) -> subprocess.CompletedProcess:
@@ -1441,7 +1412,6 @@ class Kit(unittest.TestCase):
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("a cópia nova do kit (a pasta `trilha/` e o que o `kit.py atualizar` escreve) "
                       "dispensam change", comum)
-        self.assertNotIn("os scripts de conferência e da página", comum)
         self.assertIn("Não edite este arquivo nem a pasta `trilha/`", comum)
 
     def test_ferramenta_cria_projeto_novo_e_recusa_pasta_cheia(self) -> None:

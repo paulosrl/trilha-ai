@@ -35,9 +35,9 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 6. A limpeza dos testes, a versão e os textos
 
-- [ ] 6.1 Saem do `testes/test_kit.py` os `assertNotIn` de frases aposentadas, pelo critério do design (decisão 6), e os testes que ficarem vazios; o conjunto de testes passa
+- [x] 6.1 Saem do `testes/test_kit.py` os `assertNotIn` de frases aposentadas, pelo critério do design (decisão 6), e os testes que ficarem vazios; o conjunto de testes passa
 - [x] 6.2 O comum vai a "Versão 2.1, de <data do commit>." e o plugin a `2.1.0`; o `context` do `openspec/config.yaml` do kit cita `modelo/trilha/` como a pasta do ruff; o `test_versao_do_plugin_igual_a_do_kit` passa e o `openspec validate --all --no-interactive` também
-- [ ] 6.3 O conjunto de testes e o ruff (check e format), cada um sozinho, sem erro
+- [x] 6.3 O conjunto de testes e o ruff (check e format), cada um sozinho, sem erro
 
 ## 7. Execução manual
 
