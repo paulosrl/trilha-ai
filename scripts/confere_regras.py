@@ -8,7 +8,8 @@ Confere, na raiz indicada:
   produto no título, cita ANDAMENTO.md e openspec/config.yaml em "Documentos" e segue o
   esqueleto das sete seções, na ordem;
 - os dois somados têm no máximo 200 linhas;
-- ANDAMENTO.md existe, tem as seis linhas pedidas, com a data e a hora, e cabe em dez linhas;
+- ANDAMENTO.md existe, tem as seis linhas pedidas, com a data e a hora (nunca no futuro), e cabe
+  em dez linhas;
 - com --fonte, o CLAUDE-comum.md é cópia idêntica do que está no kit.
 
 Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema; "ok" se nada falhar.
@@ -18,6 +19,7 @@ from __future__ import annotations
 
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 LIMITE_DE_LINHAS = 200
@@ -104,8 +106,11 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
     for chave in CHAVES_DO_ANDAMENTO:
         if chave not in texto_andamento:
             falhas.append(f"ANDAMENTO.md sem a linha {chave}")
-    if not DATA_E_HORA.search(texto_andamento):
+    hora = DATA_E_HORA.search(texto_andamento)
+    if not hora:
         falhas.append("ANDAMENTO.md sem a hora em 'Atualizado em' (AAAA-MM-DD HH:MM)")
+    elif not hora.group(1).startswith("<") and hora.group(1) > f"{datetime.now():%Y-%m-%d %H:%M}":
+        falhas.append(f"ANDAMENTO.md com a hora no futuro ({hora.group(1)}); leia-a com `date`")
 
     if fonte is not None:
         original = fonte / "CLAUDE-comum.md"

@@ -96,13 +96,39 @@ class Kit(unittest.TestCase):
         """v1.14: só a mudança de sentido sobe a versão do PRD, do TDD ou da decomposição."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("não sobe a versão dele nem a linha \"de origem\" de quem o cita", comum)
-        self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário.", comum)
+        self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário", comum)
 
     def test_prd_e_spec_em_desacordo(self) -> None:
         """v1.15: o PRD aprovado manda sobre o spec; se o certo for o spec, o PRD ganha versão nova."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("PRD e spec em desacordo: vale o PRD aprovado", comum)
         self.assertIn("se o certo for o spec, o PRD ganha versão nova", comum)
+
+    def test_regras_gerais_vindas_dos_repositorios(self) -> None:
+        """v1.16: o "sim" isolado, o que ler antes do propose e a mutação desfeita saem dos CLAUDE.md."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("Um \"sim\" isolado responde só à pergunta principal da mensagem", comum)
+        self.assertIn("rode `openspec list`", comum)
+        self.assertIn("(`progress.total`)", comum)
+        self.assertIn("desfaça-a por edição inversa, nunca com `git checkout`", comum)
+
+    def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
+        """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("atualiza a linha \"de origem\" de quem o cita, sem versão nova dele", comum)
+
+    def test_ciclo_guarda_os_marcos_e_o_andamento_o_passo(self) -> None:
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertNotIn("O passo do ciclo em que cada change está: a tabela", comum)
+        self.assertIn("Os marcos de cada change (briefing, auditoria, archive): a tabela \"Ciclo\"", comum)
+
+    def test_auditoria_tem_criterio_de_fechamento(self) -> None:
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("Uma auditoria fecha com a verificação do repositório verde e sem contradição", comum)
+
+    def test_hora_do_andamento_lida_do_relogio(self) -> None:
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("a hora, lida do relógio (`date`) e nunca estimada", comum)
 
     def test_archive_gera_a_pagina(self) -> None:
         """v1.13: os passos depois do archive vivem só no config.yaml; o comum aponta para lá."""
@@ -183,6 +209,10 @@ class Kit(unittest.TestCase):
     def test_verificador_reprova_andamento_sem_hora(self) -> None:
         erro = self._verifica_com_defeito("ANDAMENTO.md", "<AAAA-MM-DD HH:MM>", "2026-10-14")
         self.assertIn("sem a hora", erro)
+
+    def test_verificador_reprova_andamento_com_hora_no_futuro(self) -> None:
+        erro = self._verifica_com_defeito("ANDAMENTO.md", "<AAAA-MM-DD HH:MM>", "2999-01-01 00:00")
+        self.assertIn("no futuro", erro)
 
     def test_verificador_reprova_claude_sem_o_nome_do_produto(self) -> None:
         erro = self._verifica_com_defeito("CLAUDE.md", "# CLAUDE.md — <nome do produto>", "# CLAUDE.md")

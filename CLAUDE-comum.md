@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.15, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.16, de 2026-10-14. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd` e o Python 3, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -31,20 +31,21 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 5. `/opsx:verify`: cada sugestão aplicada ou recusada por escrito, com o motivo;
 6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista.
 
+- Antes de propor, leia o spec da capability em `openspec/specs/` e rode `openspec list`: evita change duplicada ou em colisão. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
 - Não edite `openspec/specs/` à mão, exceto typo ou link: os specs mudam por delta e archive. Se editou, registre uma change retroativa.
 - Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
 - Espere a escolha do usuário antes de ampliar o escopo de uma change aprovada. Achado fora do escopo vira outra change ou revisão do PRD ou do TDD; achado que o spec já cobre é correção dentro da change, com o teste que falha escrito antes.
 
 ## Registrar cada decisão no artefato dono dela
 
-- Decisão de produto: nova versão do PRD. Decisão técnica: nova versão do TDD. Decisão local de uma change: o `design.md` dela. O passo do ciclo em que cada change está: a tabela "Ciclo" da decomposição. Desvio ou incidente, às claras e nunca escondido: o `design.md` da change em curso, ou a decomposição se estiver fora de change. Nada fica só na conversa.
-- Correção de texto no PRD, no TDD ou na decomposição que não muda requisito, decisão nem ordem (redação, erro, referência) não sobe a versão dele nem a linha "de origem" de quem o cita: fica no registro de processo, se houver, ou na mensagem do commit. Só a mudança de sentido é versão nova, aprovada pelo usuário.
+- Decisão de produto: nova versão do PRD. Decisão técnica: nova versão do TDD. Decisão local de uma change: o `design.md` dela. Os marcos de cada change (briefing, auditoria, archive): a tabela "Ciclo" da decomposição; o passo em curso, o `ANDAMENTO.md`. Desvio ou incidente, às claras e nunca escondido: o `design.md` da change em curso, ou a decomposição se estiver fora de change. Nada fica só na conversa.
+- Correção de texto no PRD, no TDD ou na decomposição que não muda requisito, decisão nem ordem (redação, erro, referência) não sobe a versão dele nem a linha "de origem" de quem o cita: fica no registro de processo, se houver, ou na mensagem do commit. Só a mudança de sentido é versão nova, aprovada pelo usuário; ela atualiza a linha "de origem" de quem o cita, sem versão nova dele.
 
 ## Trabalho interrompível: saber onde parou
 
 Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não está em disco se perde, e o que não está anotado precisa ser adivinhado. Por isso:
 
-- `ANDAMENTO.md`, na raiz, existe sempre e diz, em até dez linhas: o estado ("em andamento" ou "nada em andamento"), a etapa (PRD, TDD, decomposição, a change e o passo do ciclo, ou o trabalho fora de change), a unidade em curso (o artefato, ou o apply, cujo progresso é o `tasks.md`), o que já está feito nela, o próximo passo exato e a hora; não guarda o estado do envio ao remoto, que o `git status` mostra. Escreva-o **antes** de começar cada unidade de trabalho e reescreva-o ao terminá-la; ao fechar a etapa, volte a "nada em andamento". É versionado e vai no commit de cada unidade.
+- `ANDAMENTO.md`, na raiz, existe sempre e diz, em até dez linhas: o estado ("em andamento" ou "nada em andamento"), a etapa (PRD, TDD, decomposição, a change e o passo do ciclo, ou o trabalho fora de change), a unidade em curso (o artefato, ou o apply, cujo progresso é o `tasks.md`), o que já está feito nela, o próximo passo exato e a hora, lida do relógio (`date`) e nunca estimada; não guarda o estado do envio ao remoto, que o `git status` mostra. Escreva-o **antes** de começar cada unidade de trabalho e reescreva-o ao terminá-la; ao fechar a etapa, volte a "nada em andamento". É versionado e vai no commit de cada unidade.
 - Durante o apply, o ponto de retomada é o `tasks.md`, que o OpenSpec marca tarefa a tarefa. Faça um commit ao fim do propose, outro quando a auditoria do gate 3 for aprovada e outro a cada parada do apply, nunca um só commit no fim: o commit é o ponto de retomada que sobrevive a qualquer queda.
 - Ao fechar uma etapa, diga ao usuário quantos commits estão por enviar ao remoto; envie só com "sim".
 - Ao começar qualquer sessão, antes de agir: leia `ANDAMENTO.md`, `git status`, `git log -3` e, se houver change ativa, `openspec list`; diga onde parou, o que está por commitar e qual é o próximo passo. Trabalho não commitado que você encontrar só é continuado ou descartado com a escolha do usuário.
@@ -57,9 +58,10 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - Pedido curto, com erro de digitação ou com mais de uma leitura: diga a leitura adotada antes de agir.
 - Pedido que contraria requisito ou ADR volta ao usuário com opções; nunca é atendido em silêncio.
 - Delegação ("escolha o melhor") não dispensa o gate: siga a recomendação já apresentada e registre a delegação.
-- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho (a do gate 3 também não): não muda o `ANDAMENTO.md` nem o registro de processo; o relatório entra no registro junto com a primeira correção.
+- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho (a do gate 3 também não): não muda o `ANDAMENTO.md` nem o registro de processo; o relatório entra no registro junto com a primeira correção. Uma auditoria fecha com a verificação do repositório verde e sem contradição; repetição e redação menores ficam no relatório e se corrigem quando o arquivo mudar por outro motivo.
 - Ao fechar trabalho seu, releia o diff inteiro e corrija antes de entregar.
 - Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração.
+- Um "sim" isolado responde só à pergunta principal da mensagem; o envio ao remoto perguntado à parte pede "sim" para ele (ou "sim, em tudo"). Em pergunta com mais de uma decisão, confirme cada uma.
 - Não escreva em outro repositório nem troque de projeto sem ordem explícita nomeando-o.
 - Sugira `/clear` em uma linha no fim da mensagem em todo corte natural (etapa fechada, change arquivada, conferência longa terminada, antes de outra frente), só com tudo em disco e commitado, nunca no meio de uma tarefa; diga o que o usuário recupera ao voltar.
 
@@ -76,6 +78,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - `git status` limpo não prova que nada vazou: confira o `git log`.
 - Ao renomear ou citar arquivo, script ou rota, faça grep do nome no repositório inteiro antes do commit.
 - Ao trocar texto num documento grande, use um trecho único e confira no diff as linhas removidas.
+- Quebrou o código de propósito para provar um teste (mutação): desfaça-a por edição inversa, nunca com `git checkout`, e confira no `git diff` que só a mudança entregue sobrou.
 - Teste instável só está resolvido após 5 rodadas consecutivas verdes.
 - Testes sem rede; projeto que consome uma fonte externa grava a resposta real uma vez e a simula.
 - Rode a verificação do repositório sozinha e confira o código de saída antes do commit; nunca a encadeie com um filtro (`| tail`, `| grep`), que esconde um lint reprovado.
