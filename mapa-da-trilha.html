@@ -202,7 +202,7 @@ a { color: var(--pinho); }
       <li><div><strong>GitHub obrigatório, com repositório privado criado na etapa 0.</strong><p>O trabalho deixa de viver só no disco. É a regra do trabalho interrompível levada até o fim: o commit sobrevive à queda da sessão, o envio sobrevive à queda da máquina.</p></div></li>
       <li><div><strong>Uma branch e um pull request por change.</strong><p>A branch nasce no começo do ciclo; o PR em rascunho nasce com o propose e mostra o plano antes de qualquer código. Um só "sim" autoriza os envios da branch até o merge. É a rotina que o próprio OpenSpec recomenda.</p></div></li>
       <li><div><strong>O archive dentro do PR, antes do merge.</strong><p>O OpenSpec aceita as duas convenções e pede só que você escolha uma. Dentro do PR, a main nunca tem specs e código em desacordo, e os passos que o método faz depois do archive (o Ciclo, a página) entram juntos.</p></div></li>
-      <li><div><strong>Verificação automática (CI) a cada envio, e o merge só com ela verde.</strong><p>O <code>scripts/check.sh</code> e o <code>openspec validate --all --strict</code> rodam no GitHub. O Claude confere com <code>gh pr checks</code> antes de pedir o merge. A proteção da main pelo próprio GitHub é opcional, porque exige o GitHub Pro ou um repositório público.</p></div></li>
+      <li><div><strong>Verificação automática (CI) a cada envio, e o merge só com ela verde.</strong><p>O <code>scripts/check.sh</code> e o <code>openspec validate --all</code> rodam no GitHub. O Claude confere com <code>gh pr checks</code> antes de pedir o merge. A proteção da main pelo próprio GitHub é opcional, porque exige o GitHub Pro ou um repositório público.</p></div></li>
       <li><div><strong>Merge com merge commit, nunca squash.</strong><p>Os commits de retomada (propose, gate 3, cada parada do apply) continuam na história. O squash os juntaria num só.</p></div></li>
       <li><div><strong>A change fecha no merge, não no archive.</strong><p>Depois do archive, a change some do <code>openspec list</code>; só o PR diz se falta o merge. Por isso a retomada de uma sessão olha o PR, e o <code>ANDAMENTO.md</code> só volta a "nada em andamento" depois do merge.</p></div></li>
       <li><div><strong>Travas automáticas (1.27).</strong><p>Antes de cada commit, o git confere as regras e o método. Antes de cada comando, o Claude Code barra o envio forçado, o <code>--no-verify</code>, o <code>pkill -f</code> e o merge fora do passo 7. O que era lembrado passa a ser cobrado.</p></div></li>
@@ -272,7 +272,7 @@ a { color: var(--pinho); }
       git: "Commit ao fim do propose, como o CLAUDE-comum.md manda.",
       gitp: "Commit ao fim do propose, na branch.",
       gh: "Nada até o fim da etapa.",
-      ghp: "Envio da branch e PR em rascunho. O CI roda openspec validate --strict. O PR mostra o plano antes do código.",
+      ghp: "Envio da branch e PR em rascunho. O CI roda o openspec validate. O PR mostra o plano antes do código.",
       cmd: "/opsx:propose @sdd/briefing-openspec/briefing-change-NN-….md\ngit commit -m \"feat(openspec): propose NN\"",
       cmdp: "/opsx:propose @sdd/briefing-openspec/briefing-change-NN-….md\ngit commit -m \"feat(openspec): propose NN\"\ngit push -u origin change/NN-nome\ngh pr create --draft" },
     { id: "revisao", nome: "Revisão", titulo: "A revisão do plano", gate: "gate 3", ciclo: true,

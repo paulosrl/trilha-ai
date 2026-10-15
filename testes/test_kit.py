@@ -139,7 +139,8 @@ class Kit(unittest.TestCase):
         ci = (RAIZ / "github-verificacao.yml").read_text(encoding="utf-8")
         self.assertIn("o merge, só com a verificação do GitHub verde no PR (`gh pr checks`)", comum)
         self.assertIn("run: bash scripts/check.sh", ci)
-        self.assertIn("run: openspec validate --all --strict --no-interactive", ci)
+        self.assertIn("run: openspec validate --all --no-interactive", ci)
+        self.assertNotIn("--strict", ci)  # o estrito reprova os avisos que o check.sh aceita
         self.assertRegex(ci, r"@fission-ai/openspec@\d+\.\d+\.\d+")
         # Fora de .github/workflows/ no kit: aqui o check.sh reprovaria, porque o kit não segue o método.
         self.assertFalse((RAIZ / ".github/workflows/verificacao.yml").exists())

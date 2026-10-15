@@ -121,7 +121,7 @@ def atualizar(pasta: Path) -> int:
     for nome, origem in A_PREENCHER.items():
         if not (pasta / nome).exists():
             _copiar(pasta, nome, origem)
-            print(f"aviso: {nome} não existia e foi criado do modelo do kit; preencha-o")
+            print(f"aviso: {nome} não existia e foi criado do modelo do kit; confira-o")
     _ligar_travas(pasta)
     _sincronizar_regras(pasta)
     if (pasta / "sdd").is_dir():
