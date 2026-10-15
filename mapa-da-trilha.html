@@ -206,7 +206,7 @@ a { color: var(--pinho); }
       <li><div><strong>Merge com merge commit, nunca squash.</strong><p>Os commits de retomada (propose, gate 3, cada parada do apply) continuam na história. O squash os juntaria num só.</p></div></li>
       <li><div><strong>A change fecha no merge, não no archive.</strong><p>Depois do archive, a change some do <code>openspec list</code>; só o PR diz se falta o merge. Por isso a retomada de uma sessão olha o PR, e o <code>ANDAMENTO.md</code> só volta a "nada em andamento" depois do merge.</p></div></li>
       <li><div><strong>Travas automáticas (1.27).</strong><p>Antes de cada commit, o git confere as regras e o método. Antes de cada comando, o Claude Code barra o envio forçado, o <code>--no-verify</code>, o <code>pkill -f</code> e o merge fora do passo 7. O que era lembrado passa a ser cobrado.</p></div></li>
-      <li><div><strong>Uma revisão independente (1.28).</strong><p>No passo do verify, um agente sem o contexto da sessão revisa a branch com o <code>/code-review</code>. Quem escreveu o código não é o único a revisá-lo.</p></div></li>
+      <li><div><strong>Uma revisão independente (1.28).</strong><p>No passo do verify, um agente sem o contexto da sessão revisa o PR com o <code>/code-review &lt;número do PR&gt;</code>. Quem escreveu o código não é o único a revisá-lo.</p></div></li>
       <li><div><strong>Segredos fora do git (1.29).</strong><p>O CI procura senhas e chaves em todo o histórico (gitleaks), as ações vão fixadas pelo commit e o Dependabot propõe as atualizações. Achado real se troca antes de tudo.</p></div></li>
       <li><div><strong>Cada cenário com a sua prova.</strong><p>A tarefa nomeia o teste pelo arquivo, pelo caso e pelo comando; o teste confere o efeito que se vê; a tarefa só é marcada com o teste passando; e o <code>design.md</code> termina com a evidência de cada cenário. Regras que nasceram no heimdall e foram para o kit.</p></div></li>
     </ol>
@@ -298,11 +298,11 @@ a { color: var(--pinho); }
     { id: "verify", nome: "Verify", titulo: "A conferência (verify)", gate: "", ciclo: true,
       voce: "Decide cada sugestão: aplicar ou recusar.",
       claude: "Roda /opsx:verify e registra cada sugestão no design.md, aplicada ou recusada, com o motivo.",
-      claudep: "Roda /opsx:verify e o /code-review, uma revisão por um agente sem o contexto da sessão. Cada sugestão dos dois vai ao design.md, aplicada ou recusada, com o motivo.",
+      claudep: "Roda /opsx:verify e o /code-review do PR, uma revisão por um agente sem o contexto da sessão. Cada sugestão dos dois vai ao design.md, aplicada ou recusada, com o motivo.",
       git: "Commit.", gitp: "Commit, na branch.",
       gh: "Nada até o fim da etapa.", ghp: "Envio da branch. CI verde.",
       cmd: "/opsx:verify\ngit commit -m \"fix(...): sugestões do verify\"",
-      cmdp: "/opsx:verify\n/code-review\ngit commit -m \"fix(...): sugestões do verify e da revisão\"\ngit push" },
+      cmdp: "/opsx:verify\n/code-review <número do PR>\ngit commit -m \"fix(...): sugestões do verify e da revisão\"\ngit push" },
     { id: "archive", nome: "Archive", titulo: "O arquivamento (archive)", gate: "", ciclo: true,
       voce: "Confirma o archive.",
       claude: "Roda /opsx:archive: o delta entra em openspec/specs/ e a change vai para archive/. Depois valida os specs, atualiza o Ciclo e gera de novo sdd/documentacao.html.",

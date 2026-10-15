@@ -10,7 +10,8 @@ Confere, na raiz indicada:
 - os dois somados têm no máximo 200 linhas;
 - ANDAMENTO.md existe, tem as seis linhas pedidas, com a data e a hora (nunca no futuro), e cabe
   em dez linhas;
-- com --fonte, o CLAUDE-comum.md é cópia idêntica do que está no kit.
+- com --fonte, o CLAUDE-comum.md é cópia idêntica do que está no kit;
+- os campos < > dos modelos do kit ainda por preencher, como aviso (a stack só vem na etapa 2).
 
 Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema; "ok" se nada falhar.
 """
@@ -42,7 +43,32 @@ CHAVES_DO_ANDAMENTO = (
     "**Próximo passo exato:**",
     "**Atualizado em:**",
 )
-
+# Os campos < > dos modelos do kit (esqueleto-CLAUDE.md, ANDAMENTO.md e o contexto do
+# openspec/config.yaml), pelo começo de cada um; o teste do kit os confere com os modelos.
+CAMPOS_DO_MODELO = {
+    "CLAUDE.md": (
+        "<nome do produto>",
+        "<uma ou duas frases",
+        "prd-<nome>.md",
+        "tdd-<nome>.md",
+        "decomposicao-<nome>.md",
+        "`<caminho>`",
+        "`<quando>`",
+        "<instalar as dependências>",
+        "<rodar>",
+        "<gerenciador de pacotes",
+        "<onde ficam as respostas",
+        "<o dado real",
+        "<o que já deu errado",
+    ),
+    "ANDAMENTO.md": (
+        "<PRD, TDD, decomposição",
+        "<o que já está pronto",
+        "<o que fazer a seguir",
+        "<AAAA-MM-DD HH:MM>",
+    ),
+    "openspec/config.yaml": ("Projeto: <nome>", "<uma frase sobre o que é", "<linguagem e versão"),
+}
 
 # A hora real, ou o espaço reservado do kit recém-copiado.
 DATA_E_HORA = re.compile(r"\*\*Atualizado em:\*\* (\d{4}-\d\d-\d\d \d\d:\d\d|<AAAA-MM-DD HH:MM>)")
@@ -141,6 +167,18 @@ def avisos_das_travas(raiz: Path) -> list[str]:
     return avisos
 
 
+def avisos_dos_campos(raiz: Path) -> list[str]:
+    """Os campos do modelo ainda por preencher: aviso, porque alguns só se preenchem na etapa 2."""
+    avisos = []
+    for nome, campos in CAMPOS_DO_MODELO.items():
+        arquivo = raiz / nome
+        texto = arquivo.read_text(encoding="utf-8") if arquivo.is_file() else ""
+        faltam = [campo for campo in campos if campo in texto]
+        if faltam:
+            avisos.append(f"{nome} ainda tem {len(faltam)} campo(s) do modelo: {faltam[0]}…")
+    return avisos
+
+
 def main(argv: list[str]) -> int:
     if not argv or len(argv) not in (1, 3) or (len(argv) == 3 and argv[1] != "--fonte"):
         print(__doc__, file=sys.stderr)
@@ -148,7 +186,7 @@ def main(argv: list[str]) -> int:
     raiz = Path(argv[0]).resolve()
     fonte = Path(argv[2]).resolve() if len(argv) == 3 else None
     falhas = conferir(raiz, fonte)
-    for aviso in avisos_das_travas(raiz):
+    for aviso in avisos_das_travas(raiz) + avisos_dos_campos(raiz):
         print(f"aviso: {aviso}", file=sys.stderr)
     for falha in falhas:
         print(f"FALHA: {falha}", file=sys.stderr)

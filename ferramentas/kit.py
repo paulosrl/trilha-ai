@@ -42,6 +42,13 @@ A_PREENCHER = {
     ".claude/settings.json": "claude-settings.json",
     ".github/dependabot.yml": "github-dependabot.yml",
 }
+# Dos preenchidos, os que só têm a parte da stack preenchida: o resto é fixo e muda com o kit.
+COM_PARTE_FIXA = (
+    ".gitignore",
+    "scripts/check.sh",
+    ".github/workflows/verificacao.yml",
+    ".github/dependabot.yml",
+)
 
 
 class Recusa(Exception):
@@ -124,6 +131,7 @@ def atualizar(pasta: Path) -> int:
             print(f"aviso: {nome} não existia e foi criado do modelo do kit; confira-o")
     _ligar_travas(pasta)
     _sincronizar_regras(pasta)
+    _avisar_parte_fixa(pasta, antes)
     if (pasta / "sdd").is_dir():
         _rodar(pasta, [sys.executable, "-I", "scripts/gerar_pagina_sdd.py"])
 
@@ -185,6 +193,42 @@ def _sincronizar_regras(pasta: Path) -> None:
             print(f"regras do openspec/config.yaml atualizadas: eram as do kit em {versao}")
             return
     print("aviso: o openspec/config.yaml tem regras próprias; compare-as com as do kit à mão")
+
+
+def _linhas_fixas(texto: str) -> set[str]:
+    """As linhas que valem, sem os comentários, que o projeto troca pelos passos da stack."""
+    linhas = (re.sub(r"(^|\s+)#.*", "", linha).strip() for linha in texto.splitlines())
+    return {linha for linha in linhas if linha}
+
+
+def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
+    """Diz o que o kit mudou na parte fixa desde a versão do projeto; a cópia fica com o usuário."""
+    if antes == "?":
+        return
+    # O commit que trouxe a versão do comum do projeto; o que o kit mudou depois dele vale avisar.
+    desde = _git(KIT, "log", "--format=%h", "-S", f"Versão {antes},", "--", "CLAUDE-comum.md")
+    if not desde:
+        return
+    for nome in COM_PARTE_FIXA:
+        origem = A_PREENCHER[nome]
+        if not (pasta / nome).is_file():
+            continue
+        velho = subprocess.run(
+            ["git", "-C", str(KIT), "show", f"{desde.split()[-1]}:{origem}"],
+            capture_output=True,
+            text=True,
+            check=False,
+        ).stdout
+        novo = (KIT / origem).read_text(encoding="utf-8")
+        projeto = _linhas_fixas((pasta / nome).read_text(encoding="utf-8"))
+        faltam = sorted(_linhas_fixas(novo) - _linhas_fixas(velho) - projeto)
+        sobram = sorted((_linhas_fixas(velho) - _linhas_fixas(novo)) & projeto)
+        if faltam or sobram:
+            print(f"aviso: a parte fixa de {nome} mudou no kit desde a {antes}; traga à mão:")
+            for linha in faltam:
+                print(f"  + {linha}")
+            for linha in sobram:
+                print(f"  - {linha}")
 
 
 def _rodar(pasta: Path, comando: list[str]) -> bool:

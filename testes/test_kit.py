@@ -186,7 +186,8 @@ class Kit(unittest.TestCase):
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         for arquivo in ("github-verificacao.yml", ".github/workflows/testes.yml"):
             texto = (RAIZ / arquivo).read_text(encoding="utf-8")
-            usos = re.findall(r"^\s+- uses: (\S+)", texto, re.M)
+            # Também os exemplos comentados: quem os descomenta herda a fixação.
+            usos = re.findall(r"^\s+(?:#\s+)?- uses: (\S+)", texto, re.M)
             self.assertTrue(usos, arquivo)
             for uso in usos:
                 self.assertRegex(uso, r"@[0-9a-f]{40}$", f"{arquivo}: {uso} sem o commit fixado")
@@ -202,8 +203,11 @@ class Kit(unittest.TestCase):
     def test_revisao_independente_no_verify(self) -> None:
         """v1.28: no passo 5, o /code-review por um agente sem o contexto da sessão."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertIn("5. `/opsx:verify` e a revisão independente do código, o `/code-review`", comum)
+        # Com o alvo: sem ele, o /code-review revisa só o que não foi commitado, vazio depois do commit.
+        self.assertIn("5. `/opsx:verify` e a revisão independente do código, o `/code-review <número do PR>`",
+                      comum)
         self.assertIn("quem escreveu não é o único a revisar", comum)
+        self.assertIn("/code-review <número do PR>", (RAIZ / "mapa-da-trilha.html").read_text())
 
     def test_a_change_fecha_no_merge(self) -> None:
         """v1.25: a change fecha no merge; a retomada olha o PR; um só lugar para a regra dos envios."""
@@ -401,6 +405,42 @@ class Kit(unittest.TestCase):
         )
         self.assertIn("ANDAMENTO.md", erro)
         self.assertIn("openspec/config.yaml", erro)
+
+    def test_verificador_avisa_os_campos_do_modelo_por_preencher(self) -> None:
+        """Cada campo < > dos modelos é cobrado como aviso, e só ele: o projeto pode usar < > no texto."""
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp)
+            _copia_do_kit(destino)
+            regras = [sys.executable, "-I", str(destino / "scripts/confere_regras.py"), tmp]
+            saida = subprocess.run(regras, capture_output=True, text=True, check=False)
+            self.assertEqual(saida.returncode, 0, saida.stderr)  # aviso: a stack só vem na etapa 2
+            for nome in ("CLAUDE.md", "ANDAMENTO.md", "openspec/config.yaml"):
+                self.assertIn(f"aviso: {nome} ainda tem ", saida.stderr)
+                alvo = destino / nome
+                texto = alvo.read_text(encoding="utf-8").replace("<AAAA-MM-DD HH:MM>", "2026-10-15 10:00")
+                texto = re.sub(r"<[^<>]+>", "x", texto)
+                if nome != "ANDAMENTO.md":
+                    texto += "\nO texto do projeto pode citar `<origem>`.\n"
+                alvo.write_text(texto, encoding="utf-8")
+            saida = subprocess.run(regras, capture_output=True, text=True, check=False)
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertNotIn("ainda tem", saida.stderr)
+
+    def test_campos_do_verificador_sao_os_dos_modelos(self) -> None:
+        """A lista do confere_regras.py cobre cada campo < > dos modelos, e nenhum a mais."""
+        spec = importlib.util.spec_from_file_location("regras", RAIZ / "scripts/confere_regras.py")
+        regras = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(regras)
+        for nome, campos in regras.CAMPOS_DO_MODELO.items():
+            texto = (RAIZ / ORIGEM[nome]).read_text(encoding="utf-8").split("\nrules:")[0]
+            if nome.endswith(".yaml"):  # sem os comentários ("o que está entre < e >")
+                texto = "\n".join(l for l in texto.splitlines() if not l.lstrip().startswith("#"))
+            trechos = [(m.start(), m.end()) for c in campos for m in re.finditer(re.escape(c), texto)]
+            for campo in campos:
+                self.assertIn(campo, texto, f"{nome}: {campo} não está no modelo")
+            for achado in re.finditer(r"<[^<>]+>", texto):
+                self.assertTrue(any(a < achado.end() and achado.start() < b for a, b in trechos),
+                                f"{nome}: {achado.group()} fora de CAMPOS_DO_MODELO")
 
     def _confere_metodo(self, destino: Path, *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
@@ -603,6 +643,19 @@ class Kit(unittest.TestCase):
         self.assertEqual(vermelho.returncode, 2)
         self.assertIn("não está verde", vermelho.stderr)
 
+    def test_trava_do_claude_le_as_opcoes_e_nao_o_texto(self) -> None:
+        """As opções juntas e as longas não escapam; o texto de uma mensagem não é opção."""
+        for comando in ("git push -uf origin main", "cd x && git push --force-with-lease=main",
+                        "bash -c 'git push --force'", "pkill --full node", "git commit -n -m x",
+                        "git commit -anm x", "git merge --no-verify main"):
+            self.assertEqual(self._guarda(comando).returncode, 2, comando)
+        mensagem = "git commit -m \"$(cat <<'EOF'\nfix: explica o --no-verify, o pkill -f e o gh pr merge 7\nEOF\n)\""
+        for comando in (mensagem, "git commit -m 'sem --no-verify'", "git commit -mn",
+                        "git push -u origin change/01-fix-f", "git push --follow-tags",
+                        "git push && rm -f x", "pkill -F arquivo.pid", "echo git push -f"):
+            saida = self._guarda(comando)
+            self.assertEqual(saida.returncode, 0, f"{comando}: {saida.stderr}")
+
     def test_travas_ligadas_no_projeto_novo_e_a_do_commit_funciona(self) -> None:
         env = {**os.environ, **GIT_TESTE}
         with tempfile.TemporaryDirectory() as tmp:
@@ -715,6 +768,36 @@ class Kit(unittest.TestCase):
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertIn("regras próprias", saida.stdout)
             self.assertIn("Uma regra própria.", config.read_text(encoding="utf-8"))
+
+    def test_atualizar_avisa_a_parte_fixa_que_mudou_no_kit(self) -> None:
+        """O CI preenchido não é sobrescrito, mas o que o kit mudou nele desde a versão do projeto é dito."""
+        env = {**os.environ, **GIT_TESTE}
+        antigo = subprocess.run(["git", "show", "v1.29:github-verificacao.yml"], cwd=RAIZ,
+                                capture_output=True, text=True, check=True).stdout
+        stack = "      - run: uv sync  # a parte da stack, preenchida\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_velho(tmp)
+            comum = pasta / "CLAUDE-comum.md"
+            comum.write_text(comum.read_text(encoding="utf-8").replace("Versão 1.19,", "Versão 1.29,"),
+                             encoding="utf-8")
+            ci = pasta / ".github/workflows/verificacao.yml"
+            ci.write_text(antigo + stack, encoding="utf-8")
+            subprocess.run(["git", "commit", "-qam", "CI da 1.29"], cwd=pasta, env=env, check=True)
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertIn("a parte fixa de .github/workflows/verificacao.yml mudou no kit desde a 1.29",
+                          saida.stdout)
+            self.assertIn("+ branches: [main, master]", saida.stdout)
+            self.assertIn("- run: openspec validate --all --strict --no-interactive", saida.stdout)
+            self.assertNotIn("dependabot.yml mudou", saida.stdout)
+            self.assertEqual(ci.read_text(encoding="utf-8"), antigo + stack)  # só o aviso
+            # Com as linhas novas trazidas à mão, o aviso some, mesmo com a stack do projeto.
+            atual = (RAIZ / "github-verificacao.yml").read_text(encoding="utf-8")
+            ci.write_text(atual + stack, encoding="utf-8")
+            comum.write_text(re.sub(r"^Versão [\d.]+,", "Versão 1.29,", comum.read_text(encoding="utf-8"),
+                                    flags=re.M), encoding="utf-8")
+            subprocess.run(["git", "commit", "-qam", "de volta à 1.29"], cwd=pasta, env=env, check=True)
+            self.assertNotIn("a parte fixa", self._ferramenta("atualizar", str(pasta)).stdout)
 
     def test_ferramenta_recusa_trabalho_pendente_change_em_curso_e_outra_branch(self) -> None:
         env = {**os.environ, **GIT_TESTE}
