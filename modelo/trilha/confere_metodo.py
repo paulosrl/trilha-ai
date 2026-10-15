@@ -7,9 +7,11 @@ Confere, na raiz do repositório:
   da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
-- o plugin `sdd` instalado, pela lista do Claude Code: o do kit, ligado e na versão do
-  trilha/CLAUDE-comum.md; só aviso, nunca falha, e nada sem o Claude Code (o CI), sem a resposta
-  dele no prazo ou com --sem-plugin, que a trava do commit usa para não esperar a cada commit.
+- as instalações do plugin `sdd` que podem valer no projeto, pela lista do Claude Code lida na
+  pasta dele: a do kit, ligada, na versão do trilha/CLAUDE-comum.md e, se o .claude/settings.json
+  a declara, instalada no projeto; só aviso, nunca falha, e
+  nada sem o Claude Code (o CI), sem a resposta dele no prazo ou com --sem-plugin, que a trava do
+  commit usa para não esperar a cada commit.
 
 Roda no check.sh (e, por ele, no CI) e na trava do commit (trilha/hooks/pre-commit): documento do
 método fora do formato barra o commit e o merge; o que depende da máquina (o plugin) só avisa.
@@ -31,10 +33,16 @@ SDD = RAIZ / "sdd"
 ANDAMENTO = RAIZ / "ANDAMENTO.md"
 PLUGIN_SDD = "sdd@trilha-ai"
 # Dois comandos, não ligados por &&: o install roda mesmo se o marketplace já estiver registrado.
+# O plugin vale por projeto (o settings.json dele o declara); o kit.py cita o mesmo comando.
 INSTALAR = (
     "`claude plugin marketplace add paulosrl/trilha-ai` (se ainda não estiver) e "
-    f"`claude plugin install {PLUGIN_SDD}`"
+    f"`claude plugin install {PLUGIN_SDD} --scope project`"
 )
+# Os escopos de uma instalação que vale numa pasta só, a que a lista traz em projectPath.
+ESCOPOS_DO_PROJETO = ("local", "project")
+# Onde a pasta liga ou desliga o plugin, da configuração que prevalece à que cede; sem nenhuma
+# delas, vale a do usuário.
+CONFIGURACOES = (("local", ".claude/settings.local.json"), ("project", ".claude/settings.json"))
 # Quanto esperar pela lista de plugins do Claude Code; sem resposta nele, segue sem aviso.
 PRAZO_DO_CLAUDE = 10
 NUMERO = re.compile(r"\d{2,3}")
@@ -134,7 +142,8 @@ def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
 
 
 def _instalacoes_do_sdd() -> list[dict] | None:
-    """As instalações do plugin sdd, pela lista do Claude Code; None se ela não responder."""
+    """As instalações do plugin sdd que podem valer no projeto, pela lista do Claude Code lida na
+    pasta dele (o "ligado" segue o settings.json da pasta); None se ela não responder."""
     try:
         saida = subprocess.run(
             ["claude", "plugin", "list", "--json"],
@@ -142,13 +151,26 @@ def _instalacoes_do_sdd() -> list[dict] | None:
             text=True,
             timeout=PRAZO_DO_CLAUDE,
             check=False,
+            cwd=RAIZ,
         )
         lista = json.loads(saida.stdout) if saida.returncode == 0 else None
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
         return None
     if not isinstance(lista, list):
         return None
-    return [p for p in lista if isinstance(p, dict) and str(p.get("id", "")).startswith("sdd@")]
+    sdd = [p for p in lista if isinstance(p, dict) and str(p.get("id", "")).startswith("sdd@")]
+    return [plugin for plugin in sdd if _pode_valer(plugin)]
+
+
+def _pode_valer(plugin: dict) -> bool:
+    """A instalação da máquina inteira (sem pasta) ou a deste projeto. A de outra pasta aparece na
+    lista, até como ligada, mas não vale aqui. Com a do usuário e a do projeto, não se sabe qual a
+    sessão carrega (a do usuário, quando instalada antes): as duas são conferidas."""
+    pasta = plugin.get("projectPath")
+    if not pasta:
+        return True
+    deste_projeto = Path(str(pasta)).resolve() == RAIZ.resolve()
+    return deste_projeto and plugin.get("scope") in ESCOPOS_DO_PROJETO
 
 
 def _versao_do_comum() -> str:
@@ -158,28 +180,64 @@ def _versao_do_comum() -> str:
     return achado.group(1) if achado else ""
 
 
+def _declaracao() -> tuple[str, object] | None:
+    """O escopo e o valor da declaração do plugin que vale nesta pasta, a da configuração que
+    prevalece; None sem nenhuma. A lista não serve para isso: o "ligado" da instalação de projeto
+    não segue a pasta, e o projectEnabled não lê o settings.local.json."""
+    for escopo, nome in CONFIGURACOES:
+        try:
+            dados = json.loads((RAIZ / nome).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        plugins = dados.get("enabledPlugins") if isinstance(dados, dict) else None
+        if isinstance(plugins, dict) and PLUGIN_SDD in plugins:
+            return escopo, plugins[PLUGIN_SDD]
+    return None
+
+
+def _avisos_da_declaracao(instalacoes: list[dict]) -> list[str]:
+    """O plugin desligado, com o escopo que o desliga; o declarado no projeto e instalado só para
+    a máquina inteira, que cada máquina instala no projeto (o settings.json não instala)."""
+    do_kit = [plugin for plugin in instalacoes if plugin.get("id") == PLUGIN_SDD]
+    declaracao = _declaracao()
+    if declaracao is None:
+        desligado = any(plugin.get("enabled") is False for plugin in do_kit)
+        escopo = "user"
+    else:
+        escopo, valor = declaracao
+        desligado = valor is False
+    if desligado:
+        ligar = f"`claude plugin enable {PLUGIN_SDD} --scope {escopo}`"
+        return [f"plugin {PLUGIN_SDD} desligado no escopo {escopo}: rode {ligar}"]
+    no_projeto = any(plugin.get("scope") in ESCOPOS_DO_PROJETO for plugin in do_kit)
+    if declaracao is not None and do_kit and not no_projeto:
+        instalar = f"`claude plugin install {PLUGIN_SDD} --scope project`"
+        return [f"plugin {PLUGIN_SDD} declarado no projeto e só na máquina: rode {instalar}"]
+    return []
+
+
 def avisar_plugin() -> list[str]:
     instalacoes = _instalacoes_do_sdd()
     if instalacoes is None:
         return []
     if not instalacoes:
         return [f"plugin sdd não instalado: rode {INSTALAR}"]
-    avisos, versao = [], _versao_do_comum()
+    avisos, versao = _avisos_da_declaracao(instalacoes), _versao_do_comum()
     for plugin in instalacoes:
+        escopo = plugin.get("scope")
+        opcao = f" --scope {escopo}" if escopo else ""
         if plugin.get("id") != PLUGIN_SDD:
             avisos.append(
                 f"plugin sdd de fora do kit ({plugin.get('id')}): rode "
-                f"`claude plugin uninstall {plugin.get('id')}` e {INSTALAR}"
+                f"`claude plugin uninstall {plugin.get('id')}{opcao}` e {INSTALAR}"
             )
             continue
-        if plugin.get("enabled") is False:
-            avisos.append(
-                f"plugin {PLUGIN_SDD} desligado: rode `claude plugin enable {PLUGIN_SDD}`"
-            )
         if versao and plugin.get("version") != f"{versao}.0":
+            qual = f" (instalação {escopo})" if escopo else ""
             avisos.append(
-                f"plugin sdd na {plugin.get('version')} e o CLAUDE-comum.md na {versao}: atualize "
-                f"o que estiver atrás (`claude plugin update {PLUGIN_SDD}` ou o kit.py atualizar)"
+                f"plugin sdd na {plugin.get('version')}{qual} e o CLAUDE-comum.md na {versao}: "
+                f"atualize o que estiver atrás (`claude plugin update {PLUGIN_SDD}{opcao}` ou o "
+                "kit.py atualizar)"
             )
     return avisos
 
@@ -196,8 +254,9 @@ def main(argv: list[str]) -> int:
     decomposicao, tdd = _unico("decomposicao-*.md"), _unico("tdd-*.md")
     if not SDD.is_dir():
         avisos.append(
-            "sem a pasta sdd/: crie-a com `mkdir sdd`; o PRD, o TDD, a decomposição e os "
-            "briefings nascem nela"
+            "sem a pasta sdd/: crie-a com `mkdir sdd` e copie para ela o "
+            "modelo/sdd/padroes-tecnicos.md do kit, os padrões de partida do TDD; o PRD, o TDD, "
+            "a decomposição e os briefings nascem nela"
         )
     if decomposicao:
         falhas += conferir_decomposicao(decomposicao.read_text(encoding="utf-8"))

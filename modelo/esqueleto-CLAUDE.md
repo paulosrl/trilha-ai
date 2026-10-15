@@ -10,7 +10,7 @@ Regras só deste repositório. As comuns a todo projeto estão em `trilha/CLAUDE
 
 ## Documentos
 
-- Em `sdd/`: PRD `prd-<nome>.md` · TDD `tdd-<nome>.md` · decomposição `decomposicao-<nome>.md` · briefings `briefing-openspec/briefing-change-NN-*.md` · a página `documentacao.html`.
+- Em `sdd/`: PRD `prd-<nome>.md` · TDD `tdd-<nome>.md` · decomposição `decomposicao-<nome>.md` · briefings `briefing-openspec/briefing-change-NN-*.md` · a página `documentacao.html` · os padrões técnicos `padroes-tecnicos.md`, ponto de partida do TDD.
 - Contexto e regras por artefato do OpenSpec: `openspec/config.yaml`. Onde o trabalho parou: `ANDAMENTO.md`.
 - Registro de processo (opcional; apague se não houver): `<caminho>`, atualizado `<quando>`.
 
