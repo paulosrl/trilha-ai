@@ -16,6 +16,7 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -50,16 +51,17 @@ def _nome_do_produto(prd: str) -> str:
     return titulo or RAIZ.name
 
 
-def _resumo_do_produto(prd: str) -> str:
-    """O primeiro parágrafo de texto corrido do PRD, depois do título e dos metadados."""
+def _sem_marcacao(texto: str) -> str:
+    """Tira a marcação de markdown que o resumo mostraria crua: negrito, código e links."""
+    texto = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", texto)
+    return re.sub(r"\*\*|__|`", "", texto)
+
+
+def _resumo_do_produto(prd: str, limite: int = 300) -> str:
+    """O primeiro parágrafo de texto corrido do PRD, depois do título, dos metadados e das notas."""
     paragrafo: list[str] = []
     for linha in prd.splitlines():
-        if (
-            linha.startswith("#")
-            or linha.startswith("**")
-            or linha.startswith("|")
-            or linha.startswith("-")
-        ):
+        if linha.startswith(("#", "**", "|", "-", ">")):
             if paragrafo:
                 break
             continue
@@ -68,44 +70,49 @@ def _resumo_do_produto(prd: str) -> str:
                 break
             continue
         paragrafo.append(linha.strip())
-    return " ".join(paragrafo)[:300]
+    resumo = _sem_marcacao(" ".join(paragrafo))
+    if len(resumo) <= limite:
+        return resumo
+    return resumo[:limite].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
 
 
-def _nome_da_change(briefing: str) -> str:
-    """briefing-change-NN-nome-da-change.md → "Nome da change"."""
-    nome = re.sub(r"^briefing-change-\d+-", "", Path(briefing).stem)
-    return nome.replace("-", " ").capitalize()
+def _nome_da_change(celula: str) -> str:
+    """O nome do briefing em qualquer ponto da célula → "Nome da change"; sem ele, vazio."""
+    achado = re.search(r"briefing-change-\d+-([\w-]+)", celula)
+    return achado.group(1).replace("-", " ").capitalize() if achado else ""
+
+
+VAZIO = {"", "—", "–", "-"}  # a célula de um passo que ainda não aconteceu
 
 
 def _changes(decomposicao: str) -> list[dict[str, str]]:
-    """A tabela "Ciclo" da decomposição: | NN | briefing | auditoria | archive |."""
-    if "## Ciclo" not in decomposicao:
+    """A tabela da seção "## Ciclo" da decomposição: | NN | briefing | auditoria | archive |."""
+    linhas = decomposicao.splitlines()
+    titulos = (i for i, linha in enumerate(linhas) if linha.strip() == "## Ciclo")
+    inicio = next(titulos, None)
+    if inicio is None:
         return []
-    ciclo = decomposicao.split("## Ciclo", 1)[1]
     changes = []
-    for linha in ciclo.splitlines():
+    for linha in linhas[inicio + 1 :]:
+        if linha.startswith("## "):
+            break
         celulas = [c.strip() for c in linha.strip().strip("|").split("|")]
-        if len(celulas) != 4 or not re.fullmatch(r"\d{2,3}", celulas[0]):
+        if not re.fullmatch(r"\d{2,3}", celulas[0]):
+            continue
+        if len(celulas) != 4:
+            print(f"aviso: linha do Ciclo fora do formato, ignorada: {linha}", file=sys.stderr)
             continue
         numero, briefing, _auditoria, archive = celulas
         if archive.startswith("arquivada"):
             estado, rotulo = "arquivada", "arquivada"
         elif archive.startswith("retirada"):
             estado, rotulo = "retirada", "retirada"
-        elif briefing not in ("—", ""):
+        elif briefing not in VAZIO:
             estado, rotulo = "andamento", "em andamento"
         else:
             estado, rotulo = "futura", "a fazer"
-        changes.append(
-            {
-                "numero": numero,
-                "nome": _nome_da_change(briefing.split()[0])
-                if briefing.startswith("briefing")
-                else "",
-                "estado": estado,
-                "rotulo": rotulo,
-            }
-        )
+        nome = _nome_da_change(briefing)
+        changes.append({"numero": numero, "nome": nome, "estado": estado, "rotulo": rotulo})
     return changes
 
 

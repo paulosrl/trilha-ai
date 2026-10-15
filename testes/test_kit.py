@@ -423,6 +423,64 @@ class Kit(unittest.TestCase):
             self.assertIn('"estado": "retirada"', pagina)
             self.assertIn(".selo.retirada", pagina)
 
+    def _gera_pagina(self, arquivos: dict[str, str]) -> tuple[dict, str]:
+        """Copia o kit, escreve os documentos em sdd/, gera a página e devolve os dados e o stderr."""
+        import json
+
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp)
+            _copia_do_kit(destino)
+            (destino / "sdd").mkdir()
+            for nome, texto in arquivos.items():
+                (destino / "sdd" / nome).write_text(texto, encoding="utf-8")
+            saida = subprocess.run(
+                [sys.executable, "-I", str(destino / "scripts/gerar_pagina_sdd.py")],
+                capture_output=True, text=True, check=True,
+            )
+            pagina = (destino / "sdd/documentacao.html").read_text(encoding="utf-8")
+        bruto = pagina.split('id="dados">', 1)[1].split("</script>", 1)[0]
+        return json.loads(bruto.replace("<\\/", "</")), saida.stderr
+
+    def test_pagina_le_o_ciclo_sem_perder_nem_inventar_change(self) -> None:
+        """A leitura para na seção seguinte, avisa a linha fora do formato e acha o briefing na célula."""
+        dados, stderr = self._gera_pagina({"decomposicao-x.md": (
+            "# Decomposição\n\n## Ciclo\n\n| NN | briefing | auditoria | archive |\n|---|---|---|---|\n"
+            "| 01 | [b](briefing-openspec/briefing-change-01-fundacao-cep.md) | aprovada | arquivada 2026 |\n"
+            "| 02 | - | - | - |\n"
+            "| 03 | briefing-change-03-x.md | — | — | PR #4 |\n"
+            "\n## Depois\n\n| 05 | briefing-change-05-y.md | — | — |\n"
+        )})
+        changes = {c["numero"]: c for c in dados["changes"]}
+        self.assertEqual(sorted(changes), ["01", "02"])
+        self.assertEqual(changes["01"]["nome"], "Fundacao cep")
+        self.assertEqual(changes["01"]["estado"], "arquivada")
+        self.assertEqual(changes["02"]["estado"], "futura")
+        self.assertIn("linha do Ciclo fora do formato, ignorada: | 03 |", stderr)
+
+    def test_resumo_do_produto_sem_marcacao_e_sem_cortar_palavra(self) -> None:
+        palavras = " ".join(["palavra"] * 60)
+        dados, _ = self._gera_pagina({"prd-x.md": (
+            "# PRD: X\n\n> **Documento histórico.** Leia o `README.md`.\n\n"
+            f"O **sistema** usa `código` e [um link](https://x) com {palavras}.\n"
+        )})
+        resumo = dados["resumo"]
+        self.assertTrue(resumo.startswith("O sistema usa código e um link com palavra"), resumo)
+        self.assertNotRegex(resumo, r"\*\*|`|\]\(|^>")
+        self.assertTrue(resumo.endswith("palavra…"), resumo)
+        self.assertLessEqual(len(resumo), 301)
+
+    def test_modelo_da_pagina_tem_teclado_celular_e_rodape_corretos(self) -> None:
+        modelo = (RAIZ / "scripts/pagina_sdd_modelo.html").read_text(encoding="utf-8")
+        self.assertIn("ArrowRight", modelo)
+        self.assertIn('document.getElementById("aba-" + chave).focus()', modelo)
+        self.assertIn(".briefings > li {", modelo)
+        self.assertNotIn(".briefings li {", modelo)
+        self.assertIn("grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }", modelo)
+        self.assertIn("article.doc { overflow-wrap: break-word; }", modelo)  # palavra longa no celular
+        self.assertIn("article.doc a { overflow-wrap: anywhere; }", modelo)  # URL longa no celular
+        self.assertIn("os documentos mudaram por último em", modelo)
+        self.assertNotIn('", em " + dados.atualizado', modelo)
+
 
 if __name__ == "__main__":
     unittest.main()
