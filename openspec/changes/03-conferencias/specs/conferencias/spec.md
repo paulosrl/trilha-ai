@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: Decomposição no esqueleto da skill
-A conferência do método SHALL exigir que a decomposição (`sdd/decomposicao-*.md`) tenha as linhas de título `## 1.`, `## 2.` e `## Ciclo`, cada uma no começo da linha, e MUST reprovar a que não tiver, nomeando cada título que falta e o esqueleto da skill `sdd:briefing`.
+A conferência do método SHALL exigir que a decomposição (`sdd/decomposicao-*.md`) tenha as linhas de título `## 1.`, `## 2.` e `## Ciclo`, cada uma no começo da linha e fora de bloco de código, lendo cada seção até o título seguinte, de qualquer nível, e MUST reprovar a que não tiver, nomeando cada título que falta e o esqueleto da skill `sdd:briefing`.
 
 #### Scenario: Esqueleto da skill
 - **WHEN** a decomposição é o esqueleto que a skill `sdd:briefing` traz, com ou sem uma change retirada
@@ -17,6 +17,14 @@ A conferência do método SHALL exigir que a decomposição (`sdd/decomposicao-*
 - **WHEN** a decomposição tem os títulos `## 1.` e `## Ciclo`, e não o `## 2.`
 - **THEN** a conferência do método reprova, citando `## 2.`
 
+#### Scenario: Subseção depois do Ciclo
+- **WHEN** a decomposição traz, depois da tabela do `## Ciclo`, uma subseção `###` com outra tabela numerada
+- **THEN** a conferência do método compara só a tabela do "Ciclo" com a da seção 1 e termina com o código de saída 0
+
+#### Scenario: Título citado em bloco de código
+- **WHEN** a decomposição cita, dentro de um bloco de código, um `## 2.` ou um `## Ciclo` com uma tabela
+- **THEN** o título citado não conta: sem o `## 2.` de verdade, a conferência reprova, citando `## 2.`; com os três de verdade, a tabela citada não entra na comparação
+
 ### Requirement: Aviso da stack por preencher depois do TDD
 Quando a pasta `sdd/` tiver um `tdd-*.md`, a conferência das regras SHALL avisar, sem falhar, cada lugar da stack que ainda traz o texto do modelo do kit que pede o preenchimento: `scripts/check.sh`, `.github/workflows/verificacao.yml`, `.github/dependabot.yml`, `.gitignore` e a linha "Stack" do `openspec/config.yaml`. Sem TDD, ela MUST NOT dar esse aviso.
 
@@ -28,6 +36,10 @@ Quando a pasta `sdd/` tiver um `tdd-*.md`, a conferência das regras SHALL avisa
 #### Scenario: Stack preenchida
 - **WHEN** o projeto tem um `sdd/tdd-x.md` e nenhum dos cinco lugares traz mais o texto do modelo que pede o preenchimento
 - **THEN** a conferência das regras não imprime o aviso da stack
+
+#### Scenario: Stack preenchida como o modelo pede
+- **WHEN** o projeto tem um `sdd/tdd-x.md`, apagou do `.gitignore` o bloco da stack que não é a sua e o comentário que pede isso, e trocou os exemplos do `.github/dependabot.yml` pelo bloco real, apagando o comentário que pede isso
+- **THEN** o aviso da stack não cita o `.gitignore` nem o `.github/dependabot.yml`
 
 #### Scenario: Projeto sem TDD
 - **WHEN** o projeto feito do kit não tem `sdd/tdd-*.md`

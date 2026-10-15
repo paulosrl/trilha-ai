@@ -40,6 +40,7 @@ PRAZO_DO_CLAUDE = 10
 NUMERO = re.compile(r"\d{2,3}")
 # Os títulos da decomposição, como o esqueleto da skill sdd:briefing os traz.
 TITULOS = ("## 1.", "## 2.", "## Ciclo")
+TITULO = re.compile(r"#{1,6} ")
 
 
 def _unico(padrao: str) -> Path | None:
@@ -60,11 +61,16 @@ def _numeros(linhas: list[list[str]]) -> set[str]:
 
 
 def _secoes(texto: str) -> dict[str, str]:
-    """O texto de cada seção de nível 2, pelo começo do título, até o título seguinte."""
+    """O texto de cada seção da decomposição, pelo começo do título, até o título seguinte, de
+    qualquer nível; o que está em bloco de código (um exemplo citado) não conta."""
     secoes: dict[str, str] = {}
-    atual = None
+    atual, citando = None, False
     for linha in texto.splitlines():
-        if linha.startswith("## "):
+        if linha.lstrip().startswith("```"):
+            citando = not citando
+        elif citando:
+            continue
+        elif TITULO.match(linha):
             atual = next((t for t in TITULOS if linha.startswith(t)), None)
             if atual is not None:
                 secoes.setdefault(atual, "")
@@ -77,8 +83,9 @@ def conferir_decomposicao(texto: str) -> list[str]:
     secoes = _secoes(texto)
     faltam = [f"`{titulo}`" for titulo in TITULOS if titulo not in secoes]
     if faltam:
+        titulos = "os títulos" if len(faltam) > 1 else "o título"
         falha = (
-            f"decomposição sem o título {', '.join(faltam)} no começo da linha, como no "
+            f"decomposição sem {titulos} {', '.join(faltam)} no começo da linha, como no "
             "esqueleto da skill `sdd:briefing`"
         )
         return [falha]

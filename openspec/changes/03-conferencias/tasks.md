@@ -39,6 +39,15 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 - [x] 6.2 O comum vai a "Versão 2.1, de <data do commit>." e o plugin a `2.1.0`; o `context` do `openspec/config.yaml` do kit cita `modelo/trilha/` como a pasta do ruff; o `test_versao_do_plugin_igual_a_do_kit` passa e o `openspec validate --all --no-interactive` também
 - [x] 6.3 O conjunto de testes e o ruff (check e format), cada um sozinho, sem erro
 
+## 8. As respostas à revisão independente
+
+Cada teste novo é escrito antes da correção e falha antes dela; os testes devolvidos (8.4) guardam um defeito que não voltou e passam desde já.
+
+- [x] 8.1 Os modelos do `.gitignore` e do `.github/dependabot.yml` ganham uma linha própria que pede para ser apagada, e ela vira o marcador; o teste `test_stack_preenchida_como_o_modelo_pede_nao_avisa` comprova o cenário "Stack preenchida como o modelo pede" (`-k test_stack_preenchida_como_o_modelo_pede_nao_avisa`), e o `test_marcadores_da_stack_sao_os_dos_modelos` continua passando
+- [x] 8.2 Cada seção da decomposição termina no título seguinte, de qualquer nível, e as linhas em bloco de código não contam; os testes `test_decomposicao_com_subsecao_depois_do_ciclo_passa` e `test_decomposicao_com_titulo_citado_em_bloco_de_codigo` comprovam os cenários "Subseção depois do Ciclo" e "Título citado em bloco de código" (`-k test_decomposicao_com`)
+- [x] 8.3 A falha da decomposição diz "sem os títulos" quando falta mais de um; o teste `test_decomposicao_sem_dois_titulos_diz_os_titulos` a comprova (`-k test_decomposicao_sem_dois_titulos_diz_os_titulos`)
+- [x] 8.4 Voltam ao `testes/test_kit.py` as proteções da página (a regra `.briefings li {` e o rodapé `", em " + dados.atualizado`) e a do nome `openspec-propose` no comum; o `test_regras_largas_demais_reprovam` passa do teto com folga, sem depender do tamanho do modelo; o `confere_regras.py` é carregado uma vez só nos testes (`REGRAS`); o conjunto de testes e o ruff, cada um sozinho, sem erro
+
 ## 7. Execução manual
 
 - [x] 7.1 Com o usuário olhando: um projeto novo pelo `kit.py novo`, numa pasta descartável, com o perfil real da máquina (sem o aviso do perfil) e com um `HOME` descartável (com o aviso); e um clone descartável do heimdall conferido pelo `confere_regras.py` e pelo `confere_metodo.py` desta branch, mostrando o aviso da stack (ou a ausência dele, se a stack já estiver preenchida) e o tamanho dentro do teto

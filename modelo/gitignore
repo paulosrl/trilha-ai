@@ -3,7 +3,8 @@
 *.log
 .DS_Store
 
-# Python (apague se a stack decidida no TDD for outra)
+# Parte da stack, decidida no TDD (etapa 2): apague o bloco que não for o seu e este comentário.
+# Python
 .venv/
 __pycache__/
 *.py[cod]
@@ -11,7 +12,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
-# Node (apague se a stack decidida no TDD for outra)
+# Node
 node_modules/
 .next/
 

@@ -21,6 +21,10 @@ PLUGIN = RAIZ / "plugins" / "sdd"  # o plugin que o kit publica
 _spec = importlib.util.spec_from_file_location("kit", RAIZ / "ferramentas" / "kit.py")
 FERRAMENTA = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(FERRAMENTA)
+# A conferência das regras, pelas tabelas dela (os campos e os marcadores da stack) e pelo teto.
+_spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha" / "confere_regras.py")
+REGRAS = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(REGRAS)
 DO_KIT = (*FERRAMENTA.SEM_MUDAR, *FERRAMENTA.A_PREENCHER)
 ORIGEM = dict(FERRAMENTA.A_PREENCHER)  # destino no projeto → origem no kit
 GIT_TESTE = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
@@ -162,6 +166,29 @@ class Kit(unittest.TestCase):
         self.assertIn("`## 2.`", falha)
         self.assertNotIn("`## 1.`", falha)
 
+    def test_decomposicao_com_subsecao_depois_do_ciclo_passa(self) -> None:
+        """A seção termina no título seguinte, de qualquer nível: a tabela de uma subseção não é do Ciclo."""
+        texto = self._esqueleto_da_decomposicao() + "\n\n### Notas\n\n| NN | nota |\n|---|---|\n| 03 | outra |\n"
+        saida = self._confere_decomposicao(texto)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+
+    def test_decomposicao_com_titulo_citado_em_bloco_de_codigo(self) -> None:
+        """O título e a tabela dentro de um bloco de código não contam."""
+        citado = "\n\n## Pendências\n\n```markdown\n## 2. Regras\n\n## Ciclo\n\n| NN | b |\n|---|---|\n| 09 | — |\n```\n"
+        esqueleto = self._esqueleto_da_decomposicao()
+        saida = self._confere_decomposicao(esqueleto + citado)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        sem_a_2 = esqueleto.replace("## 2. Regras de convivência", "## Regras de convivência") + citado
+        saida = self._confere_decomposicao(sem_a_2)
+        self.assertEqual(saida.returncode, 1, saida.stderr)
+        self.assertIn("`## 2.`", saida.stderr)
+
+    def test_decomposicao_sem_dois_titulos_diz_os_titulos(self) -> None:
+        texto = self._esqueleto_da_decomposicao().replace("## 1. Mapa", "## Mapa").replace("## 2. Regras", "## Regras")
+        saida = self._confere_decomposicao(texto)
+        self.assertEqual(saida.returncode, 1, saida.stderr)
+        self.assertIn("sem os títulos `## 1.`, `## 2.`", saida.stderr)
+
     def test_briefing_seguinte_depois_do_merge(self) -> None:
         """F06: a change fecha no merge (comum, passo 7); o briefing da próxima espera por ele."""
         skill = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
@@ -205,11 +232,8 @@ class Kit(unittest.TestCase):
 
     def test_comum_cabe_em_metade_do_teto(self) -> None:
         """F09: o comum fica em 16 KB, metade do teto que a conferência cobra; a outra é do projeto."""
-        spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha/confere_regras.py")
-        regras = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(regras)
         tamanho = len((MODELO / "trilha/CLAUDE-comum.md").read_bytes())
-        self.assertLessEqual(tamanho, regras.LIMITE_DE_BYTES // 2)
+        self.assertLessEqual(tamanho, REGRAS.LIMITE_DE_BYTES // 2)
 
     def test_comum_nao_cita_curso(self) -> None:
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
@@ -246,6 +270,7 @@ class Kit(unittest.TestCase):
         """A skill do plugin chama-se sdd:briefing, para não colidir com a openspec-propose nativa do OpenSpec."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("`sdd:briefing`", comum)
+        self.assertNotIn("openspec-propose", comum)
 
     def test_comum_poe_a_auditoria_na_revisao_do_openspec(self) -> None:
         """v1.9: a auditoria do gate 3 é a revisão que o OpenSpec pede ao fim do propose, não um passo à parte."""
@@ -570,8 +595,7 @@ class Kit(unittest.TestCase):
 
     def test_regras_largas_demais_reprovam(self) -> None:
         """F09: abaixo das 200 linhas, mas acima dos 32 KB, a conferência reprova pelos bytes."""
-        tamanho = len((MODELO / "trilha/CLAUDE-comum.md").read_bytes()) + len((MODELO / "esqueleto-CLAUDE.md").read_bytes())
-        largas = "- " + "x" * (32_768 - tamanho) + "\n"
+        largas = "- " + "x" * REGRAS.LIMITE_DE_BYTES + "\n"  # sozinha, já passa do teto
         erro = self._verifica_com_defeito("CLAUDE.md", "- Nenhuma.\n", f"- Nenhuma.\n{largas}")
         self.assertIn("bytes", erro)
         self.assertIn("32768", erro)
@@ -630,10 +654,7 @@ class Kit(unittest.TestCase):
 
     def test_campos_do_verificador_sao_os_dos_modelos(self) -> None:
         """A lista do confere_regras.py cobre cada campo < > dos modelos, e nenhum a mais."""
-        spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha/confere_regras.py")
-        regras = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(regras)
-        for nome, campos in regras.CAMPOS_DO_MODELO.items():
+        for nome, campos in REGRAS.CAMPOS_DO_MODELO.items():
             texto = (MODELO / ORIGEM[nome]).read_text(encoding="utf-8").split("\nrules:")[0]
             if nome.endswith(".yaml"):  # sem os comentários ("o que está entre < e >")
                 texto = "\n".join(l for l in texto.splitlines() if not l.lstrip().startswith("#"))
@@ -646,21 +667,15 @@ class Kit(unittest.TestCase):
 
     def test_marcadores_da_stack_sao_os_dos_modelos(self) -> None:
         """F04: um marcador por lugar da stack que o comum nomeia no gate 2, e cada um está no modelo."""
-        spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha/confere_regras.py")
-        regras = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(regras)
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         gate_2 = next(l for l in comum.splitlines() if l.startswith("- Ao fechar o gate 2"))
         lugares = sorted(c for c in re.findall(r"`([^`]+)`", gate_2.split("Até lá")[0]) if "." in c)
-        self.assertEqual(sorted(regras.STACK_DO_MODELO), lugares)
-        for nome, marcador in regras.STACK_DO_MODELO.items():
+        self.assertEqual(sorted(REGRAS.STACK_DO_MODELO), lugares)
+        for nome, marcador in REGRAS.STACK_DO_MODELO.items():
             self.assertIn(marcador, (MODELO / ORIGEM[nome]).read_text(encoding="utf-8"), nome)
 
     def _avisos_da_stack(self, com_tdd: bool, preenchida: bool = False) -> list[str]:
         """As linhas de aviso da stack da conferência das regras num projeto feito do kit."""
-        spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha/confere_regras.py")
-        regras = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(regras)
         with tempfile.TemporaryDirectory() as tmp:
             destino = Path(tmp)
             _copia_do_kit(destino)
@@ -668,7 +683,7 @@ class Kit(unittest.TestCase):
             if com_tdd:
                 (destino / "sdd/tdd-x.md").write_text("# TDD\n", encoding="utf-8")
             if preenchida:
-                for nome, marcador in regras.STACK_DO_MODELO.items():
+                for nome, marcador in REGRAS.STACK_DO_MODELO.items():
                     alvo = destino / nome
                     linhas = alvo.read_text(encoding="utf-8").splitlines(keepends=True)
                     alvo.write_text("".join(l for l in linhas if marcador not in l), encoding="utf-8")
@@ -686,6 +701,27 @@ class Kit(unittest.TestCase):
 
     def test_stack_preenchida_nao_avisa(self) -> None:
         self.assertEqual(self._avisos_da_stack(com_tdd=True, preenchida=True), [])
+
+    def test_stack_preenchida_como_o_modelo_pede_nao_avisa(self) -> None:
+        """Quem segue à risca o que o modelo pede ao preencher a stack não é mais avisado dela."""
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp)
+            _copia_do_kit(destino)
+            (destino / "sdd").mkdir()
+            (destino / "sdd/tdd-x.md").write_text("# TDD\n", encoding="utf-8")
+            ignorar = destino / ".gitignore"  # fica o bloco do Python; sai o do Node e o pedido
+            texto = re.sub(r"# Node\b[^\n]*\n(?:[^\n]+\n)*\n?", "", ignorar.read_text(encoding="utf-8"))
+            ignorar.write_text("".join(l for l in texto.splitlines(True) if "este comentário" not in l))
+            dependabot = destino / ".github/dependabot.yml"  # os exemplos viram o bloco real
+            texto = dependabot.read_text(encoding="utf-8").replace("  #   ", "  ")
+            dependabot.write_text("".join(l for l in texto.splitlines(True) if "este comentário" not in l))
+            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_regras.py"), tmp],
+                                   capture_output=True, text=True, check=False)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next(l for l in saida.stderr.splitlines() if "parte da stack" in l)
+        self.assertIn("scripts/check.sh", aviso)  # os outros três seguem por preencher
+        self.assertNotIn(".gitignore", aviso)
+        self.assertNotIn("dependabot.yml", aviso)
 
     def test_projeto_sem_tdd_nao_avisa_a_stack(self) -> None:
         self.assertEqual(self._avisos_da_stack(com_tdd=False), [])
@@ -992,10 +1028,12 @@ class Kit(unittest.TestCase):
         self.assertIn("ArrowRight", modelo)
         self.assertIn('document.getElementById("aba-" + chave).focus()', modelo)
         self.assertIn(".briefings > li {", modelo)
+        self.assertNotIn(".briefings li {", modelo)  # a regra pegava as listas dentro dos briefings
         self.assertIn("grid-template-columns: minmax(0, 1fr); gap: 0.5rem; }", modelo)
         self.assertIn("article.doc { overflow-wrap: break-word; }", modelo)  # palavra longa no celular
         self.assertIn("article.doc a { overflow-wrap: anywhere; }", modelo)  # URL longa no celular
         self.assertIn("os documentos mudaram por último em", modelo)
+        self.assertNotIn('", em " + dados.atualizado', modelo)
 
 
     def _guarda(self, comando: str, gh_sai_com: int = 0) -> subprocess.CompletedProcess:

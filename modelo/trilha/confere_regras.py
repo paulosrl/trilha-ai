@@ -79,8 +79,8 @@ CAMPOS_DO_MODELO = {
 STACK_DO_MODELO = {
     "scripts/check.sh": "a parte da stack ainda não foi preenchida",
     ".github/workflows/verificacao.yml": "Troque o comentário pelos passos reais",
-    ".github/dependabot.yml": "Parte da stack, decidida no TDD (etapa 2)",
-    ".gitignore": "(apague se a stack decidida no TDD for outra)",
+    ".github/dependabot.yml": "exemplos pelo bloco real e apague este comentário",
+    ".gitignore": "apague o bloco que não for o seu e este comentário",
     "openspec/config.yaml": "<linguagem e versão",
 }
 
