@@ -7,12 +7,13 @@ Confere, na raiz indicada:
 - CLAUDE.md importa o comum (linha "@trilha/CLAUDE-comum.md"), não repete regra dele, tem o nome do
   produto no título, cita ANDAMENTO.md e openspec/config.yaml em "Documentos" e segue o
   esqueleto das sete seções, na ordem;
-- os dois somados têm no máximo 200 linhas;
+- os dois somados têm no máximo 200 linhas e 32 KB (32.768 bytes);
 - ANDAMENTO.md existe, tem as seis linhas pedidas, com a data e a hora (nunca no futuro), e cabe
   em dez linhas;
 - com --fonte, a pasta trilha/ é cópia idêntica da modelo/trilha/ do kit, arquivo a arquivo
   (o cache do Python, __pycache__/, não conta);
-- os campos < > dos modelos do kit ainda por preencher, como aviso (a stack só vem na etapa 2).
+- os campos < > dos modelos do kit ainda por preencher, como aviso (a stack só vem na etapa 2);
+- com o TDD escrito (sdd/tdd-*.md), os lugares da stack ainda como o modelo os deixou, como aviso.
 
 Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema; "ok" se nada falhar.
 """
@@ -26,6 +27,7 @@ from datetime import datetime
 from pathlib import Path
 
 LIMITE_DE_LINHAS = 200
+LIMITE_DE_BYTES = 32_768  # 32 KB: o comum e o CLAUDE.md vão a toda sessão
 IMPORTACAO = "@trilha/CLAUDE-comum.md"
 LIMITE_DO_ANDAMENTO = 10
 ESQUELETO = (
@@ -70,6 +72,16 @@ CAMPOS_DO_MODELO = {
         "<AAAA-MM-DD HH:MM>",
     ),
     "openspec/config.yaml": ("Projeto: <nome>", "<uma frase sobre o que é", "<linguagem e versão"),
+}
+
+# Os lugares da stack que o comum manda preencher ao fechar o gate 2, cada um com o texto do
+# modelo que pede o preenchimento; o teste do kit confere que cada texto está no modelo.
+STACK_DO_MODELO = {
+    "scripts/check.sh": "a parte da stack ainda não foi preenchida",
+    ".github/workflows/verificacao.yml": "Troque o comentário pelos passos reais",
+    ".github/dependabot.yml": "exemplos pelo bloco real e apague este comentário",
+    ".gitignore": "apague o bloco que não for o seu e este comentário",
+    "openspec/config.yaml": "<linguagem e versão",
 }
 
 # A hora real, ou o espaço reservado do kit recém-copiado.
@@ -164,6 +176,11 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
         falhas.append(
             f"CLAUDE.md + CLAUDE-comum.md somam {total} linhas; o limite é {LIMITE_DE_LINHAS}"
         )
+    tamanho = len(comum.read_bytes()) + len(proprio.read_bytes())
+    if tamanho > LIMITE_DE_BYTES:
+        falhas.append(
+            f"CLAUDE.md + CLAUDE-comum.md somam {tamanho} bytes; o limite é {LIMITE_DE_BYTES}"
+        )
 
     linhas_andamento = _linhas(andamento)
     if len(linhas_andamento) > LIMITE_DO_ANDAMENTO:
@@ -219,6 +236,24 @@ def avisos_dos_campos(raiz: Path) -> list[str]:
     return avisos
 
 
+def avisos_da_stack(raiz: Path) -> list[str]:
+    """Com o TDD escrito, os lugares da stack ainda como o modelo os deixou: aviso, não falha."""
+    if not any((raiz / "sdd").glob("tdd-*.md")):
+        return []
+    pendentes = [
+        nome
+        for nome, marcador in STACK_DO_MODELO.items()
+        if (raiz / nome).is_file() and marcador in (raiz / nome).read_text(encoding="utf-8")
+    ]
+    if not pendentes:
+        return []
+    aviso = (
+        f"há TDD, e a parte da stack ainda é a do modelo em {', '.join(pendentes)}; preencha-a "
+        "como o CLAUDE-comum.md manda ao fechar o gate 2"
+    )
+    return [aviso]
+
+
 def main(argv: list[str]) -> int:
     if not argv or len(argv) not in (1, 3) or (len(argv) == 3 and argv[1] != "--fonte"):
         print(__doc__, file=sys.stderr)
@@ -226,7 +261,7 @@ def main(argv: list[str]) -> int:
     raiz = Path(argv[0]).resolve()
     fonte = Path(argv[2]).resolve() if len(argv) == 3 else None
     falhas = conferir(raiz, fonte)
-    for aviso in avisos_das_travas(raiz) + avisos_dos_campos(raiz):
+    for aviso in avisos_das_travas(raiz) + avisos_dos_campos(raiz) + avisos_da_stack(raiz):
         print(f"aviso: {aviso}", file=sys.stderr)
     for falha in falhas:
         print(f"FALHA: {falha}", file=sys.stderr)

@@ -6,7 +6,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
-  # Parte da stack, decidida no TDD (etapa 2): o gerenciador de pacotes do projeto. Exemplos:
+  # Parte da stack, decidida no TDD (etapa 2): o gerenciador de pacotes do projeto. Troque os
+  # exemplos pelo bloco real e apague este comentário. Exemplos:
   #   - package-ecosystem: uv   # ou pip, npm
   #     directory: /
   #     schedule:

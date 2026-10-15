@@ -3,12 +3,13 @@
 Uso: python3 -I trilha/confere_metodo.py [--sem-plugin] [--vizinho <nome>]...
 
 Confere, na raiz do repositório:
-- a decomposição tem toda change da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
+- a decomposição tem os títulos do esqueleto da skill (`## 1.`, `## 2.`, `## Ciclo`), toda change
+  da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
 - o plugin `sdd` instalado, pela lista do Claude Code: o do kit, ligado e na versão do
-  trilha/CLAUDE-comum.md; só aviso, nunca falha, e nada sem o Claude Code (o CI) ou com
-  --sem-plugin, que a trava do commit usa para não esperar o Claude Code a cada commit.
+  trilha/CLAUDE-comum.md; só aviso, nunca falha, e nada sem o Claude Code (o CI), sem a resposta
+  dele no prazo ou com --sem-plugin, que a trava do commit usa para não esperar a cada commit.
 
 Roda no check.sh (e, por ele, no CI) e na trava do commit (trilha/hooks/pre-commit): documento do
 método fora do formato barra o commit e o merge; o que depende da máquina (o plugin) só avisa.
@@ -34,7 +35,12 @@ INSTALAR = (
     "`claude plugin marketplace add paulosrl/trilha-ai` (se ainda não estiver) e "
     f"`claude plugin install {PLUGIN_SDD}`"
 )
+# Quanto esperar pela lista de plugins do Claude Code; sem resposta nele, segue sem aviso.
+PRAZO_DO_CLAUDE = 10
 NUMERO = re.compile(r"\d{2,3}")
+# Os títulos da decomposição, como o esqueleto da skill sdd:briefing os traz.
+TITULOS = ("## 1.", "## 2.", "## Ciclo")
+TITULO = re.compile(r"#{1,6} ")
 
 
 def _unico(padrao: str) -> Path | None:
@@ -54,12 +60,37 @@ def _numeros(linhas: list[list[str]]) -> set[str]:
     return {celulas[0] for celulas in linhas if NUMERO.fullmatch(celulas[0])}
 
 
+def _secoes(texto: str) -> dict[str, str]:
+    """O texto de cada seção da decomposição, pelo começo do título, até o título seguinte, de
+    qualquer nível; o que está em bloco de código (um exemplo citado) não conta."""
+    secoes: dict[str, str] = {}
+    atual, citando = None, False
+    for linha in texto.splitlines():
+        if linha.lstrip().startswith("```"):
+            citando = not citando
+        elif citando:
+            continue
+        elif TITULO.match(linha):
+            atual = next((t for t in TITULOS if linha.startswith(t)), None)
+            if atual is not None:
+                secoes.setdefault(atual, "")
+        elif atual is not None:
+            secoes[atual] += f"{linha}\n"
+    return secoes
+
+
 def conferir_decomposicao(texto: str) -> list[str]:
-    if "## 1." not in texto or "## Ciclo" not in texto:
-        return ["decomposição sem a seção 1 ou sem a tabela Ciclo"]
-    secao_1 = texto.split("## 1.", 1)[1].split("## 2.", 1)[0]
-    ciclo = texto.split("## Ciclo", 1)[1].split("## ", 1)[0]
-    linhas_1, linhas_ciclo = _linhas_de_tabela(secao_1), _linhas_de_tabela(ciclo)
+    secoes = _secoes(texto)
+    faltam = [f"`{titulo}`" for titulo in TITULOS if titulo not in secoes]
+    if faltam:
+        titulos = "os títulos" if len(faltam) > 1 else "o título"
+        falha = (
+            f"decomposição sem {titulos} {', '.join(faltam)} no começo da linha, como no "
+            "esqueleto da skill `sdd:briefing`"
+        )
+        return [falha]
+    linhas_1 = _linhas_de_tabela(secoes["## 1."])
+    linhas_ciclo = _linhas_de_tabela(secoes["## Ciclo"])
     falhas = []
     # Uma linha por change; a retirada, com "retirada" no archive (o estado que a página mostra).
     if _numeros(linhas_ciclo) != _numeros(linhas_1):
@@ -109,7 +140,7 @@ def _instalacoes_do_sdd() -> list[dict] | None:
             ["claude", "plugin", "list", "--json"],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=PRAZO_DO_CLAUDE,
             check=False,
         )
         lista = json.loads(saida.stdout) if saida.returncode == 0 else None
