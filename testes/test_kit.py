@@ -25,6 +25,27 @@ GIT_TESTE = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_N
 ESQUELETO_DO_CLAUDE = RAIZ / "CLAUDE.md"  # o deste repositório não é o esqueleto; o esqueleto é copiado abaixo
 
 
+def _claude_falso(pasta: Path, corpo: str) -> None:
+    """Um `claude` de mentira em pasta/, que roda o corpo dado (um script de sh)."""
+    falso = pasta / "claude"
+    falso.write_text(f"#!/bin/sh\n{corpo}\n", encoding="utf-8")
+    falso.chmod(0o755)
+
+
+_SEM_CLAUDE = tempfile.TemporaryDirectory()
+
+
+def setUpModule() -> None:
+    """Toda conferência dos testes vê um `claude` que falha, nunca o da máquina: o aviso do plugin
+    depende do que está instalado nela. Os testes do aviso trocam este por outro."""
+    _claude_falso(Path(_SEM_CLAUDE.name), "exit 1")
+    os.environ["PATH"] = f"{_SEM_CLAUDE.name}:{os.environ['PATH']}"
+
+
+def tearDownModule() -> None:
+    _SEM_CLAUDE.cleanup()
+
+
 def _copia_do_kit(destino: Path) -> None:
     for nome in DO_KIT:
         alvo = destino / nome
@@ -533,11 +554,81 @@ class Kit(unittest.TestCase):
                 self.assertTrue(any(a < achado.end() and achado.start() < b for a, b in trechos),
                                 f"{nome}: {achado.group()} fora de CAMPOS_DO_MODELO")
 
-    def _confere_metodo(self, destino: Path, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            [sys.executable, "-I", str(destino / "scripts/confere_metodo.py"), *args],
-            capture_output=True, text=True, check=False,
-        )
+    def _confere_metodo(self, destino: Path, *args: str, claude: str | None = "exit 1"
+                        ) -> subprocess.CompletedProcess[str]:
+        """A conferência do método com um `claude` falso que roda o corpo dado; com None, a
+        máquina sem o Claude Code (só a pasta do falso no PATH, vazia)."""
+        with tempfile.TemporaryDirectory() as falsos:
+            if claude is not None:
+                _claude_falso(Path(falsos), claude)
+            return subprocess.run(
+                [sys.executable, "-I", str(destino / "scripts/confere_metodo.py"), *args],
+                capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos},
+            )
+
+    def _aviso_do_plugin(self, lista: object, versao_do_comum: str = "1.35",
+                         vizinho: bool = False) -> subprocess.CompletedProcess[str]:
+        """A conferência num projeto feito do kit, com o comum na versão dada e um `claude` falso
+        que lista os plugins dados; com vizinho, uma pasta pipeline-prd-tdd-openspec ao lado."""
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = Path(tmp) / "projeto"
+            _copia_do_kit(destino)
+            comum = destino / "CLAUDE-comum.md"
+            comum.write_text(re.sub(r"^Versão [\d.]+,", f"Versão {versao_do_comum},",
+                                    comum.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
+            if vizinho:
+                manifesto = Path(tmp) / "pipeline-prd-tdd-openspec/plugins/sdd/.claude-plugin"
+                manifesto.mkdir(parents=True)
+                (manifesto / "plugin.json").write_text('{"name": "sdd", "version": "9.9.9"}')
+            texto = lista if isinstance(lista, str) else json.dumps(lista)
+            return self._confere_metodo(destino, claude=f"printf '%s' '{texto}'")
+
+    def test_plugin_conferido_sem_a_pasta_vizinha(self) -> None:
+        lista = [{"id": "sdd@trilha-ai", "version": "1.35.0", "scope": "user", "enabled": True}]
+        com, sem = self._aviso_do_plugin(lista, vizinho=True), self._aviso_do_plugin(lista)
+        self.assertEqual((com.returncode, com.stderr), (sem.returncode, sem.stderr))
+        self.assertNotIn("plugin sdd", com.stderr)
+
+    def test_plugin_do_marketplace_antigo_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@pipeline-prd-tdd-openspec", "version": "0.3.9"}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("marketplace antigo", saida.stderr)
+        self.assertIn("claude plugin install sdd@trilha-ai", saida.stderr)
+
+    def test_plugin_com_versao_diferente_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.34.0"}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next(l for l in saida.stderr.splitlines() if "plugin sdd" in l)
+        self.assertIn("1.34.0", aviso)
+        self.assertIn("1.35", aviso)
+
+    def test_plugin_com_versao_igual_nao_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.35.0"}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("plugin sdd", saida.stderr)
+
+    def test_plugin_ausente_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "outro@lugar", "version": "1.0.0"}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("plugin sdd não instalado", saida.stderr)
+        self.assertIn("claude plugin install sdd@trilha-ai", saida.stderr)
+
+    def test_sem_o_claude_code_nao_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _copia_do_kit(Path(tmp))
+            saida = self._confere_metodo(Path(tmp), claude=None)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("plugin sdd", saida.stderr)
+
+    def test_lista_de_plugins_com_erro_nao_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            _copia_do_kit(Path(tmp))
+            erro = self._confere_metodo(Path(tmp), claude="echo falhou >&2; exit 2")
+        self.assertEqual(erro.returncode, 0, erro.stderr)
+        self.assertNotIn("plugin sdd", erro.stderr)
+        nao_json = self._aviso_do_plugin("isto não é json")
+        self.assertEqual(nao_json.returncode, 0, nao_json.stderr)
+        self.assertNotIn("plugin sdd", nao_json.stderr)
 
     def test_metodo_aprova_um_repositorio_feito_do_kit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

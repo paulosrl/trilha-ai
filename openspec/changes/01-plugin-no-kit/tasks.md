@@ -16,15 +16,15 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 3. A conferência do plugin instalado
 
-- [ ] 3.1 Reescrever a leitura do plugin no `modelo/scripts/confere_metodo.py`: `claude plugin list --json` com prazo de 10 s, todas as instalações `sdd@…`, a versão do projeto lida do `CLAUDE-comum.md` da raiz, qualquer falha em silêncio; sem `../pipeline-prd-tdd-openspec` nem `installed_plugins.json`; o texto do arquivo diz o que ele confere. Nos testes, o `confere_metodo` roda sempre com um `claude` falso no PATH (nunca o da máquina)
-- [ ] 3.2 O teste `test_plugin_conferido_sem_a_pasta_vizinha` comprova o cenário "Pasta vizinha com outra versão"
-- [ ] 3.3 O teste `test_plugin_do_marketplace_antigo_avisa` comprova o cenário "Plugin do marketplace antigo" (o aviso com `claude plugin install sdd@trilha-ai` e a saída 0)
-- [ ] 3.4 O teste `test_plugin_com_versao_diferente_avisa` comprova o cenário "Versões diferentes" (o aviso cita `1.34.0` e `1.35`; saída 0)
-- [ ] 3.5 O teste `test_plugin_com_versao_igual_nao_avisa` comprova o cenário "Versões iguais" da conferência
-- [ ] 3.6 O teste `test_plugin_ausente_avisa` comprova o cenário "Claude Code sem o plugin"
-- [ ] 3.7 O teste `test_sem_o_claude_code_nao_avisa` comprova o cenário "Máquina sem o Claude Code"
-- [ ] 3.8 O teste `test_lista_de_plugins_com_erro_nao_avisa` comprova o cenário "Lista de plugins com erro" (saída diferente de 0 e texto que não é JSON)
-- [ ] 3.9 Rodar o ruff 0.17 do CI do kit (`uvx ruff@0.17.0 check --isolated --line-length 100 modelo/scripts/ ferramentas/` e o mesmo com `format --check`), sem erro
+- [x] 3.1 Reescrever a leitura do plugin no `modelo/scripts/confere_metodo.py`: `claude plugin list --json` com prazo de 10 s, todas as instalações `sdd@…`, a versão do projeto lida do `CLAUDE-comum.md` da raiz, qualquer falha em silêncio; sem `../pipeline-prd-tdd-openspec` nem `installed_plugins.json`; o texto do arquivo diz o que ele confere. Nos testes, o `confere_metodo` roda sempre com um `claude` falso no PATH (nunca o da máquina)
+- [x] 3.2 O teste `test_plugin_conferido_sem_a_pasta_vizinha` comprova o cenário "Pasta vizinha com outra versão"
+- [x] 3.3 O teste `test_plugin_do_marketplace_antigo_avisa` comprova o cenário "Plugin do marketplace antigo" (o aviso com `claude plugin install sdd@trilha-ai` e a saída 0)
+- [x] 3.4 O teste `test_plugin_com_versao_diferente_avisa` comprova o cenário "Versões diferentes" (o aviso cita `1.34.0` e `1.35`; saída 0)
+- [x] 3.5 O teste `test_plugin_com_versao_igual_nao_avisa` comprova o cenário "Versões iguais" da conferência
+- [x] 3.6 O teste `test_plugin_ausente_avisa` comprova o cenário "Claude Code sem o plugin"
+- [x] 3.7 O teste `test_sem_o_claude_code_nao_avisa` comprova o cenário "Máquina sem o Claude Code"
+- [x] 3.8 O teste `test_lista_de_plugins_com_erro_nao_avisa` comprova o cenário "Lista de plugins com erro" (saída diferente de 0 e texto que não é JSON)
+- [x] 3.9 Rodar o ruff 0.17 do CI do kit (`uvx ruff@0.17.0 check --isolated --line-length 100 modelo/scripts/ ferramentas/` e o mesmo com `format --check`), sem erro
 
 ## 4. A documentação
 
