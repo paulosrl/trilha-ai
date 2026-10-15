@@ -41,7 +41,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 7. Execução manual
 
-- [ ] 7.1 Com o usuário olhando: um projeto novo pelo `kit.py novo`, numa pasta descartável, com o perfil real da máquina (sem o aviso do perfil) e com um `HOME` descartável (com o aviso); e um clone descartável do heimdall conferido pelo `confere_regras.py` e pelo `confere_metodo.py` desta branch, mostrando o aviso da stack (ou a ausência dele, se a stack já estiver preenchida) e o tamanho dentro do teto
+- [x] 7.1 Com o usuário olhando: um projeto novo pelo `kit.py novo`, numa pasta descartável, com o perfil real da máquina (sem o aviso do perfil) e com um `HOME` descartável (com o aviso); e um clone descartável do heimdall conferido pelo `confere_regras.py` e pelo `confere_metodo.py` desta branch, mostrando o aviso da stack (ou a ausência dele, se a stack já estiver preenchida) e o tamanho dentro do teto
 
 ## Workflow follow-up
 

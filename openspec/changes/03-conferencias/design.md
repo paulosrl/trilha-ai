@@ -48,3 +48,10 @@ Desde a 2.0, as conferências que os projetos rodam estão em `modelo/trilha/`: 
 ## Revisão dos artefatos
 
 A revisão do fim do propose, pelo checklist da skill `sdd:briefing` adaptado ao kit (a descrição aprovada no lugar do PRD; o `CLAUDE.md` do kit e os specs atuais no lugar dos ADRs), deu o laudo APROVADO, aprovado pelo usuário em 2026-10-15. Duas observações, resolvidas no apply: o texto do topo do `confere_regras.py`, que lista o que ele confere, ganha o aviso da stack e o teto de 32 KB; e, com TDD e a linha "Stack" ainda por preencher, o aviso da stack e o dos campos `< >` saem juntos, de propósito, porque cada um diz uma coisa.
+
+## Execução manual
+
+Em 2026-10-15, em pastas descartáveis do scratchpad, com o usuário olhando:
+
+- `kit.py novo` com o perfil real da máquina (`custom`, com o verify): os próximos passos citam o `openspec config profile`, sem aviso; com um `HOME` descartável (o perfil padrão `core`): o aviso do verify que falta. Os dois terminam com 0.
+- Um clone do heimdall (1.30) migrado pelo `kit.py atualizar` desta branch: as conferências passam; o aviso da stack aponta só o `.github/workflows/verificacao.yml`, que de fato não tem os passos da stack (o `check.sh` já está preenchido e não aparece); o comum e o `CLAUDE.md` somam 29.214 bytes e 194 linhas, abaixo dos tetos. O heimdall real ficou sem mudança (mesmo HEAD e mesmo `git status`).
