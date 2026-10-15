@@ -6,7 +6,7 @@ Este repositório é a **fonte** dos arquivos que todo repositório novo copia. 
 
 Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do aluno, no repositório do curso (https://github.com/paulosrl/consulta-publica, pasta `docs/curso/`). A ordem, resumida:
 
-1. **Instale as ferramentas** (Claude Code, OpenSpec, CodeGraph e o plugin `sdd`), pela subseção "Instalar as ferramentas" da etapa 0, que copia os comandos das documentações oficiais. O kit precisa também do **Python 3** instalado, porque o verificador `scripts/confere_regras.py` é um programa Python sem dependências; no Ubuntu e no WSL ele costuma vir instalado: confira com `python3 --version`.
+1. **Instale as ferramentas** (Claude Code, OpenSpec, CodeGraph e o plugin `sdd`), pela subseção "Instalar as ferramentas" da etapa 0, que copia os comandos das documentações oficiais. O kit precisa também do **Python 3** instalado, porque o verificador `scripts/confere_regras.py` é um programa Python sem dependências; no Ubuntu e no WSL ele costuma vir instalado: confira com `python3 --version`. Precisa ainda de uma **conta no GitHub** e do GitHub CLI (`gh`, instalação em https://cli.github.com), autenticado uma vez com `gh auth login`: todo repositório do método tem um remoto privado no GitHub.
 2. **Crie a pasta e o git:** `mkdir <nome> && cd <nome> && git init`.
 3. **Copie os arquivos deste repositório** (menos este README, o `CLAUDE.md` e a pasta `testes/`) para a raiz do repositório novo, mantendo os caminhos:
 
@@ -25,7 +25,7 @@ Para o passo a passo com a explicação de cada coisa, siga a etapa 0 do guia do
 
 4. **Inicialize as ferramentas no repositório:** `openspec init` (ele mantém o `config.yaml` copiado; se perguntar, não o sobrescreva) e `codegraph init`.
 5. **Confira:** `bash scripts/check.sh` deve terminar com `ok` na parte das regras e na do método. Com este kit em `../trilha-ai` (ou em `TRILHA_AI`), ele confere também que o comum é cópia idêntica do daqui; sem ele, avisa.
-6. **Primeiro commit,** com a linha de coautoria da IA.
+6. **Primeiro commit,** com a linha de coautoria da IA, **e o repositório no GitHub:** `gh repo create <nome> --private --source . --push` cria o repositório privado, liga-o como `origin` e envia o primeiro commit.
 7. **Siga para a etapa 1 do guia:** o PRD.
 
 ## Os arquivos de regras

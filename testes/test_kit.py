@@ -112,6 +112,15 @@ class Kit(unittest.TestCase):
         self.assertIn("(`progress.total`)", comum)
         self.assertIn("desfaça-a por edição inversa, nunca com `git checkout`", comum)
 
+    def test_remoto_privado_no_github(self) -> None:
+        """v1.20: todo repositório do método tem um remoto privado no GitHub, criado na etapa 0."""
+        comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        readme = (RAIZ / "README.md").read_text(encoding="utf-8")
+        self.assertIn("desde a etapa 0, um remoto privado no GitHub (`origin`)", comum)
+        self.assertIn("`gh repo create <nome> --private --source . --push`", comum)
+        self.assertIn("`gh auth login`", readme)
+        self.assertIn("`gh repo create <nome> --private --source . --push`", readme)
+
     def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
         """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
