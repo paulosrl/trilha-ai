@@ -216,7 +216,8 @@ class Kit(unittest.TestCase):
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("Cada cenário de spec vira um teste", comum)
         self.assertNotIn("todo requisito virou spec", comum)
-        self.assertIn("pelo checklist de 8 itens da skill `sdd:briefing`", comum)
+        self.assertIn("pelo checklist da skill `sdd:briefing`", comum)
+        self.assertNotIn("checklist de 8 itens", comum)  # v1.30: a contagem é da skill
 
     def test_andamento_sem_o_envio_e_com_trabalho_fora_de_change(self) -> None:
         """v1.13: o envio ao remoto não vai ao ANDAMENTO.md; a etapa admite trabalho fora de change."""
@@ -239,7 +240,7 @@ class Kit(unittest.TestCase):
         comum = (RAIZ / "CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("execução manual, em dado descartável, com o usuário olhando", comum)
         self.assertIn("recusada por escrito no `design.md` da change, com o motivo", comum)
-        self.assertIn("a aprovação do gate 3 atualiza também o \"Ciclo\"", comum)
+        self.assertIn("a tabela \"Ciclo\" da decomposição, atualizada no commit do passo de cada marco", comum)
 
     def test_auditoria_fechada_no_registro_copia_sem_change_e_o_openspec_comanda(self) -> None:
         """v1.18: a escolha do usuário, com ou sem correção, leva o relatório ao registro; a cópia nova
@@ -275,7 +276,10 @@ class Kit(unittest.TestCase):
         self.assertIn("a edição direta que as instruções dele pedem", comum)
         self.assertIn("ou pelo caminho que ele indicar", comum)
         self.assertNotIn("MAY (RFC 2119)", config)
-        self.assertIn("o OpenSpec pede evitar SHOULD e MAY", config)
+        self.assertIn("um DEVE em português o reprova", config)
+        # v1.30: o que o modelo do OpenSpec já pede fica nas instruções dele.
+        for repetido in ("não o como", "alternativa rejeitada", "cenário com WHEN/THEN", '"- [ ] N.M'):
+            self.assertNotIn(repetido, config)
         self.assertEqual(config.count("mantendo em inglês os títulos do modelo do OpenSpec"), 2)
 
     def test_cenario_mantido_no_delta_fica_como_esta(self) -> None:

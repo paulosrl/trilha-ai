@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.29, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.30, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -9,7 +9,7 @@ Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD →
 Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 1. `sdd/prd-<nome>.md`: o quê e o porquê. Nenhuma palavra de tecnologia, salvo a restrição que o usuário declara imposta de fora, que a skill registra à parte. Escrito com a skill `sdd:prd` e aprovado bloco a bloco pelo usuário, como a skill pede (gate 1).
-2. `sdd/tdd-<nome>.md`: as decisões técnicas, como ADRs. Escrito com a skill `sdd:tdd` e aprovado bloco a bloco pelo usuário, como a skill pede (gate 2). Não se redecidem numa change.
+2. `sdd/tdd-<nome>.md`: as decisões técnicas, como ADRs. Escrito com a skill `sdd:tdd` e aprovado bloco a bloco pelo usuário, como a skill pede (gate 2).
 3. `sdd/decomposicao-<nome>.md`: as changes, a ordem de execução com a razão, as regras de convivência e a tabela "Ciclo". Vem da skill `sdd:briefing`, que também escreve cada briefing e audita o gate 3.
 4. `sdd/briefing-openspec/briefing-change-NN-<nome>.md`: a entrada de cada change, autossuficiente: requisitos, regras, critérios de aceite e ADRs na íntegra, mais "o que já existe".
 5. `openspec/specs/`: o comportamento já entregue. O `openspec/config.yaml` traz o contexto do projeto e as regras por artefato (a língua, a origem citada de cada requisito e cenário, um teste por cenário); o OpenSpec o lê ao gerar cada artefato, e o briefing não repete o que está nele.
@@ -26,7 +26,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 1. briefing aprovado pelo usuário, numa branch `change/NN-nome` aberta a partir da main atualizada antes do primeiro commit da change; o usuário dá aqui um só "sim" para todos os envios da branch até o merge;
 2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código; commit, envio e pull request em rascunho (`gh pr create --draft`), que mostra o plano antes do código;
-3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist de 8 itens da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, ou pelo caminho que ele indicar (o artefato que falta, uma change nova), depois da escolha do usuário; a revisão termina com a auditoria aprovada, em commit e envio;
+3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, ou pelo caminho que ele indicar, depois da escolha do usuário; a revisão termina com a auditoria aprovada, em commit e envio;
 4. `/opsx:apply`, no fluxo do OpenSpec; termina na tarefa que a regra das tarefas do `openspec/config.yaml` põe por último; commit e envio a cada parada, nunca um só no fim;
 5. `/opsx:verify` e a revisão independente do código, o `/code-review` do Claude Code sobre a branch, feita por um agente sem o contexto da sessão: quem escreveu não é o único a revisar. Cada sugestão dos dois é aplicada ou recusada por escrito no `design.md` da change, com o motivo; commit e envio;
 6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista; commit e envio, e o PR sai do rascunho (`gh pr ready`): código, specs e página chegam juntos à main;
@@ -40,7 +40,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 ## Registrar cada decisão no artefato dono dela
 
-- Decisão de produto: nova versão do PRD. Decisão técnica: nova versão do TDD. Decisão local de uma change: o `design.md` dela; o OpenSpec o cria só quando cabe, e, sem ele, o `notas.md` da pasta da change faz as vezes dele em todo lugar do método que cita o `design.md`. Os marcos de cada change (briefing, auditoria, archive): a tabela "Ciclo" da decomposição; o passo em curso, o `ANDAMENTO.md`. Desvio ou incidente, às claras e nunca escondido: o `design.md` da change em curso, ou a decomposição se estiver fora de change. Nada fica só na conversa.
+- Decisão de produto: nova versão do PRD. Decisão técnica: nova versão do TDD. Decisão local de uma change: o `design.md` dela; o OpenSpec o cria só quando cabe, e, sem ele, o `notas.md` da pasta da change faz as vezes dele em todo lugar do método que cita o `design.md`. Os marcos de cada change (briefing, auditoria, archive): a tabela "Ciclo" da decomposição, atualizada no commit do passo de cada marco; o passo em curso, o `ANDAMENTO.md`. Desvio ou incidente, às claras e nunca escondido: o `design.md` da change em curso, ou a decomposição se estiver fora de change. Nada fica só na conversa.
 - Correção de texto no PRD, no TDD ou na decomposição que não muda requisito, decisão nem ordem (redação, erro, referência) não sobe a versão dele nem a linha "de origem" de quem o cita: fica no registro de processo, se houver, ou na mensagem do commit. Só a mudança de sentido é versão nova, aprovada pelo usuário; ela atualiza a linha "de origem" de quem o cita, sem versão nova dele.
 
 ## Trabalho interrompível: saber onde parou
@@ -61,7 +61,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - Pedido curto, com erro de digitação ou com mais de uma leitura: diga a leitura adotada antes de agir.
 - Pedido que contraria requisito ou ADR volta ao usuário com opções; nunca é atendido em silêncio.
 - Delegação ("escolha o melhor") não dispensa o gate: siga a recomendação já apresentada e registre a delegação.
-- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho (a do gate 3 também não): não muda o `ANDAMENTO.md` nem o registro de processo. A escolha, com ou sem correção, é unidade de trabalho: atualiza o `ANDAMENTO.md` e leva o relatório ao registro, se houver; a aprovação do gate 3 atualiza também o "Ciclo" e vai no commit do gate 3. Uma auditoria fecha com a verificação do repositório verde e sem contradição; repetição e redação menores ficam no relatório e se corrigem quando o arquivo mudar por outro motivo.
+- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho (a do gate 3 também não): não muda o `ANDAMENTO.md` nem o registro de processo. A escolha, com ou sem correção, é unidade de trabalho: atualiza o `ANDAMENTO.md` e leva o relatório ao registro, se houver. Uma auditoria fecha com a verificação do repositório verde e sem contradição; repetição e redação menores ficam no relatório e se corrigem quando o arquivo mudar por outro motivo.
 - Ao fechar trabalho seu, releia o diff inteiro e corrija antes de entregar.
 - Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração; o envio ao GitHub segue a regra dos envios, em "Trabalho interrompível".
 - Um "sim" isolado responde só à pergunta principal da mensagem; o envio ao remoto perguntado à parte pede "sim" para ele (ou "sim, em tudo"). Em pergunta com mais de uma decisão, confirme cada uma.

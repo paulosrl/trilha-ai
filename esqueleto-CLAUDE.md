@@ -1,6 +1,6 @@
 # CLAUDE.md — <nome do produto>
 
-Regras só deste repositório. As comuns a todo projeto (o método SDD, o ciclo OpenSpec, o registro de cada decisão, o trabalho interrompível, como trabalhar com o usuário, as armadilhas) estão em `CLAUDE-comum.md`, importado abaixo.
+Regras só deste repositório. As comuns a todo projeto estão em `CLAUDE-comum.md`, importado abaixo.
 
 @CLAUDE-comum.md
 
