@@ -118,6 +118,41 @@ class Kit(unittest.TestCase):
         self.assertIn("1.35.0", erro)
         self.assertIn("1.36", erro)
 
+    def test_esqueleto_da_decomposicao_passa_na_conferencia(self) -> None:
+        """F02: o formato que a skill briefing ensina é o que a trava do commit lê, com ou sem retirada."""
+        skill = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
+        esqueleto = next(b for b in skill.split("```markdown\n")[1:] if "## 1. Mapa de changes" in b)
+        esqueleto = esqueleto.split("\n```", 1)[0]
+        retirada = esqueleto.replace("<por que depende da 01> |", "<por que depende da 01>; retirada em 2026-10-16: motivo |")
+        retirada = retirada.replace("| 02 | — | — | — |", "| 02 | — | — | retirada em 2026-10-16 |")
+        self.assertNotEqual(retirada, esqueleto)
+        for texto in (esqueleto, retirada):
+            with tempfile.TemporaryDirectory() as tmp:
+                _copia_do_kit(Path(tmp))
+                (Path(tmp) / "sdd").mkdir()
+                (Path(tmp) / "sdd/decomposicao-x.md").write_text(texto, encoding="utf-8")
+                saida = self._confere_metodo(Path(tmp))
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertNotIn("FALHA", saida.stderr)
+
+    def test_briefing_seguinte_depois_do_merge(self) -> None:
+        """F06: a change fecha no merge (comum, passo 7); o briefing da próxima espera por ele."""
+        skill = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("anterior estiver arquivada", skill)
+        self.assertIn("quando a change anterior estiver com o merge feito", skill)
+        self.assertIn("Depois do merge da change", skill)
+
+    def test_gate_2_fecha_a_stack(self) -> None:
+        """F04: ao fechar o gate 2, o comum nomeia os lugares da stack; a skill tdd remete a ele."""
+        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        regra = next(l for l in comum.splitlines() if l.startswith("- Ao fechar o gate 2"))
+        for lugar in ("`scripts/check.sh`", "`.github/workflows/verificacao.yml`", "`.github/dependabot.yml`",
+                      "`.gitignore`", "`openspec/config.yaml`"):
+            self.assertIn(lugar, regra)
+            self.assertTrue((MODELO / ORIGEM[lugar.strip("`")]).is_file(), lugar)
+        tdd = (PLUGIN / "skills/tdd/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("como o `CLAUDE-comum.md` manda ao fechar o gate 2", tdd)
+
     def test_mudanca_sem_versao_nova_reprova(self) -> None:
         env = {**os.environ, **GIT_TESTE}
         with tempfile.TemporaryDirectory() as tmp:

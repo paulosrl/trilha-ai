@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 1.35, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 1.36, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
@@ -19,6 +19,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 - Faltou requisito: a pendência volta ao PRD. Faltou decisão técnica: volta ao TDD. Não improvise.
 - PRD e spec em desacordo: vale o PRD aprovado, e uma change corrige o comportamento e o spec; se o certo for o spec, o PRD ganha versão nova. O usuário escolhe qual dos dois está certo.
 - Para contrariar ou estender um ADR, pare e pergunte. Mudança de decisão técnica é uma nova versão do TDD, aprovada antes do código.
+- Ao fechar o gate 2, antes da decomposição, a stack decidida no TDD entra nos lugares que a esperam: a parte da stack do `scripts/check.sh`, os passos do `.github/workflows/verificacao.yml`, o `.github/dependabot.yml`, o bloco do `.gitignore` e a linha "Stack" do `context` do `openspec/config.yaml`. Até lá, o `check.sh` avisa que ela falta.
 - Projeto que nasceu sem PRD ou TDD escreve o que falta antes da próxima change que toque requisito ou tecnologia. Até lá, uma correção de comportamento que um spec já descreve nasce de um briefing curto, escrito a partir desse spec (o requisito e o cenário corrigidos, o defeito, o esperado, o que já existe), sem requisito novo nem decisão técnica, aprovado pelo usuário; o resto do ciclo é o mesmo. Nesse caso, o passo do ciclo de cada change fica no `ANDAMENTO.md`, e a change arquivada entra na tabela "Ciclo" quando a decomposição nascer. Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.
 - Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito, ajuste de teste e a cópia nova dos arquivos que o método manda copiar sem mudar (este arquivo, os scripts de conferência e da página, a trava `guarda.py` e o `.githooks/pre-commit`) dispensam change.
 

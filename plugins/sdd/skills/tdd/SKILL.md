@@ -250,6 +250,6 @@ Salve como `sdd/tdd-<nome-kebab-case>.md`, ao lado do PRD de origem.
 Após salvar:
 1. Entregue o arquivo ao usuário
 2. Resumo de 2 linhas: decisões de porta de um sentido tomadas e pendências devolvidas ao PRD
-3. Declare: "Gate 2 cumprido. Próxima etapa: a decomposição e os briefings (skill `briefing`), que alimentam o `/opsx:propose`."
+3. Declare: "Gate 2 cumprido. Próximos passos: a stack nos arquivos do repositório, como o `CLAUDE-comum.md` manda ao fechar o gate 2, e depois a decomposição e os briefings (skill `briefing`), que alimentam o `/opsx:propose`."
 
 **Não** exiba o TDD completo no chat — o arquivo é a entrega.

@@ -28,7 +28,7 @@ Implementação: /opsx:apply → verificação → archive → próxima change
 1. **O OpenSpec executa; esta skill prepara e confere.** Entrada de qualidade (briefing) e saída auditada (checklist) — o meio pertence à ferramenta nativa.
 2. **Nada se redecide no caminho.** O briefing entrega os ADRs que tocam a change, sob "NÃO redecidir", para o propose referenciá-los, nunca reabri-los. Tecnologia redecidida no `design.md` é defeito de auditoria.
 3. **Lacuna se devolve, não se resolve.** Falta de requisito → `PEN-PRD-XXX` (volta ao Estágio 1). Falta de decisão técnica → `PEN-TDD-XXX` (volta ao Estágio 2). O briefing lista as pendências que tocam a change; nenhuma se resolve por improviso dentro do OpenSpec.
-4. **Decomposição completa, especificação progressiva.** Todas as changes são nomeadas e ordenadas de uma vez; o briefing é emitido um por vez, quando a change anterior estiver arquivada — a partir da change 02, o propose nativo precisa ver o código que já existe.
+4. **Decomposição completa, especificação progressiva.** Todas as changes são nomeadas e ordenadas de uma vez; o briefing é emitido um por vez, quando a change anterior estiver com o merge feito (é no merge que ela fecha, pelo `CLAUDE-comum.md`) — a partir da change 02, o propose nativo precisa ver, na main, o código que já existe.
 5. **Rastreabilidade é auditável nos dois sentidos.** PRD → artefatos (todo RF virou spec? todo CA virou cenário?) e artefatos → PRD (há spec sem RF? cenário inventado?).
 
 ## Processo
@@ -55,18 +55,31 @@ Derive as changes dos `ESC-XXX`, aplicando os critérios:
 4. **Dependência em prosa:** ordem declarada com razão ("02 depende de 01 porque exporta o que 01 cadastra").
 5. **Fora de change, só o que o `CLAUDE-comum.md` dispensa:** a decomposição cita essa regra, sem repeti-la nem ampliá-la.
 
-Apresente a tabela (change, ESC/RF cobertos, depende de, razão) e **aguarde aprovação**. Aprovada, salve `sdd/decomposicao-<nome>.md` — único arquivo de registro desta skill — com a ordem e a razão, as regras de convivência e a tabela "Ciclo", que registra os marcos de cada change (briefing, auditoria, archive) e é lida pela página do método:
+Apresente a tabela (change, ESC/RF cobertos, depende de, razão) e **aguarde aprovação**. Aprovada, salve `sdd/decomposicao-<nome>.md` — o arquivo de registro desta skill, ao lado dos briefings — neste esqueleto:
 
 ```markdown
+# Decomposição: <nome do produto>
+
+## 1. Mapa de changes
+
+| NN | change | ESC e RF cobertos | depende de | razão |
+|---|---|---|---|---|
+| 01 | `<nome-da-change>` | ESC-001 · RF-001, RF-002 | — | <por que vem nesta ordem> |
+| 02 | `<nome-da-change>` | ESC-002 · RF-003 | 01 | <por que depende da 01> |
+
+## 2. Regras de convivência
+
+<o que as changes compartilham; o que fica fora de change, citando o CLAUDE-comum.md sem repeti-lo>
+
 ## Ciclo
 
 | NN | briefing | auditoria | archive |
 |---|---|---|---|
-| 01 | briefing-change-01-<nome>.md (aprovado AAAA-MM-DD) | gate 3 aprovado AAAA-MM-DD | arquivada em <pasta que o archive criou> |
+| 01 | briefing-change-01-<nome>.md (aprovado AAAA-MM-DD) | gate 3 aprovado AAAA-MM-DD | arquivada em <pasta que o archive criou> (PR #N) |
 | 02 | — | — | — |
 ```
 
-Uma linha por change, na ordem; `—` enquanto o passo não aconteceu. Change retirada antes do archive mantém a linha, com `retirada em AAAA-MM-DD` na coluna archive e o motivo; a página do método a mostra como retirada. Num projeto que já tem changes arquivadas, a tabela nasce com elas.
+Os títulos `## 1.`, `## 2.` e `## Ciclo`, e o número da change na primeira coluna das duas tabelas, são o formato que a conferência do método lê na trava do commit: as changes da seção 1 e as do "Ciclo" são as mesmas. Outras seções (a recepção, as pendências) podem vir entre a 2 e o "Ciclo". O "Ciclo" registra os marcos de cada change e é lido pela página do projeto (`sdd/documentacao.html`): uma linha por change, na ordem; `—` enquanto o passo não aconteceu. Change retirada antes do archive mantém as duas linhas: na seção 1, a razão termina com `retirada em AAAA-MM-DD` e o motivo; no "Ciclo", a coluna archive começa com `retirada em AAAA-MM-DD`. Num projeto que já tem changes arquivadas, as tabelas nascem com elas.
 
 ### 3. Briefing — a entrada do /opsx:propose
 
@@ -127,7 +140,7 @@ Emita o **laudo de auditoria**: `APROVADO` (gate 3 cumprido: a revisão terminou
 
 ### 5. Ciclo
 
-Após o archive da change e os passos que o `openspec/config.yaml` manda fazer depois dele (entre eles, a linha da change na tabela "Ciclo"), retorne ao passo 3 para o briefing da próxima — agora com "changes arquivadas" atualizado, para o propose nativo tratar o código existente como brownfield.
+Depois do merge da change, que vem após o archive e os passos que o `openspec/config.yaml` manda fazer depois dele (entre eles, a linha da change na tabela "Ciclo"), retorne ao passo 3 para o briefing da próxima — agora com "changes arquivadas" atualizado, para o propose nativo tratar o código existente como brownfield.
 
 ## Qualidade — antes de emitir cada briefing
 
