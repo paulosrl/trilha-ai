@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-# A trava do commit (copiada sem mudar; ligada por: git config core.hooksPath .githooks).
-# Antes de cada commit, as regras e o método, que são rápidos. A stack e os testes ficam no
-# scripts/check.sh e no CI: o teste que falha antes do código precisa poder ir num commit. O
-# aviso do plugin, que espera o Claude Code responder, também fica no check.sh (--sem-plugin).
-set -euo pipefail
-cd "$(git rev-parse --show-toplevel)"
-python3 -I scripts/confere_regras.py . >/dev/null
-python3 -I scripts/confere_metodo.py --sem-plugin >/dev/null

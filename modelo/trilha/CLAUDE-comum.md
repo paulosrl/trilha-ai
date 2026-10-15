@@ -1,8 +1,8 @@
 # CLAUDE-comum.md
 
-Versão 1.36, de 2026-10-15. Não edite este arquivo: o que é deste repositório vai no `CLAUDE.md`.
+Versão 2.0, de 2026-10-15. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
 
-Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o importa no seu `CLAUDE.md` com `@CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
+Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o guarda na pasta `trilha/`, com o resto do que o método copia sem mudar, e o importa no seu `CLAUDE.md` com `@trilha/CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Regra do `CLAUDE.md` do repositório sobre o mesmo assunto prevalece sobre esta, desde que declarada em "Exceções ao comum", com o motivo.
 
 ## O método: documentos que mandam, nesta ordem
 
@@ -14,14 +14,14 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 4. `sdd/briefing-openspec/briefing-change-NN-<nome>.md`: a entrada de cada change, autossuficiente: requisitos, regras, critérios de aceite e ADRs na íntegra, mais "o que já existe".
 5. `openspec/specs/`: o comportamento já entregue. O `openspec/config.yaml` traz o contexto do projeto, com a língua, e as regras por artefato (a origem citada de cada requisito e cenário, um teste por cenário); o OpenSpec o lê ao gerar cada artefato, e o briefing não repete o que está nele.
 
-- `sdd/documentacao.html` é a documentação do projeto, gerada por `python3 scripts/gerar_pagina_sdd.py` ao fechar cada etapa (PRD, TDD, decomposição, change arquivada); não se edita à mão.
+- `sdd/documentacao.html` é a documentação do projeto, gerada por `python3 trilha/gerar_pagina_sdd.py` ao fechar cada etapa (PRD, TDD, decomposição, change arquivada); não se edita à mão.
 - Um registro de processo (o que foi pedido e feito em cada etapa) é opcional; quem o mantém declara no `CLAUDE.md` onde ele fica e quando é atualizado.
 - Faltou requisito: a pendência volta ao PRD. Faltou decisão técnica: volta ao TDD. Não improvise.
 - PRD e spec em desacordo: vale o PRD aprovado, e uma change corrige o comportamento e o spec; se o certo for o spec, o PRD ganha versão nova. O usuário escolhe qual dos dois está certo.
 - Para contrariar ou estender um ADR, pare e pergunte. Mudança de decisão técnica é uma nova versão do TDD, aprovada antes do código.
 - Ao fechar o gate 2, antes da decomposição, a stack decidida no TDD entra nos lugares que a esperam: a parte da stack do `scripts/check.sh`, os passos do `.github/workflows/verificacao.yml`, o `.github/dependabot.yml`, o bloco do `.gitignore` e a linha "Stack" do `context` do `openspec/config.yaml`. Até lá, o `check.sh` avisa que ela falta.
 - Projeto que nasceu sem PRD ou TDD escreve o que falta antes da próxima change que toque requisito ou tecnologia. Até lá, uma correção de comportamento que um spec já descreve nasce de um briefing curto, escrito a partir desse spec (o requisito e o cenário corrigidos, o defeito, o esperado, o que já existe), sem requisito novo nem decisão técnica, aprovado pelo usuário; o resto do ciclo é o mesmo. Nesse caso, o passo do ciclo de cada change fica no `ANDAMENTO.md`, e a change arquivada entra na tabela "Ciclo" quando a decomposição nascer. Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.
-- Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito, ajuste de teste e a cópia nova dos arquivos que o método manda copiar sem mudar (este arquivo, os scripts de conferência e da página, a trava `guarda.py` e o `.githooks/pre-commit`) dispensam change.
+- Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito, ajuste de teste e a cópia nova do kit (a pasta `trilha/` e o que o `kit.py atualizar` escreve) dispensam change.
 
 ## O ciclo de cada change (OpenSpec)
 
@@ -76,7 +76,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 
 ## Armadilhas
 
-- As travas do kit não se contornam: o `.githooks/pre-commit` (ligado por `git config core.hooksPath .githooks`) confere as regras e o método antes de cada commit, e o `scripts/guarda.py`, hook do Claude Code no `.claude/settings.json`, barra o envio forçado, o `--no-verify`, o `pkill -f` e o `pgrep -f` (o padrão casa o próprio shell: encerre processos pelo PID guardado) e o merge sem `--merge` ou sem a verificação verde. Trava que barrar algo legítimo volta ao usuário.
+- As travas do kit não se contornam: o `trilha/hooks/pre-commit` (ligado por `git config core.hooksPath trilha/hooks`) confere as regras e o método antes de cada commit, e o `trilha/guarda.py`, hook do Claude Code no `.claude/settings.json`, barra o envio forçado, o `--no-verify`, o `pkill -f` e o `pgrep -f` (o padrão casa o próprio shell: encerre processos pelo PID guardado) e o merge sem `--merge` ou sem a verificação verde. Trava que barrar algo legítimo volta ao usuário.
 - Nunca pare, remova ou mate processo ou container de outro projeto sem ordem explícita.
 - Senha, chave ou token nunca entram no git; o CI os procura no histórico (gitleaks). Achado real: troque a chave antes de qualquer outra coisa, porque apagá-la do git não a desfaz no histórico; falso positivo vai ao `.gitleaksignore`, com a escolha do usuário.
 - Dado real nunca serve a teste manual: use uma cópia descartável e prove, antes e depois, que o real não mudou.
@@ -90,4 +90,4 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 
 ## O `CLAUDE.md` de cada repositório
 
-Só o que não se deduz lendo o código, neste esqueleto: **O que é** · **Documentos** (os nomes reais do PRD, do TDD e da decomposição, em `sdd/`; o `openspec/config.yaml` e o `ANDAMENTO.md`) · **Comandos** (rodar, testar, publicar; a verificação chama o `confere_regras.py` e o `confere_metodo.py`) · **Regras de código** · **Dados a proteger** · **Armadilhas próprias** · **Exceções ao comum**, cada uma com o motivo. O `CLAUDE.md` e o `CLAUDE-comum.md` somados têm no máximo 200 linhas.
+Só o que não se deduz lendo o código, neste esqueleto: **O que é** · **Documentos** (os nomes reais do PRD, do TDD e da decomposição, em `sdd/`; o `openspec/config.yaml` e o `ANDAMENTO.md`) · **Comandos** (rodar, testar, publicar; a verificação chama o `trilha/verifica.sh`) · **Regras de código** · **Dados a proteger** · **Armadilhas próprias** · **Exceções ao comum**, cada uma com o motivo. O `CLAUDE.md` e o `CLAUDE-comum.md` somados têm no máximo 200 linhas.
