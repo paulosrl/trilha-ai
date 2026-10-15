@@ -33,7 +33,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 5. Execução manual
 
-- [ ] 5.1 Com a confirmação do usuário e ele olhando: trocar o plugin da máquina (`claude plugin uninstall sdd@pipeline-prd-tdd-openspec`, `claude plugin marketplace remove pipeline-prd-tdd-openspec`, `claude plugin marketplace add /home/pl/projetos/trilha-ai`, `claude plugin install sdd@trilha-ai`); conferir em `claude plugin list --json` o `sdd@trilha-ai` na `1.35.0`; num projeto descartável no scratchpad (`kit.py novo`), o `confere_metodo` sem aviso do plugin e, com o comum do descartável na "Versão 1.36", com o aviso
+- [x] 5.1 Com a confirmação do usuário e ele olhando: trocar o plugin da máquina (`claude plugin uninstall sdd@pipeline-prd-tdd-openspec`, `claude plugin marketplace remove pipeline-prd-tdd-openspec`, `claude plugin marketplace add /home/pl/projetos/trilha-ai`, `claude plugin install sdd@trilha-ai`); conferir em `claude plugin list --json` o `sdd@trilha-ai` na `1.35.0`; num projeto descartável no scratchpad (`kit.py novo`), o `confere_metodo` sem aviso do plugin e, com o comum do descartável na "Versão 1.36", com o aviso
 
 ## Workflow follow-up
 
