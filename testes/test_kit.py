@@ -33,6 +33,7 @@ def _claude_falso(pasta: Path, corpo: str) -> None:
 
 
 _SEM_CLAUDE = tempfile.TemporaryDirectory()
+_PATH_ORIGINAL = os.environ["PATH"]
 
 
 def setUpModule() -> None:
@@ -43,6 +44,7 @@ def setUpModule() -> None:
 
 
 def tearDownModule() -> None:
+    os.environ["PATH"] = _PATH_ORIGINAL
     _SEM_CLAUDE.cleanup()
 
 
@@ -53,12 +55,23 @@ def _copia_do_kit(destino: Path) -> None:
         shutil.copy(MODELO / ORIGEM.get(nome, nome), alvo)
 
 
-def _divergencia_de_versao(comum: str, manifesto: dict) -> str:
+def _divergencia_de_versao(kit: str, manifesto: dict) -> str:
     """Vazio se o plugin está na versão do kit (X.Y.0 para "Versão X.Y"); senão, as duas."""
-    achado = re.search(r"^Versão (\d+\.\d+),", comum, re.M)
-    kit = achado.group(1) if achado else "?"
     plugin = manifesto.get("version", "?")
     return "" if plugin == f"{kit}.0" else f"o plugin está na {plugin} e o kit na {kit}"
+
+
+def _mudou_desde_a_tag(raiz: Path) -> list[str]:
+    """Os arquivos de modelo/ e plugins/ que mudaram desde a tag da versão atual do comum; vazio
+    se a tag ainda não existe (a versão nova em preparo)."""
+    tag = f"v{FERRAMENTA._versao(raiz / 'modelo' / 'CLAUDE-comum.md')}"
+    existe = subprocess.run(["git", "-C", str(raiz), "rev-parse", "-q", "--verify", f"refs/tags/{tag}"],
+                            capture_output=True, text=True, check=False)
+    if existe.returncode != 0:
+        return []
+    saida = subprocess.run(["git", "-C", str(raiz), "diff", "--name-only", tag, "--", "modelo", "plugins"],
+                           capture_output=True, text=True, check=True)
+    return saida.stdout.split()
 
 
 class Kit(unittest.TestCase):
@@ -96,14 +109,33 @@ class Kit(unittest.TestCase):
 
     def test_versao_do_plugin_igual_a_do_kit(self) -> None:
         """Uma versão para o método: o plugin é X.Y.0 da "Versão X.Y" do comum."""
-        comum = (MODELO / "CLAUDE-comum.md").read_text(encoding="utf-8")
+        kit = FERRAMENTA._versao(MODELO / "CLAUDE-comum.md")
         manifesto = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
-        self.assertEqual(_divergencia_de_versao(comum, manifesto), "")
+        self.assertEqual(_divergencia_de_versao(kit, manifesto), "")
 
     def test_versao_do_plugin_esquecida_reprova(self) -> None:
-        erro = _divergencia_de_versao("Versão 1.36, de 2026-10-16.\n", {"version": "1.35.0"})
+        erro = _divergencia_de_versao("1.36", {"version": "1.35.0"})
         self.assertIn("1.35.0", erro)
         self.assertIn("1.36", erro)
+
+    def test_mudanca_sem_versao_nova_reprova(self) -> None:
+        env = {**os.environ, **GIT_TESTE}
+        with tempfile.TemporaryDirectory() as tmp:
+            raiz = Path(tmp)
+            (raiz / "modelo").mkdir()
+            (raiz / "modelo/CLAUDE-comum.md").write_text("Versão 1.0, de 2026-10-15.\n", encoding="utf-8")
+            (raiz / "plugins").mkdir()
+            (raiz / "plugins/skill.md").write_text("antes\n", encoding="utf-8")
+            for comando in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "kit"]):
+                subprocess.run(["git", "-C", tmp, *comando], check=True, env=env)
+            (raiz / "plugins/skill.md").write_text("depois\n", encoding="utf-8")
+            self.assertEqual(_mudou_desde_a_tag(raiz), [])  # sem a tag: a versão nova em preparo
+            subprocess.run(["git", "-C", tmp, "tag", "v1.0", "HEAD"], check=True, env=env)
+            self.assertEqual(_mudou_desde_a_tag(raiz), ["plugins/skill.md"])
+
+    def test_kit_sem_mudanca_depois_da_tag(self) -> None:
+        """Mudou modelo/ ou plugins/ depois da tag da versão: suba a versão (CLAUDE.md do kit)."""
+        self.assertEqual(_mudou_desde_a_tag(RAIZ), [])
 
     def test_versao_no_comum(self) -> None:
         for arquivo in ("CLAUDE-comum.md",):
@@ -592,7 +624,7 @@ class Kit(unittest.TestCase):
     def test_plugin_do_marketplace_antigo_avisa(self) -> None:
         saida = self._aviso_do_plugin([{"id": "sdd@pipeline-prd-tdd-openspec", "version": "0.3.9"}])
         self.assertEqual(saida.returncode, 0, saida.stderr)
-        self.assertIn("marketplace antigo", saida.stderr)
+        self.assertIn("de fora do kit (sdd@pipeline-prd-tdd-openspec)", saida.stderr)
         self.assertIn("claude plugin install sdd@trilha-ai", saida.stderr)
 
     def test_plugin_com_versao_diferente_avisa(self) -> None:
@@ -612,6 +644,53 @@ class Kit(unittest.TestCase):
         self.assertEqual(saida.returncode, 0, saida.stderr)
         self.assertIn("plugin sdd não instalado", saida.stderr)
         self.assertIn("claude plugin install sdd@trilha-ai", saida.stderr)
+
+    def test_plugin_de_outro_marketplace_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@meu-fork", "version": "0.3.9", "enabled": True}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next(l for l in saida.stderr.splitlines() if "plugin sdd" in l)
+        self.assertIn("sdd@meu-fork", aviso)
+        self.assertIn("claude plugin install sdd@trilha-ai", aviso)
+
+    def test_aviso_do_plugin_com_comandos_separados(self) -> None:
+        for lista in ([{"id": "sdd@pipeline-prd-tdd-openspec", "version": "0.3.9"}], []):
+            avisos = [l for l in self._aviso_do_plugin(lista).stderr.splitlines() if "plugin sdd" in l]
+            self.assertEqual(len(avisos), 1, lista)
+            self.assertIn("`claude plugin marketplace add paulosrl/trilha-ai`", avisos[0])
+            self.assertIn("`claude plugin install sdd@trilha-ai`", avisos[0])
+            self.assertNotIn("&&", avisos[0])
+
+    def test_plugin_desligado_avisa(self) -> None:
+        saida = self._aviso_do_plugin([{"id": "sdd@trilha-ai", "version": "1.35.0", "enabled": False}])
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("claude plugin enable sdd@trilha-ai", saida.stderr)
+
+    def test_trava_do_commit_nao_consulta_o_claude(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, marca = Path(tmp) / "proj", Path(tmp) / "consultou"
+            self._ferramenta("novo", str(pasta))
+            falsos = Path(tmp) / "falsos"
+            falsos.mkdir()
+            _claude_falso(falsos, f"touch {marca}; printf '[]'")
+            env = {**os.environ, **GIT_TESTE, "PATH": f"{falsos}:{os.environ['PATH']}"}
+            subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
+            commit = subprocess.run(["git", "commit", "-qm", "kit"], cwd=pasta, env=env,
+                                    capture_output=True, text=True)
+            self.assertEqual(commit.returncode, 0, commit.stderr)
+            self.assertFalse(marca.exists(), "a trava do commit consultou o Claude Code")
+
+    def test_check_sh_avisa_o_plugin(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = Path(tmp) / "proj"
+            self._ferramenta("novo", str(pasta))
+            falsos = Path(tmp) / "falsos"
+            falsos.mkdir()
+            _claude_falso(falsos, "printf '%s' '[{\"id\": \"sdd@meu-fork\", \"version\": \"0.3.9\"}]'")
+            env = {**os.environ, "PATH": f"{falsos}:{os.environ['PATH']}"}
+            saida = subprocess.run(["bash", "scripts/check.sh"], cwd=pasta, env=env,
+                                   capture_output=True, text=True)
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertIn("sdd@meu-fork", saida.stderr)
 
     def test_sem_o_claude_code_nao_avisa(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
