@@ -148,6 +148,9 @@ class Kit(unittest.TestCase):
         self.assertRegex(ci, r"@fission-ai/openspec@\d+\.\d+\.\d+")
         # Fora de .github/workflows/ no kit: aqui o check.sh reprovaria, porque o kit não segue o método.
         self.assertFalse((RAIZ / ".github/workflows/verificacao.yml").exists())
+        # O CI do próprio kit roda estes testes.
+        kit = (RAIZ / ".github/workflows/testes.yml").read_text(encoding="utf-8")
+        self.assertIn("run: python3 -m unittest discover -s testes", kit)
 
     def test_a_change_fecha_no_merge(self) -> None:
         """v1.25: a change fecha no merge; a retomada olha o PR; um só lugar para a regra dos envios."""

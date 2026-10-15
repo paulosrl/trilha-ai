@@ -1,0 +1,19 @@
+# Os testes do kit Trilha AI, a cada envio à main e a cada pull request. Só deste repositório:
+# o CI que os projetos copiam é o github-verificacao.yml da raiz.
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Os testes do kit (Python 3 puro, sem dependências)
+        run: python3 -m unittest discover -s testes -v
