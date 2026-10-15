@@ -39,7 +39,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 6. Execução manual
 
-- [ ] 6.1 Com o usuário olhando: migrar um clone descartável do heimdall com o `kit.py atualizar` e conferir o `bash scripts/check.sh` em `ok` (com o `openspec validate` real), um commit passando pela trava do commit, o aviso do `pre-push` próprio, a trava do Claude Code (`trilha/guarda.py`) barrando um `git push --force` e a página do projeto gerada por `python3 trilha/gerar_pagina_sdd.py`
+- [x] 6.1 Com o usuário olhando: migrar um clone descartável do heimdall com o `kit.py atualizar` e conferir o `bash scripts/check.sh` em `ok` (com o `openspec validate` real), um commit passando pela trava do commit, o aviso do `pre-push` próprio, a trava do Claude Code (`trilha/guarda.py`) barrando um `git push --force` e a página do projeto gerada por `python3 trilha/gerar_pagina_sdd.py`
 
 ## Workflow follow-up
 
