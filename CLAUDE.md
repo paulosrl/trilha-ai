@@ -21,7 +21,7 @@ Em conflito, vale nesta ordem: os testes e o CI do kit; a escolha do usuário; o
 2. `/opsx:propose` com a descrição; commit, envio e pull request em rascunho (`gh pr create --draft`);
 3. a revisão dos artefatos antes do apply; o que reprovar se corrige com `/opsx:update`, depois da escolha do usuário;
 4. `/opsx:apply`, com o teste escrito antes do código e a execução manual como última tarefa; commit a cada parada;
-5. `/opsx:verify` e o `/code-review <número do PR>`, numa sessão nova; cada sugestão dos dois, aplicada ou recusada com o motivo, vai à seção "Respostas à revisão" do `design.md` da change, ou ao `notas.md` da pasta da change quando o propose não criar o `design.md`;
+5. `/opsx:verify` e o `/code-review <número do PR>`, numa sessão nova ou num agente sem o contexto da sessão; cada sugestão dos dois, aplicada ou recusada com o motivo, vai à seção "Respostas à revisão" do `design.md` da change, ou ao `notas.md` da pasta da change quando o propose não criar o `design.md`;
 6. `/opsx:archive` e os passos do `operations.archive` do `openspec/config.yaml`; o pull request sai do rascunho (`gh pr ready`);
 7. o merge, com a verificação do GitHub verde e o "sim" do usuário: `gh pr merge --merge --delete-branch`, e a tag `vX.Y` quando a regra da versão pedir.
 
