@@ -46,6 +46,8 @@ O Claude Code lê o `CLAUDE.md` da raiz de cada repositório. No método, as reg
 | `modelo/esqueleto-CLAUDE.md` | todo projeto novo, copiado como `CLAUDE.md` | o modelo do que é só daquele projeto (o que ele é, os documentos, os comandos, as armadilhas, as exceções ao comum); já traz a linha `@trilha/CLAUDE-comum.md`, que faz o Claude ler o comum |
 | `CLAUDE.md` deste repositório | só este repositório | as regras de manutenção do kit; não importa o comum nem serve de modelo, porque este repositório não é um projeto do método |
 
+As auditorias do kit, com o roteiro e o relatório de cada rodada, ficam em `docs/auditorias/` e não se copiam.
+
 ## Ao mudar o padrão
 
 O `CLAUDE-comum.md` muda **aqui**, em `modelo/trilha/`, com a versão e a data novas (que o plugin `sdd` acompanha), o teste verde (`python3 -m unittest discover -s testes`) e a tag `vX.Y`, e só depois são copiados para cada repositório, cada um sob ordem do usuário. Um repositório nunca edita a própria cópia: o que é dele vai no `CLAUDE.md`, em "Exceções ao comum" se contrariar o comum. O `confere_regras.py --fonte` acusa a cópia divergente.
