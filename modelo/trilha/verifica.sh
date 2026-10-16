@@ -5,8 +5,8 @@
 set -euo pipefail
 cd "$(dirname "$(readlink -f "$0")")/.."
 
-# As regras (CLAUDE.md, trilha/CLAUDE-comum.md, ANDAMENTO.md), com a pasta trilha/ comparada à do
-# kit quando ele está ao lado (ou em TRILHA_AI).
+# As regras (CLAUDE.md, trilha/CLAUDE-comum.md, ANDAMENTO.md), com a pasta trilha/ comparada à da
+# versão do projeto no kit, quando ele está ao lado (ou em TRILHA_AI).
 FONTE="${TRILHA_AI:-../trilha-ai}"
 if [ -d "$FONTE" ]; then
   python3 -I trilha/confere_regras.py . --fonte "$FONTE"

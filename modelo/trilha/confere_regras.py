@@ -10,8 +10,11 @@ Confere, na raiz indicada:
 - os dois somados têm no máximo 200 linhas e 32 KB (32.768 bytes);
 - ANDAMENTO.md existe, tem as seis linhas pedidas, com a data e a hora (nunca no futuro), e cabe
   em dez linhas;
-- com --fonte, a pasta trilha/ é cópia idêntica da modelo/trilha/ do kit, arquivo a arquivo
-  (o cache do Python, __pycache__/, não conta);
+- com --fonte, a pasta trilha/ é igual à modelo/trilha/ da versão do projeto, arquivo a arquivo
+  (o cache do Python, __pycache__/, não conta): a cópia de trabalho do kit, na mesma versão; a tag
+  vX.Y do kit, noutra, com aviso; sem a tag, só o aviso;
+- as travas desligadas (o core.hooksPath, o guarda.py no .claude/settings.json e o
+  disableAllHooks), como aviso;
 - os campos < > dos modelos do kit ainda por preencher, como aviso (a stack só vem na etapa 2);
 - com o TDD escrito (sdd/tdd-*.md), os lugares da stack ainda como o modelo os deixou, como aviso.
 
@@ -20,6 +23,7 @@ Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema; "
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -103,43 +107,114 @@ def _secao(linhas: list[str], titulo: str) -> str:
     return "\n".join(texto)
 
 
-def _arquivos(pasta: Path) -> dict[str, Path]:
+# Cada arquivo de uma pasta do método: o conteúdo e se é executável.
+Conteudos = dict[str, tuple[bytes, bool]]
+ATUALIZAR = "rode o kit.py atualizar do kit, com a escolha do usuário; não edite a pasta"
+
+
+def _versao(comum: Path) -> str:
+    """A versão X.Y da linha "Versão X.Y, de …" do comum; vazio sem ela."""
+    texto = comum.read_text(encoding="utf-8") if comum.is_file() else ""
+    achado = re.search(r"^Versão (\d+\.\d+),", texto, re.MULTILINE)
+    return achado.group(1) if achado else ""
+
+
+def _conteudos(pasta: Path) -> Conteudos:
     """Os arquivos de uma pasta do método, pelo caminho relativo, sem o cache do Python."""
     if not pasta.is_dir():
         return {}
     return {
-        str(arquivo.relative_to(pasta)): arquivo
+        str(arquivo.relative_to(pasta)): (
+            arquivo.read_bytes(),
+            bool(arquivo.stat().st_mode & 0o111),
+        )
         for arquivo in sorted(pasta.rglob("*"))
         if arquivo.is_file() and "__pycache__" not in arquivo.parts
     }
 
 
-def diferencas_da_pasta(projeto: Path, kit: Path) -> list[str]:
-    """O que impede a pasta trilha/ do projeto de ser cópia idêntica da do kit."""
-    deles, nossos = _arquivos(kit), _arquivos(projeto)
-    falhas = [f"trilha/{nome} falta; copie a pasta do kit" for nome in deles if nome not in nossos]
+def _conteudos_da_tag(kit: Path, tag: str) -> Conteudos | None:
+    """A modelo/trilha/ do kit numa tag, lida pelo git, sem extrair nada; None sem a tag (ou sem
+    o git, num clone raso) ou sem a pasta nela (antes da 2.0)."""
+    lista = subprocess.run(
+        ["git", "-C", str(kit), "ls-tree", "-r", "-z", tag, "--", "modelo/trilha"],
+        capture_output=True,
+        check=False,
+    )
+    if lista.returncode != 0:
+        return None
+    itens = []
+    for registro in filter(None, lista.stdout.split(b"\0")):
+        info, caminho = registro.split(b"\t", 1)
+        modo, tipo, objeto = info.split()
+        if tipo == b"blob":
+            itens.append((caminho.decode("utf-8"), modo == b"100755", objeto))
+    if not itens:
+        return None
+    lote = subprocess.run(
+        ["git", "-C", str(kit), "cat-file", "--batch"],
+        input=b"".join(objeto + b"\n" for _, _, objeto in itens),
+        capture_output=True,
+        check=False,
+    )
+    if lote.returncode != 0:
+        return None
+    resto, conteudos = lote.stdout, {}
+    for caminho, executavel, _ in itens:  # cada um: "<objeto> blob <tamanho>\n<conteúdo>\n"
+        cabeca, resto = resto.split(b"\n", 1)
+        tamanho = int(cabeca.split()[2])
+        conteudos[caminho.removeprefix("modelo/trilha/")] = (resto[:tamanho], executavel)
+        resto = resto[tamanho + 1 :]
+    return conteudos
+
+
+def _diferencas(deles: Conteudos, nossos: Conteudos) -> list[str]:
+    """O que impede a pasta trilha/ do projeto de ser igual à do kit na versão que vale."""
+    falhas = [f"trilha/{nome} falta; {ATUALIZAR}" for nome in deles if nome not in nossos]
     falhas += [
-        f"trilha/{nome} não é do kit; a pasta é só do método"
+        f"trilha/{nome} não é do kit; a pasta é só do método: {ATUALIZAR}"
         for nome in nossos
         if nome not in deles
     ]
     falhas += [
-        f"trilha/{nome} difere do kit; copie a versão do kit sem mudar nada"
+        f"trilha/{nome} difere do kit; {ATUALIZAR}"
         for nome in deles
-        if nome in nossos and deles[nome].read_bytes() != nossos[nome].read_bytes()
+        if nome in nossos and deles[nome][0] != nossos[nome][0]
     ]
-    # O git pula em silêncio o hook sem a permissão de execução: a cópia a mantém (cp -p).
+    # O git pula em silêncio o hook sem a permissão de execução: a cópia a mantém.
     falhas += [
-        f"trilha/{nome} perdeu a permissão de execução; copie-o do kit com cp -p"
+        f"trilha/{nome} perdeu a permissão de execução; {ATUALIZAR}"
         for nome in deles
-        if nome in nossos
-        and deles[nome].stat().st_mode & 0o111
-        and not nossos[nome].stat().st_mode & 0o111
+        if nome in nossos and deles[nome][1] and not nossos[nome][1]
     ]
     return falhas
 
 
-def conferir(raiz: Path, fonte: Path | None) -> list[str]:
+def comparar_com_o_kit(raiz: Path, fonte: Path) -> tuple[list[str], list[str]]:
+    """As falhas e os avisos da pasta trilha/ comparada com a da versão do projeto: a cópia de
+    trabalho do kit, na mesma versão; a tag vX.Y do kit, noutra (o kit mais novo só avisa)."""
+    original = fonte / "modelo" / "trilha"
+    if not (original / "CLAUDE-comum.md").is_file():
+        return [f"a fonte {original} não existe ou não é a pasta do kit"], []
+    nossa = _versao(raiz / "trilha" / "CLAUDE-comum.md")
+    do_kit = _versao(original / "CLAUDE-comum.md")
+    if nossa == do_kit:
+        return _diferencas(_conteudos(original), _conteudos(raiz / "trilha")), []
+    da_tag = _conteudos_da_tag(fonte, f"v{nossa}") if nossa else None
+    if da_tag is None:
+        aviso = (
+            f"o kit está na {do_kit} e não tem a tag v{nossa or '?'} da versão do projeto; a "
+            "pasta trilha/ não foi comparada"
+        )
+        return [], [aviso]
+    aviso = (
+        f"o kit está na {do_kit} e o projeto na {nossa}: a pasta trilha/ foi comparada com a "
+        f"v{nossa}; para a versão nova, rode o kit.py atualizar do kit, com a escolha do usuário"
+    )
+    return _diferencas(da_tag, _conteudos(raiz / "trilha")), [aviso]
+
+
+def conferir(raiz: Path) -> list[str]:
     falhas: list[str] = []
     comum = raiz / "trilha" / "CLAUDE-comum.md"
     proprio, andamento = raiz / "CLAUDE.md", raiz / "ANDAMENTO.md"
@@ -195,13 +270,6 @@ def conferir(raiz: Path, fonte: Path | None) -> list[str]:
         falhas.append("ANDAMENTO.md sem a hora em 'Atualizado em' (AAAA-MM-DD HH:MM)")
     elif not hora.group(1).startswith("<") and hora.group(1) > f"{datetime.now():%Y-%m-%d %H:%M}":
         falhas.append(f"ANDAMENTO.md com a hora no futuro ({hora.group(1)}); leia-a com `date`")
-
-    if fonte is not None:
-        original = fonte / "modelo" / "trilha"
-        if not (original / "CLAUDE-comum.md").is_file():
-            falhas.append(f"a fonte {original} não existe ou não é a pasta do kit")
-        else:
-            falhas += diferencas_da_pasta(raiz / "trilha", original)
     return falhas
 
 
@@ -221,6 +289,18 @@ def avisos_das_travas(raiz: Path) -> list[str]:
     ligada = settings.is_file() and "trilha/guarda.py" in settings.read_text(encoding="utf-8")
     if not ligada:
         avisos.append("trava do Claude Code desligada: .claude/settings.json sem o guarda.py")
+    # O disableAllHooks segue a precedência do Claude Code: o local prevalece sobre o do projeto.
+    for nome in (".claude/settings.local.json", ".claude/settings.json"):
+        try:
+            dados = json.loads((raiz / nome).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(dados, dict) and isinstance(dados.get("disableAllHooks"), bool):
+            if dados["disableAllHooks"]:
+                avisos.append(
+                    f"trava do Claude Code desligada: disableAllHooks verdadeiro em {nome}"
+                )
+            break
     return avisos
 
 
@@ -260,8 +340,11 @@ def main(argv: list[str]) -> int:
         return 2
     raiz = Path(argv[0]).resolve()
     fonte = Path(argv[2]).resolve() if len(argv) == 3 else None
-    falhas = conferir(raiz, fonte)
-    for aviso in avisos_das_travas(raiz) + avisos_dos_campos(raiz) + avisos_da_stack(raiz):
+    falhas, avisos = conferir(raiz), avisos_das_travas(raiz)
+    if fonte is not None:
+        da_fonte, avisos_da_fonte = comparar_com_o_kit(raiz, fonte)
+        falhas, avisos = falhas + da_fonte, avisos + avisos_da_fonte
+    for aviso in avisos + avisos_dos_campos(raiz) + avisos_da_stack(raiz):
         print(f"aviso: {aviso}", file=sys.stderr)
     for falha in falhas:
         print(f"FALHA: {falha}", file=sys.stderr)
