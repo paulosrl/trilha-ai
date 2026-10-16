@@ -1,10 +1,13 @@
 # Validar um projeto contra o kit
 
-O prompt para conferir se um repositório segue o kit Trilha AI. Troque `<pasta>` pelo caminho do
-projeto e cole numa sessão do Claude Code. Ele só audita: grava o relatório em
+O prompt para conferir se um repositório segue o kit Trilha AI. Cole-o como está numa sessão do
+Claude Code: ele pergunta primeiro o nome da pasta do projeto, que fica sempre em
+`/home/pl/projetos/<nome>`. Ele só audita: grava o relatório em
 `<pasta>/docs/validacao-trilha-ai.md` e não corrige nada.
 
 ```text
+Antes de qualquer outra coisa, pergunte o nome da pasta do projeto a validar e espere a resposta. É só o nome (por exemplo, xavier): todo projeto fica em /home/pl/projetos/<nome>, e é esse caminho que <pasta> quer dizer daqui em diante. Se a pasta não existir ou não for um repositório git, diga isso e pergunte de novo.
+
 Valide o repositório <pasta> contra o kit Trilha AI que está em /home/pl/projetos/trilha-ai. É uma auditoria: não corrija nada, não commite e não mexa no ANDAMENTO.md. O único arquivo que você grava é o relatório.
 
 Confira, rodando os comandos e lendo o código de saída de cada um:
