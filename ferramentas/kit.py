@@ -259,6 +259,9 @@ def _conferir_o_kit(antes: str) -> None:
     está atrás do projeto, que ele rebaixaria."""
     try:
         raso = _git(KIT, "rev-parse", "--is-shallow-repository")
+        # O ZIP extraído numa pasta versionada responde pelo repositório de cima: não é o kit.
+        if Path(_git(KIT, "rev-parse", "--show-toplevel")).resolve() != KIT.resolve():
+            raise Recusa("outro repositório")
     except Recusa:
         raise Recusa(
             f"o kit em {KIT} não é um repositório git (baixado como ZIP?); a atualização lê o "

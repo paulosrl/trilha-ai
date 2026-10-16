@@ -49,6 +49,16 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 - [x] 7.1 Numa pasta descartável do scratchpad: um projeto novo; a trava rodada com os comandos de contorno da auditoria, com a saída mostrada ao usuário; o commit com `git -c core.hooksPath=/dev/null` pedido pela trava e barrado; o `kit.py atualizar` sobre o projeto com o comum numa versão mais nova, recusado sem mudar nada; a pasta apagada
 
+## 8. As respostas à revisão de código e ao verify
+
+- [x] 8.1 O teste `test_trava_barra_a_linha_continuada_e_a_atribuicao_com_aspas` comprova o cenário "Linha continuada e atribuição com aspas"; falhou antes da correção (`-k test_trava_barra_a_linha_continuada_e_a_atribuicao_com_aspas`)
+- [x] 8.2 O teste `test_trava_le_o_c_so_do_shell` comprova o cenário "O -c do git"; falhou antes da correção (`-k test_trava_le_o_c_so_do_shell`)
+- [x] 8.3 O teste `test_trava_nao_le_o_corpo_do_heredoc` comprova os cenários "Heredoc que é texto" e "Heredoc que um shell roda"; falhou antes da correção (`-k test_trava_nao_le_o_corpo_do_heredoc`)
+- [x] 8.4 O teste `test_trava_confere_o_pr_do_gh_repo` comprova o cenário "Repositório pelo ambiente"; falhou antes da correção (`-k test_trava_confere_o_pr_do_gh_repo`)
+- [x] 8.5 O teste `test_trava_que_falha_barra` comprova o cenário "Erro da própria trava" (sugestão do verify); já passava e guarda o que não pode mudar (`-k test_trava_que_falha_barra`)
+- [x] 8.6 O teste `test_atualizar_recusa_o_kit_dentro_de_outro_repositorio` comprova o cenário "Kit extraído dentro de outro repositório"; falhou antes da correção (`-k test_atualizar_recusa_o_kit_dentro_de_outro_repositorio`)
+- [x] 8.7 O `guarda.py` e o `kit.py` com as correções (design, decisões 1, 2, 3, 7 e 9 revistas); a trava nova e a da main rodadas sobre os 15.720 comandos reais das sessões do usuário, sem exceção, e cada bloqueio novo conferido como acerto; o conjunto, o ruff e o `openspec validate` sem erro
+
 ## Workflow follow-up
 
 - Depois do archive: `openspec validate --all --no-interactive`, os testes e o ruff do kit; a tag `v2.5` no commit do merge, enviada com o "sim" do usuário (`git push origin main v2.5`).

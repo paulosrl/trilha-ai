@@ -35,11 +35,36 @@ DO_MERGE = ("-R", "--repo", "-b", "--body", "-t", "--subject", "-F", "--body-fil
 DO_MERGE += ("--author-email", "--match-head-commit")
 SHELLS = ("sh", "bash", "zsh", "dash", "ksh")
 PRAZO_DO_GH = 30  # segundos; o prazo do hook no Claude Code é maior
+HEREDOC = re.compile(r"(?<!<)<<(-?)(?!<)\s*(['\"]?)([\w.-]+)\2")
+
+
+def _sem_corpo_de_heredoc(texto: str) -> str:
+    """O texto sem o corpo de cada heredoc, que é dado e não comando (um Markdown que cita um
+    comando proibido), salvo o que um shell recebe para rodar (bash <<EOF)."""
+    linhas, saida, i = texto.split("\n"), [], 0
+    while i < len(linhas):
+        linha = linhas[i]
+        saida.append(linha)
+        i += 1
+        for achado in HEREDOC.finditer(linha):
+            antes = linha[: achado.start()].split()
+            if any(p.rsplit("/", 1)[-1] in SHELLS for p in antes):
+                continue
+            delimitador, com_tab = achado.group(3), achado.group(1)
+            while (
+                i < len(linhas)
+                and (linhas[i].lstrip("\t") if com_tab else linhas[i]) != delimitador
+            ):
+                i += 1
+            i += 1  # a linha do delimitador
+    return "\n".join(saida)
 
 
 def _palavras(texto: str) -> list[str]:
-    """As palavras e os separadores, como o shell os lê; o # não é comentário (no bash, só no
-    começo de uma palavra, e o fim da linha é outro comando). Aspa sem par: lidas sem as aspas."""
+    """As palavras e os separadores, como o shell os lê: a linha continuada (\\ no fim) se junta
+    à seguinte, o corpo do heredoc sai, e o # não é comentário (no bash, só no começo de uma
+    palavra, e o fim da linha é outro comando). Aspa sem par: lidas sem as aspas."""
+    texto = _sem_corpo_de_heredoc(texto.replace("\\\n", ""))
     for tentativa in (texto, texto.replace("'", " ").replace('"', " ")):
         lexer = shlex.shlex(tentativa, posix=True, punctuation_chars=SEPARADORES)
         lexer.whitespace_split = True
@@ -53,31 +78,29 @@ def _palavras(texto: str) -> list[str]:
 
 
 def _aninhado(anterior: str, comando: list[str], palavra: str) -> bool:
-    """O texto com espaço de um bash -c (ou -lc, -xc…) ou de um <<<, que o shell roda."""
+    """O texto com espaço de um bash -c (ou -lc, -xc…) ou de um <<<, que o shell roda; o -c de
+    outro comando (git -c chave=valor) não é shell."""
     if " " not in palavra and "\n" not in palavra:
         return False
     if anterior == "<<<":
         return True
-    shell = bool(comando) and comando[0].rsplit("/", 1)[-1] in SHELLS
-    return (shell and bool(re.fullmatch(r"-[a-zA-Z]*c[a-zA-Z]*", anterior))) or anterior == "-c"
+    shell = any(p.rsplit("/", 1)[-1] in SHELLS for p in comando)
+    return shell and bool(re.fullmatch(r"-[a-zA-Z]*c[a-zA-Z]*", anterior))
 
 
 def _comandos(texto: str) -> list[list[str]]:
     """Os comandos simples de uma linha de shell, cada um com as suas palavras."""
     palavras = _palavras(texto)
     comandos: list[list[str]] = [[]]
+    aninhados: list[list[str]] = []  # à parte: as palavras seguintes são do comando de fora
     for anterior, palavra in zip(["", *palavras], palavras):
         if palavra and set(palavra) <= set(SEPARADORES):
-            if palavra == "<<<" or palavra.endswith("<<<"):
-                comandos[-1].append("<<<")
             comandos.append([])
             continue
-        if _aninhado(anterior, comandos[-1], palavra) or (
-            comandos[-1] and comandos[-1][-1] == "<<<" and " " in palavra
-        ):
-            comandos.extend(_comandos(palavra))
+        if _aninhado(anterior, comandos[-1], palavra):
+            aninhados.extend(_comandos(palavra))
         comandos[-1].append(palavra)
-    return [comando for comando in comandos if comando]
+    return [comando for comando in comandos + aninhados if comando]
 
 
 def _no_lugar_de_comando(palavras: list[str]) -> list[str]:
@@ -87,7 +110,7 @@ def _no_lugar_de_comando(palavras: list[str]) -> list[str]:
     while i < len(palavras):
         palavra = palavras[i]
         nome = palavra.rsplit("/", 1)[-1]
-        if palavra in PALAVRAS_DO_SHELL or re.fullmatch(r"\w+=\S*", palavra):
+        if palavra in PALAVRAS_DO_SHELL or re.fullmatch(r"[A-Za-z_]\w*=.*", palavra, re.DOTALL):
             i += 1
         elif nome in PREFIXOS:
             i += 1
@@ -189,7 +212,7 @@ def _motivo_simples(palavras: list[str]) -> str:
     return ""
 
 
-def _motivo_do_merge(palavras: list[str]) -> str:
+def _motivo_do_merge(palavras: list[str], gh_repo: str = "") -> str:
     if (
         len(palavras) < 3
         or palavras[0].rsplit("/", 1)[-1] != "gh"
@@ -212,6 +235,7 @@ def _motivo_do_merge(palavras: list[str]) -> str:
         else:
             alvo.append(palavra)
         i += 1
+    repo = repo or (["--repo", gh_repo] if gh_repo else [])
     com_merge = "--merge" in merge or "m" in curtas
     if not com_merge or {"--squash", "--rebase"} & set(merge) or set(curtas) & {"s", "r"}:
         return MERGE
@@ -235,7 +259,9 @@ def _motivo_do_merge(palavras: list[str]) -> str:
 def _motivo(texto: str) -> str:
     for palavras in _comandos(texto):
         comando = _no_lugar_de_comando(palavras)
-        motivo = _motivo_simples(comando) or _motivo_do_merge(comando)
+        antes = palavras[: len(palavras) - len(comando)]
+        gh_repo = next((p.split("=", 1)[1] for p in antes if p.startswith("GH_REPO=")), "")
+        motivo = _motivo_simples(comando) or _motivo_do_merge(comando, gh_repo)
         if motivo:
             return motivo
     return ""

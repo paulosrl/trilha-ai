@@ -10,10 +10,11 @@ A rodada 4 da auditoria (`docs/auditorias/2026-10.md`), aprovada pelo usuário e
 - A trava acha o `git push` com força atrás de comandos que envolvem outro, de palavras do shell, de crase, de `bash -lc` e `<<<`, com `#` no meio da linha, com aspa sem par, e reconhece as opções `--force…` abreviadas e o `--mirror`.
 - A trava lê o subcomando do git depois das opções globais (o `git log --grep commit -n 3` deixa de ser barrado), aceita o `-m` do `gh pr merge` como `--merge` e passa o `-R` ao `gh pr checks`.
 - O `gh pr checks` tem prazo de 30 s; estourado, ou com um erro inesperado, a trava barra.
+- Depois da revisão de código: a trava junta a linha continuada com `\`, tira da frente a atribuição com aspas, lê o `-c` como shell só no shell, não lê o corpo de um heredoc (salvo o que um shell recebe) e passa o `GH_REPO` ao `gh pr checks`; o `atualizar` recusa o kit extraído dentro de outro repositório.
 - O `kit.py atualizar` recusa, antes de mudar qualquer arquivo, o projeto numa versão mais nova que a do kit e o kit sem o histórico do git (sem `.git` ou clone raso).
 - Com o TDD, a conferência das regras avisa o Dependabot, o `.gitignore` e a linha "Stack" do `config.yaml`; o `check.sh` e o CI, só a partir do primeiro spec em `openspec/specs/`.
 
-**Fora desta change:** os achados aceitos da rodada 4 (os falsos positivos restantes da trava, como o heredoc que grava num arquivo uma linha com `git push --force`; a página com HTML cru; o kit em edição sem versão nova; o commit com o teste vermelho; a hora a leste de UTC; o "Ciclo" sem decomposição; o aviso da ação do Dependabot); o `cd ../outro && gh pr merge`; a migração dos projetos; o texto do método, já mudado na 2.5 fora de change.
+**Fora desta change:** os achados aceitos da rodada 4 (a página com HTML cru; o kit em edição sem versão nova; o commit com o teste vermelho; a hora a leste de UTC; o "Ciclo" sem decomposição; o aviso da ação do Dependabot); o `cd ../outro && gh pr merge`; a migração dos projetos; o texto do método, já mudado na 2.5 fora de change.
 
 ## Capabilities
 

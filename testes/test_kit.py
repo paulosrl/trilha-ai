@@ -1355,6 +1355,50 @@ class Kit(unittest.TestCase):
         self.assertEqual(saida.returncode, 2)
         self.assertIn("não respondeu", saida.stderr)
 
+    def test_trava_barra_a_linha_continuada_e_a_atribuicao_com_aspas(self) -> None:
+        """Revisão de código, pontos 1 e 2."""
+        self._barrados(("git push \\\n  --force origin main", "git push origin main \\\n  -f",
+                        "git commit -m x \\\n  -n",
+                        'GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no" git push --force origin main',
+                        'GIT_TRACE=1 GIT_SSH_COMMAND="ssh -v" git push -f'))
+
+    def test_trava_le_o_c_so_do_shell(self) -> None:
+        """Revisão de código, ponto 3: o -c do git não é shell, e o texto aninhado não engole o resto."""
+        self._barrados(('git -c "user.name=Claude Bot" commit -n -m x',
+                        'git -c "core.hooksPath=/tmp/sem hooks" commit -m x', 'sudo bash -c "git push -f"'))
+        self._livres(('bash -lc "gh pr merge 7 --merge"', 'git -c "user.name=Claude Bot" commit -m x'))
+
+    def test_trava_nao_le_o_corpo_do_heredoc(self) -> None:
+        """Revisão de código, ponto 4: o texto de um heredoc não é comando, salvo para um shell."""
+        self._livres(("cat > f.md <<'EOF'\nUse `git push -f` nunca, nem `pkill -f`.\nEOF",
+                      "git commit -F- <<'EOF'\nfeat: a trava barra `git push -f`\nEOF",
+                      "git commit -m \"$(cat <<'EOF'\nfix: `git push -f`, 12\" de tela\nEOF\n)\"",
+                      "cat >> n.md <<-FIM\n\tgit push --force\n\tFIM"))
+        self._barrados(("bash <<EOF\ngit push -f\nEOF", "cat > f <<'EOF'\nx\nEOF\ngit push -f",
+                        "sh -s <<'EOF'\ngit commit -n -m x\nEOF"))
+
+    def test_trava_confere_o_pr_do_gh_repo(self) -> None:
+        """Revisão de código, ponto 6: o GH_REPO do comando vai ao gh pr checks."""
+        with tempfile.TemporaryDirectory() as tmp:
+            registro = Path(tmp) / "args.txt"
+            saida = self._guarda("GH_REPO=dono/outro gh pr merge 7 --merge",
+                                 gh_corpo=f'echo "$@" >> {registro}; exit 0')
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertIn("dono/outro", registro.read_text(encoding="utf-8").split())
+
+    def test_trava_que_falha_barra(self) -> None:
+        """Sugestão do verify: um erro inesperado da trava barra, nunca libera."""
+        with tempfile.TemporaryDirectory() as tmp:
+            guarda = Path(tmp) / "guarda.py"
+            texto = (MODELO / "trilha/guarda.py").read_text(encoding="utf-8")
+            marca = "def _motivo(texto: str) -> str:\n"
+            self.assertIn(marca, texto)
+            guarda.write_text(texto.replace(marca, marca + "    raise RuntimeError('quebrada')\n"),
+                              encoding="utf-8")
+            saida = self._guarda("git status", trava=guarda)
+        self.assertEqual(saida.returncode, 2)
+        self.assertIn("a trava falhou", saida.stderr)
+
     def test_trava_deixa_passar_a_entrada_sem_comando(self) -> None:
         for entrada in ("[]", '{"tool_input": "x"}', '{"tool_input": {"command": 3}}', "{}"):
             saida = subprocess.run([sys.executable, "-I", str(MODELO / "trilha/guarda.py")], input=entrada,
@@ -2175,6 +2219,20 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
             kit = Path(tmp) / "kit-zip"
+            shutil.copytree(RAIZ, kit, ignore=shutil.ignore_patterns(".git", "__pycache__", ".ruff_cache"))
+            saida = self._atualizar_sem_mudar(kit, pasta)
+        self.assertIn("não é um repositório git", saida.stderr)
+
+    def test_atualizar_recusa_o_kit_dentro_de_outro_repositorio(self) -> None:
+        """Revisão de código, ponto 5: o ZIP extraído numa pasta versionada não é o kit no git."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            pai = Path(tmp) / "pai"
+            pai.mkdir()
+            for comando in (["init", "-q"], ["commit", "-q", "--allow-empty", "-m", "pai"]):
+                subprocess.run(["git", "-C", str(pai), "-c", "commit.gpgsign=false", *comando], check=True,
+                               env={**os.environ, **GIT_TESTE})
+            kit = pai / "kit"
             shutil.copytree(RAIZ, kit, ignore=shutil.ignore_patterns(".git", "__pycache__", ".ruff_cache"))
             saida = self._atualizar_sem_mudar(kit, pasta)
         self.assertIn("não é um repositório git", saida.stderr)

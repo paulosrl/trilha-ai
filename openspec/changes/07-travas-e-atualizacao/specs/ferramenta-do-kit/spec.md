@@ -16,6 +16,11 @@ O `kit.py atualizar` SHALL recusar, antes de mudar qualquer arquivo, o kit que n
 - **THEN** a ferramenta recusa, dizendo que o kit precisa ser um clone do git, e termina com o código de saída 1
 - **AND** o projeto fica sem mudança
 
+#### Scenario: Kit extraído dentro de outro repositório
+- **WHEN** o `kit.py atualizar` roda de uma cópia do kit sem o `.git`, extraída numa pasta que está dentro de outro repositório git
+- **THEN** a ferramenta recusa, dizendo que o kit precisa ser um clone do git
+- **AND** o projeto fica sem mudança
+
 #### Scenario: Kit clonado raso
 - **WHEN** o `kit.py atualizar` roda de um clone raso do kit
 - **THEN** a ferramenta recusa, citando o `git fetch --unshallow --tags`

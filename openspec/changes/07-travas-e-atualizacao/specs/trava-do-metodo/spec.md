@@ -51,9 +51,29 @@ A trava SHALL barrar o `git push` com força quando o `git` vier depois de um co
 - **WHEN** o comando é `git push --force-w` ou `git push --mirror`
 - **THEN** a trava barra
 
+#### Scenario: Linha continuada e atribuição com aspas
+- **WHEN** o comando é `git push \` seguido, na linha de baixo, de `--force origin main`, ou `GIT_SSH_COMMAND="ssh -v" git push -f`
+- **THEN** a trava barra
+
 #### Scenario: O git como argumento
 - **WHEN** o comando é `echo git push -f`, `git push && rm -f x` ou `git push --force-if-includes`
 - **THEN** a trava deixa passar
+
+### Requirement: Texto que o shell não roda
+A trava SHALL ler como comando o texto de um `-c` só quando ele é de um shell, mantendo no comando de fora as palavras que vêm depois, e MUST NOT ler como comando o corpo de um heredoc, salvo o que um shell recebe para rodar.
+
+#### Scenario: O -c do git
+- **WHEN** o comando é `git -c "user.name=Claude Bot" commit -n -m x` ou `git -c "core.hooksPath=/tmp/sem hooks" commit -m x`
+- **THEN** a trava barra
+- **AND** `git -c "user.name=Claude Bot" commit -m x` passa
+
+#### Scenario: Heredoc que é texto
+- **WHEN** o comando grava num arquivo, por heredoc, um Markdown que cita `git push -f`, ou faz o commit com uma mensagem em heredoc que o cita
+- **THEN** a trava deixa passar
+
+#### Scenario: Heredoc que um shell roda
+- **WHEN** o comando é `bash <<EOF`, com `git push -f` no corpo, ou tem um `git push -f` depois da linha que fecha o heredoc
+- **THEN** a trava barra
 
 ### Requirement: Subcomando do git depois das opções globais
 A trava SHALL tomar como subcomando do git a primeira palavra depois das opções globais dele, e MUST NOT tratar como `commit` ou `push` uma dessas palavras que aparece mais adiante, como argumento de outro subcomando.
@@ -73,6 +93,10 @@ No `gh pr merge`, a trava SHALL aceitar o `-m` (também num grupo, como `-md`) c
 - **WHEN** o comando é `gh pr merge 7 -m -d` e a verificação do PR está verde
 - **THEN** a trava deixa passar
 
+#### Scenario: Repositório pelo ambiente
+- **WHEN** o comando é `GH_REPO=dono/outro gh pr merge 7 --merge`
+- **THEN** a trava confere a verificação do PR no repositório `dono/outro`
+
 #### Scenario: Repositório indicado
 - **WHEN** o comando é `gh pr merge -R dono/repo 7 --merge`
 - **THEN** a trava confere `gh pr checks 7` no repositório `dono/repo`
@@ -83,6 +107,10 @@ A trava SHALL esperar a verificação do PR por no máximo 30 segundos e MUST ba
 #### Scenario: Verificação que não responde
 - **WHEN** o `gh pr checks` não responde em 30 segundos
 - **THEN** a trava barra o merge, dizendo que a verificação não respondeu
+
+#### Scenario: Erro da própria trava
+- **WHEN** a trava falha de um jeito inesperado ao ler o comando
+- **THEN** ela barra, dizendo que falhou
 
 #### Scenario: Entrada sem comando
 - **WHEN** a entrada é um JSON sem `tool_input` com `command`, como `[]` ou `{"tool_input": "x"}`
