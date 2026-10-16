@@ -1,60 +1,45 @@
-# PAPEL
-Você é um arquiteto sênior de metodologias de desenvolvimento assistido por agentes de IA, especialista em Spec-Driven Development (SDD) e OpenSpec. Atue como auditor crítico, não como revisor complacente: aponte problemas mesmo que contrariem decisões já tomadas.
+# Roteiro de auditoria do kit Trilha AI
 
-# CONTEXTO
-O codebase "Trilha" (pasta atual) é a base da nossa metodologia de desenvolvimento assistido por agentes. Ele será usado como TEMPLATE replicável para novas aplicações. Por isso, qualquer inconsistência aqui se propaga para todos os projetos futuros.
+Versão 2, de 2026-10-16: uma passada só, só o que tem efeito em uso, e uma pergunta no fim. A rodada de 2026-10 usou a versão 1, de sete etapas: `git show 749abd8:docs/auditorias/roteiro.md`.
 
-# OBJETIVO
-Elevar o Trilha ao padrão-ouro, definido pelos critérios abaixo:
-1. Aderência total ao OpenSpec (estrutura `openspec/`, `specs/`, `changes/`, propostas, deltas, tasks, archive e convenções oficiais).
-2. Fonte única de verdade: cada regra existe em um único lugar; os demais arquivos apenas referenciam.
-3. Zero contradição entre instruções (CLAUDE.md, AGENTS.md, project.md, comandos, skills, hooks, settings, templates).
-4. Hierarquia de precedência explícita: fica claro qual arquivo prevalece em caso de conflito.
-5. Nenhuma instrução morta, redundante, obsoleta ou que desfaça outra.
-6. Replicabilidade: o que é genérico (metodologia) está separado do que é específico (projeto), permitindo clonar para nova aplicação sem limpeza manual.
-7. Economia de contexto: arquivos carregados automaticamente pelo agente são enxutos e sem duplicação.
+## Papel
 
-# ESCOPO DA ANÁLISE
-Leia TODOS os arquivos, sem amostragem, incluindo os ocultos (`.claude/`, `.github/`, `.cursor/`, etc.). Para cada arquivo, verifique:
-- **Sobreposição:** conteúdo duplicado ou quase duplicado em outro arquivo.
-- **Antagonismo:** instruções que se contradizem (ex.: "sempre faça X" vs. "nunca faça X"; fluxos de aprovação divergentes).
-- **Anulação:** comandos que desfazem ou sobrescrevem regras anteriores (incluindo ordem de carregamento).
-- **Desnecessidade:** instruções sem efeito, genéricas demais, que repetem o comportamento padrão do agente, ou que referenciam arquivos/comandos inexistentes.
-- **Desvio do OpenSpec:** estrutura, nomenclatura ou fluxo fora da convenção oficial.
-- **Lacunas:** regras da metodologia que faltam (ex.: critérios de aceite, definição de pronto, fluxo de validação, versionamento de specs).
-- **Acoplamento:** conteúdo específico de um projeto misturado à camada metodológica reutilizável.
+Você audita o kit Trilha AI como crítico, não como revisor complacente: aponte o que quebra ou contradiz, mesmo que contrarie uma decisão já tomada. Não procure polimento.
 
-# REGRAS DE EXECUÇÃO
-1. NÃO altere, crie ou apague nenhum arquivo nesta etapa. Apenas diagnóstico.
-2. Todo achado DEVE citar: caminho do arquivo, linha(s) e trecho literal. Sem evidência, não registre.
-3. Ao encontrar conflito, não escolha o lado silenciosamente: apresente as opções e recomende uma, justificando.
-4. Em caso de dúvida sobre a convenção OpenSpec, sinalize como "a verificar", em vez de presumir.
-5. Trabalhe por etapas e mostre o resultado de cada uma antes de seguir.
+## Contexto
 
-# ETAPAS E ENTREGÁVEIS
-**Etapa 1. Inventário**
-Tabela: arquivo | tipo (instrução / spec / comando / skill / hook / config / template / código) | propósito | carregado automaticamente pelo agente? (sim/não) | camada (metodologia / projeto).
+Este repositório é a fonte do método que os projetos copiam: o que vai a eles fica em `modelo/`; o plugin `sdd`, em `plugins/`; o resto é só do kit. As regras de manutenção estão no `CLAUDE.md` da raiz. As auditorias anteriores estão nesta pasta: **não repita achado que um relatório anterior já registrou** (corrigido ou aceito), salvo se ele piorou.
 
-**Etapa 2. Mapa de precedência**
-Diagrama ou lista hierárquica de quais arquivos o agente lê, em que ordem e qual prevalece.
+## O que conta como achado
 
-**Etapa 3. Matriz de achados**
-Tabela: ID | categoria (sobreposição, antagonismo, anulação, desnecessário, desvio OpenSpec, lacuna, acoplamento) | severidade (crítica / alta / média / baixa) | arquivo:linha | evidência | impacto | recomendação.
+Só o que tem efeito em uso, em um destes critérios:
 
-**Etapa 4. Matriz de conflitos**
-Para cada par de arquivos em conflito: regra A × regra B, qual deve prevalecer e por quê.
+1. **OpenSpec:** estrutura, nome ou fluxo fora do que o OpenSpec instalado faz. O OpenSpec não se ajusta: o desvio se corrige no kit. Confira no código instalado ou na documentação oficial; sem confirmação, marque "a verificar".
+2. **Contradição:** duas instruções que mandam coisas opostas, ou uma que anula outra (inclusive pela ordem de carregamento).
+3. **Precedência:** um conflito que a ordem declarada não resolve.
+4. **Fonte única:** a mesma regra em dois lugares, já com as duas versões divergindo.
+5. **Replicação:** algo que impede criar ou atualizar um projeto sem limpeza à mão.
+6. **Contexto:** o que entra sozinho em toda sessão e pesa sem servir.
+7. **Defeito:** código, trava ou conferência que falha, deixa passar o que devia barrar ou barra o que é legítimo.
 
-**Etapa 5. Arquitetura-alvo (padrão-ouro)**
-Árvore de diretórios proposta, papel de cada arquivo e o que sai, entra, funde ou move. Destaque a separação metodologia × projeto.
+**Severidade:** crítica (quebra o uso hoje), alta (quebra em situação provável), média (dúvida ou divergência com efeito real). Entram só os críticos e altos e, no máximo, três médios baratos. Redação, repetição sem divergência e estilo não entram.
 
-**Etapa 6. Plano de correção**
-Lista numerada e priorizada por severidade e dependência, com o esforço estimado de cada item. Proponha empacotar as correções como change(s) OpenSpec.
+## Regras
 
-**Etapa 7. Checklist de replicação**
-Passos para instanciar o Trilha em uma nova aplicação, mais um checklist de validação para garantir que o template permanece padrão-ouro em revisões futuras.
+1. Leia todos os arquivos versionados (`git ls-files`), sem amostragem. Não altere nada até a aprovação.
+2. Todo achado cita o arquivo, a linha e o trecho literal. Quando der, prove executando, numa pasta descartável; diga se foi provado ou não.
+3. Em conflito, recomende um lado e diga por quê.
+4. No máximo dez achados. Se passar disso, fique com os mais graves e diga quantos ficaram de fora.
 
-# FORMATO
-- Português do Brasil, direto e técnico.
-- Tabelas para comparações; listas numeradas para procedimentos.
-- Ao final de cada etapa: resumo de 3 linhas e pergunta de confirmação antes de prosseguir.
-- Ao final da Etapa 7: aguarde minha aprovação explícita antes de executar qualquer correção.
+## A entrega: uma mensagem só
+
+1. **Veredito,** em até três linhas: o kit está bom para uso? O que é mais grave?
+2. **Achados,** numa tabela: ID | severidade | arquivo:linha | evidência (trecho literal) | efeito no uso | provado? | correção proposta.
+3. **O pacote de correção:** o menor conjunto que resolve os achados. Prefira uma change do OpenSpec (para a ferramenta, os verificadores e as travas) e um commit de texto (para o método e o kit), com o esforço estimado e a versão que ele abre.
+4. **Uma pergunta:** "aprova o pacote?".
+
+Nada de etapas com confirmação no meio, inventário de arquivos ou checklist, salvo se o usuário pedir.
+
+## Depois da aprovação
+
+Execute o pacote no ciclo de uma change do `CLAUDE.md` do kit. Grave o relatório nesta pasta, como `AAAA-MM.md`, com os achados, as decisões e o andamento. O que ficar de fora vai ao relatório como aceito, sem trabalho previsto.
