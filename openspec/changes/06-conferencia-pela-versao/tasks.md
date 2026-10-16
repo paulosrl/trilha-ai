@@ -30,7 +30,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 5. Execução manual
 
-- [ ] 5.1 Numa pasta descartável do scratchpad: uma cópia do kit com a versão da cópia de trabalho à frente, um projeto feito na versão de agora e o `bash scripts/check.sh` dele com `TRILHA_AI` nessa cópia, que termina com `ok` e o aviso da versão; depois, o mesmo com um `trilha/guarda.py` editado, que reprova; a saída mostrada ao usuário e a pasta apagada
+- [x] 5.1 Numa pasta descartável do scratchpad: uma cópia do kit com a versão da cópia de trabalho à frente, um projeto feito na versão de agora e o `bash scripts/check.sh` dele com `TRILHA_AI` nessa cópia, que termina com `ok` e o aviso da versão; depois, o mesmo com um `trilha/guarda.py` editado, que reprova; a saída mostrada ao usuário e a pasta apagada
 
 ## Workflow follow-up
 

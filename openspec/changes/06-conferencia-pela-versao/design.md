@@ -38,7 +38,25 @@ Nenhuma: os projetos recebem a conferência nova com a cópia da 2.4, pelo `kit.
 
 ## Verificação
 
-A preencher no apply, com a evidência de cada cenário.
+Cada cenário com o teste que o comprova, rodado com `python3 -m unittest discover -s testes -k <teste>`, todos com `OK` em 2026-10-15; o conjunto (173 testes) passou três rodadas seguidas, o ruff (check e format) e o `openspec validate --all --no-interactive` sem erro.
+
+| Cenário | Teste |
+|---|---|
+| Pasta igual à do kit | `test_copia_da_pasta_trilha_igual_passa` |
+| Trava editada no projeto | `test_copia_reprova_a_trava_editada` (agora com o `kit.py atualizar` na mensagem) |
+| Arquivo faltando ou a mais | `test_copia_reprova_arquivo_faltando_ou_a_mais` |
+| Permissão de execução perdida | `test_copia_reprova_a_permissao_perdida` |
+| Kit numa versão mais nova | `test_kit_mais_novo_compara_pela_tag_e_avisa` |
+| Cópia divergente com o kit mais novo | `test_kit_mais_novo_reprova_a_copia_divergente_da_tag` |
+| Versão do projeto sem tag no kit | `test_versao_sem_tag_no_kit_avisa_sem_comparar` |
+| Hooks desligados pela configuração local | `test_disable_all_hooks_local_avisa` |
+| Hooks desligados pelo projeto | `test_disable_all_hooks_do_projeto_avisa` |
+| Configuração local religa os hooks | `test_disable_all_hooks_religado_pelo_local_nao_avisa` |
+| Travas ligadas no projeto novo | `test_projeto_novo_sem_aviso_de_trava` |
+
+Antes do código, falharam os testes dos cenários "Kit numa versão mais nova", "Versão do projeto sem tag no kit", "Trava editada no projeto" e os dois do `disableAllHooks` que avisam. Os outros já passavam e ficam como guarda do que não pode mudar. Uma rodada do conjunto falhou no `test_scripts_cabem_no_lint_de_quem_copia`, por duas linhas com mais de 100 caracteres, que o `ruff format` quebrou.
+
+Execução manual (tarefa 5.1), num clone descartável do kit com a tag `v2.4` e a cópia de trabalho na 2.5, e um projeto feito na 2.4: o `bash scripts/check.sh` com `TRILHA_AI` no clone terminou com 0, com o aviso "o kit está na 2.5 e o projeto na 2.4: a pasta trilha/ foi comparada com a v2.4"; com o `trilha/guarda.py` editado, terminou com 1 e "FALHA: trilha/guarda.py difere do kit; rode o kit.py atualizar do kit, com a escolha do usuário; não edite a pasta". A pasta foi apagada.
 
 ## Respostas à revisão
 
