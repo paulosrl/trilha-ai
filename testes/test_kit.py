@@ -372,6 +372,9 @@ class Kit(unittest.TestCase):
         # O CI do próprio kit roda estes testes.
         kit = (RAIZ / ".github/workflows/testes.yml").read_text(encoding="utf-8")
         self.assertIn("run: python3 -m unittest discover -s testes", kit)
+        # E valida os specs do kit, com o OpenSpec na versão que os projetos usam (N06).
+        openspec = re.search(r"@fission-ai/openspec@[\d.]+", ci).group(0)
+        self.assertIn(f"npx --yes {openspec} validate --all --no-interactive", kit)
 
     def test_regras_de_verificacao_vindas_do_heimdall(self) -> None:
         """Cada cenário com teste nomeado e evidência; tarefa marcada só com o teste passando."""

@@ -17,6 +17,12 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0  # as tags vX.Y, que a ferramenta usa para reconhecer regras antigas
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
+        with:
+          node-version: "22"
+      # Pelo npx, sem instalar: os testes abaixo seguem rodando sem o openspec no PATH.
+      - name: Os specs do kit (openspec validate, na versão do modelo/.github/workflows/verificacao.yml)
+        run: npx --yes @fission-ai/openspec@1.14.1 validate --all --no-interactive
       - name: Os testes do kit (Python 3 puro, sem dependências)
         run: python3 -m unittest discover -s testes -v
       - name: Os scripts que os projetos copiam passam no ruff (lint e formato, limite de 100)
