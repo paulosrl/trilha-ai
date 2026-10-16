@@ -76,7 +76,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 
 ## Armadilhas
 
-- As travas do kit não se contornam: o `trilha/hooks/pre-commit` (ligado por `git config core.hooksPath trilha/hooks`) confere as regras e o método antes de cada commit, e o `trilha/guarda.py`, hook do Claude Code no `.claude/settings.json`, barra o envio forçado, o `--no-verify`, o `pkill -f` e o `pgrep -f` (o padrão casa o próprio shell: encerre processos pelo PID guardado) e o merge sem `--merge` ou sem a verificação verde. Trava que barrar algo legítimo volta ao usuário.
+- As travas do kit não se contornam: o `trilha/hooks/pre-commit` (ligado por `git config core.hooksPath trilha/hooks`) confere as regras e o método antes de cada commit, e o `trilha/guarda.py`, hook do Claude Code no `.claude/settings.json`, barra o envio forçado, o `--no-verify`, o desligamento da trava do commit, o `pkill -f` e o `pgrep -f` (o padrão casa o próprio shell: encerre processos pelo PID guardado) e o merge sem `--merge` ou sem a verificação verde. Trava que barrar algo legítimo volta ao usuário.
 - Nunca pare, remova ou mate processo ou container de outro projeto sem ordem explícita.
 - Senha, chave ou token nunca entram no git; o CI os procura no histórico (gitleaks). Achado real: troque a chave antes de qualquer outra coisa, porque apagá-la do git não a desfaz no histórico; falso positivo vai ao `.gitleaksignore`, com a escolha do usuário.
 - Dado real nunca serve a teste manual: use uma cópia descartável e prove, antes e depois, que o real não mudou.

@@ -740,14 +740,19 @@ class Kit(unittest.TestCase):
         for nome, marcador in REGRAS.STACK_DO_MODELO.items():
             self.assertIn(marcador, (MODELO / ORIGEM[nome]).read_text(encoding="utf-8"), nome)
 
-    def _avisos_da_stack(self, com_tdd: bool, preenchida: bool = False) -> list[str]:
-        """As linhas de aviso da stack da conferência das regras num projeto feito do kit."""
+    def _avisos_da_stack(self, com_tdd: bool, preenchida: bool = False, com_spec: bool = False
+                         ) -> list[str]:
+        """As linhas de aviso da stack da conferência das regras num projeto feito do kit; com o
+        spec, o projeto que já arquivou a change 01."""
         with tempfile.TemporaryDirectory() as tmp:
             destino = Path(tmp)
             _copia_do_kit(destino)
             (destino / "sdd").mkdir(exist_ok=True)
             if com_tdd:
                 (destino / "sdd/tdd-x.md").write_text("# TDD\n", encoding="utf-8")
+            if com_spec:
+                (destino / "openspec/specs/x").mkdir(parents=True)
+                (destino / "openspec/specs/x/spec.md").write_text("# x Specification\n", encoding="utf-8")
             if preenchida:
                 for nome, marcador in REGRAS.STACK_DO_MODELO.items():
                     alvo = destino / nome
@@ -759,7 +764,18 @@ class Kit(unittest.TestCase):
         return [l for l in saida.stderr.splitlines() if l.startswith("aviso:") and "parte da stack" in l]
 
     def test_tdd_com_a_stack_do_modelo_avisa(self) -> None:
+        """Change 07: no gate 2, só o Dependabot, o .gitignore e o contexto; o check.sh e o CI vêm
+        com a change 01."""
         avisos = self._avisos_da_stack(com_tdd=True)
+        self.assertEqual(len(avisos), 1, avisos)
+        lugares = avisos[0].split(" em ", 1)[1].split(";", 1)[0]
+        for lugar in (".github/dependabot.yml", ".gitignore", "openspec/config.yaml"):
+            self.assertIn(lugar, lugares)
+        for lugar in ("scripts/check.sh", ".github/workflows/verificacao.yml"):
+            self.assertNotIn(lugar, lugares)
+
+    def test_change_01_arquivada_avisa_os_cinco(self) -> None:
+        avisos = self._avisos_da_stack(com_tdd=True, com_spec=True)
         self.assertEqual(len(avisos), 1, avisos)
         for lugar in ("scripts/check.sh", ".github/workflows/verificacao.yml", ".github/dependabot.yml",
                       ".gitignore", "openspec/config.yaml"):
@@ -785,7 +801,7 @@ class Kit(unittest.TestCase):
                                    capture_output=True, text=True, check=False)
         self.assertEqual(saida.returncode, 0, saida.stderr)
         aviso = next(l for l in saida.stderr.splitlines() if "parte da stack" in l)
-        self.assertIn("scripts/check.sh", aviso)  # os outros três seguem por preencher
+        self.assertIn("openspec/config.yaml", aviso)  # o contexto segue por preencher
         self.assertNotIn(".gitignore", aviso)
         self.assertNotIn("dependabot.yml", aviso)
 
@@ -1215,17 +1231,16 @@ class Kit(unittest.TestCase):
         self.assertNotIn('", em " + dados.atualizado', modelo)
 
 
-    def _guarda(self, comando: str, gh_sai_com: int = 0) -> subprocess.CompletedProcess:
-        """Roda a trava com um gh falso no PATH, que sai com o código pedido."""
-        import json
-
+    def _guarda(self, comando: str, gh_sai_com: int = 0, gh_corpo: str | None = None,
+                trava: Path | None = None) -> subprocess.CompletedProcess:
+        """Roda a trava com um gh falso no PATH, que sai com o código pedido (ou roda o corpo)."""
         with tempfile.TemporaryDirectory() as tmp:
             gh = Path(tmp) / "gh"
-            gh.write_text(f"#!/bin/sh\nexit {gh_sai_com}\n")
+            gh.write_text(f"#!/bin/sh\n{gh_corpo or f'exit {gh_sai_com}'}\n")
             gh.chmod(0o755)
             env = {**os.environ, "PATH": f"{tmp}:{os.environ['PATH']}"}
             return subprocess.run(
-                [sys.executable, "-I", str(MODELO / "trilha/guarda.py")],
+                [sys.executable, "-I", str(trava or MODELO / "trilha/guarda.py")],
                 input=json.dumps({"tool_name": "Bash", "tool_input": {"command": comando}}),
                 capture_output=True, text=True, check=False, env=env,
             )
@@ -1257,6 +1272,95 @@ class Kit(unittest.TestCase):
                         "git push && rm -f x", "pkill -F arquivo.pid", "echo git push -f"):
             saida = self._guarda(comando)
             self.assertEqual(saida.returncode, 0, f"{comando}: {saida.stderr}")
+
+    # A trava contra os contornos da rodada 4 da auditoria (change 07).
+
+    def _barrados(self, comandos: tuple[str, ...]) -> None:
+        for comando in comandos:
+            saida = self._guarda(comando)
+            self.assertEqual(saida.returncode, 2, f"{comando!r}: {saida.stderr}")
+            self.assertIn("bloqueado pela trava do método", saida.stderr)
+
+    def _livres(self, comandos: tuple[str, ...]) -> None:
+        for comando in comandos:
+            saida = self._guarda(comando)
+            self.assertEqual(saida.returncode, 0, f"{comando!r}: {saida.stderr}")
+
+    def test_trava_barra_o_hookspath_desligado(self) -> None:
+        self._barrados(("git -c core.hooksPath=/dev/null commit -m x", "git -ccore.hooksPath= commit -m x",
+                        "git -c core.hookspath=.git/hooks commit -m x",
+                        "git config core.hooksPath .git/hooks", "git config --unset core.hooksPath",
+                        "git config --local core.hooksPath /dev/null"))
+
+    def test_trava_deixa_ler_e_gravar_o_hookspath_do_metodo(self) -> None:
+        self._livres(("git config core.hooksPath", "git config core.hooksPath trilha/hooks",
+                      "git -c core.hooksPath=trilha/hooks commit -m x"))
+
+    def test_trava_barra_o_no_verify_abreviado(self) -> None:
+        self._barrados(("git commit --no-veri -m y", "git commit --no-verif -m y", "git push --no-veri"))
+        self._livres(("git commit --no-edit", "git log --no-walk"))
+
+    def test_trava_barra_o_push_forcado_atras_de_outro_comando(self) -> None:
+        self._barrados(("timeout 10 git push -f", "echo main | xargs git push -f origin",
+                        "eval git push -f", "nice -n 5 git push --force", "xargs -I {} git push -f origin {}"))
+
+    def test_trava_barra_o_push_forcado_nas_palavras_do_shell(self) -> None:
+        self._barrados(("if true; then git push -f; fi", "{ git push -f; }",
+                        "for b in a; do git push -f origin $b; done", "while false; do :; done; ! git push -f"))
+
+    def test_trava_barra_o_push_forcado_em_shell_aninhado(self) -> None:
+        self._barrados(('bash -lc "git push -f"', "bash -xc 'git push --force'", 'bash <<< "git push -f"',
+                        "`git push -f`", "echo $(git push -f)"))
+
+    def test_trava_barra_o_push_forcado_com_cerquilha_ou_aspa_sem_par(self) -> None:
+        self._barrados(("echo a#b; git push -f", "[ ${#x} -eq 0 ] && git push -f",
+                        "cd repo  # entra\ngit push --force-with-lease",
+                        "cat > n.txt <<EOF\nit's\nEOF\ngit push --force"))
+
+    def test_trava_barra_a_forca_abreviada_e_o_espelho(self) -> None:
+        self._barrados(("git push --force-w", "git push --forc", "git push --mirror", "git push --mirr origin"))
+
+    def test_trava_deixa_o_git_como_argumento(self) -> None:
+        self._livres(("echo git push -f", "git push && rm -f x", "git push --force-if-includes",
+                      "git push -u origin change/07-x", "grep -rn 'git push -f' docs"))
+
+    def test_trava_le_o_subcomando_depois_das_opcoes_globais(self) -> None:
+        self._livres(("git log --grep commit -n 3", "git log -n 3 -- push -f", "git show HEAD -- commit"))
+        self._barrados(("git -C ../x push -f", "git --git-dir=.git push --force", "git -c x.y=1 commit -n -m z"))
+
+    def test_trava_aceita_o_merge_com_m(self) -> None:
+        self._livres(("gh pr merge 7 -m -d", "gh pr merge 7 -md"))
+        self._barrados(("gh pr merge 7 -s", "gh pr merge 7 -m -r"))
+
+    def test_trava_confere_o_pr_no_repositorio_indicado(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            registro = Path(tmp) / "args.txt"
+            saida = self._guarda("gh pr merge -R dono/repo 7 --merge -t 'titulo'",
+                                 gh_corpo=f'echo "$@" >> {registro}; exit 0')
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            chamada = registro.read_text(encoding="utf-8").split()
+        self.assertEqual(chamada[:3], ["pr", "checks", "7"])
+        self.assertIn("dono/repo", chamada)
+        self.assertNotIn("titulo", chamada)
+
+    def test_trava_barra_a_verificacao_que_nao_responde(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            guarda = Path(tmp) / "guarda.py"
+            texto = (MODELO / "trilha/guarda.py").read_text(encoding="utf-8")
+            self.assertIn("PRAZO_DO_GH = 30", texto)
+            guarda.write_text(texto.replace("PRAZO_DO_GH = 30", "PRAZO_DO_GH = 1"), encoding="utf-8")
+            inicio = time.monotonic()
+            saida = self._guarda("gh pr merge 7 --merge", gh_corpo="sleep 5; exit 0", trava=guarda)
+            self.assertLess(time.monotonic() - inicio, 4)
+        self.assertEqual(saida.returncode, 2)
+        self.assertIn("não respondeu", saida.stderr)
+
+    def test_trava_deixa_passar_a_entrada_sem_comando(self) -> None:
+        for entrada in ("[]", '{"tool_input": "x"}', '{"tool_input": {"command": 3}}', "{}"):
+            saida = subprocess.run([sys.executable, "-I", str(MODELO / "trilha/guarda.py")], input=entrada,
+                                   capture_output=True, text=True, check=False)
+            self.assertEqual(saida.returncode, 0, f"{entrada}: {saida.stderr}")
+            self.assertEqual(saida.stderr, "", entrada)
 
     def test_travas_ligadas_no_projeto_novo_e_a_do_commit_funciona(self) -> None:
         env = {**os.environ, **GIT_TESTE}
@@ -2042,6 +2146,47 @@ class Kit(unittest.TestCase):
                                     flags=re.M), encoding="utf-8")
             subprocess.run(["git", "commit", "-qam", "de volta à 1.29"], cwd=pasta, env=env, check=True)
             self.assertNotIn("a parte fixa", self._ferramenta("atualizar", str(pasta)).stdout)
+
+    # O atualizar que confere o kit antes de mudar o projeto (change 07).
+
+    def _atualizar_sem_mudar(self, kit: Path, pasta: Path) -> subprocess.CompletedProcess:
+        """O atualizar de outro kit, conferindo que o projeto ficou como estava."""
+        saida = subprocess.run([sys.executable, "-I", str(kit / "ferramentas/kit.py"), "atualizar", str(pasta)],
+                               capture_output=True, text=True, check=False)
+        self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
+        mudou = subprocess.run(["git", "status", "--porcelain"], cwd=pasta, capture_output=True, text=True)
+        self.assertEqual(mudou.stdout, "", "o projeto mudou antes da recusa")
+        self.assertNotIn("commit sugerido", saida.stdout)
+        return saida
+
+    def test_atualizar_recusa_o_kit_atras_do_projeto(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            comum = pasta / "trilha/CLAUDE-comum.md"
+            comum.write_text(re.sub(r"^Versão [\d.]+,", "Versão 9.9,", comum.read_text(encoding="utf-8"),
+                                    flags=re.M), encoding="utf-8")
+            self._commit_tudo(pasta, "comum na 9.9")
+            saida = self._atualizar_sem_mudar(RAIZ, pasta)
+        versao = FERRAMENTA._versao(MODELO / "trilha/CLAUDE-comum.md")
+        for trecho in ("9.9", versao, "git pull"):
+            self.assertIn(trecho, saida.stderr)
+
+    def test_atualizar_recusa_o_kit_sem_git(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            kit = Path(tmp) / "kit-zip"
+            shutil.copytree(RAIZ, kit, ignore=shutil.ignore_patterns(".git", "__pycache__", ".ruff_cache"))
+            saida = self._atualizar_sem_mudar(kit, pasta)
+        self.assertIn("não é um repositório git", saida.stderr)
+
+    def test_atualizar_recusa_o_kit_raso(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            kit = Path(tmp) / "kit-raso"
+            subprocess.run(["git", "clone", "-q", "--depth", "1", f"file://{RAIZ}", str(kit)], check=True)
+            shutil.copy(RAIZ / "ferramentas/kit.py", kit / "ferramentas/kit.py")  # o kit.py de agora
+            saida = self._atualizar_sem_mudar(kit, pasta)
+        self.assertIn("git fetch --unshallow --tags", saida.stderr)
 
     def test_ferramenta_recusa_trabalho_pendente_change_em_curso_e_outra_branch(self) -> None:
         env = {**os.environ, **GIT_TESTE}
