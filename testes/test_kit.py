@@ -2219,7 +2219,7 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
             kit = Path(tmp) / "kit-zip"
-            shutil.copytree(RAIZ, kit, ignore=shutil.ignore_patterns(".git", "__pycache__", ".ruff_cache"))
+            shutil.copytree(RAIZ, kit, ignore=shutil.ignore_patterns(".git", "__pycache__", ".ruff_cache", ".codegraph"))
             saida = self._atualizar_sem_mudar(kit, pasta)
         self.assertIn("não é um repositório git", saida.stderr)
 
@@ -2233,7 +2233,7 @@ class Kit(unittest.TestCase):
                 subprocess.run(["git", "-C", str(pai), "-c", "commit.gpgsign=false", *comando], check=True,
                                env={**os.environ, **GIT_TESTE})
             kit = pai / "kit"
-            shutil.copytree(RAIZ, kit, ignore=shutil.ignore_patterns(".git", "__pycache__", ".ruff_cache"))
+            shutil.copytree(RAIZ, kit, ignore=shutil.ignore_patterns(".git", "__pycache__", ".ruff_cache", ".codegraph"))
             saida = self._atualizar_sem_mudar(kit, pasta)
         self.assertIn("não é um repositório git", saida.stderr)
 
