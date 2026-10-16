@@ -133,36 +133,37 @@ def _conteudos(pasta: Path) -> Conteudos:
     }
 
 
-def _conteudos_da_tag(kit: Path, tag: str) -> Conteudos | None:
-    """A modelo/trilha/ do kit numa tag, lida pelo git, sem extrair nada; None sem a tag (ou sem
-    o git, num clone raso) ou sem a pasta nela (antes da 2.0)."""
-    lista = subprocess.run(
-        ["git", "-C", str(kit), "ls-tree", "-r", "-z", tag, "--", "modelo/trilha"],
-        capture_output=True,
-        check=False,
-    )
-    if lista.returncode != 0:
+def _git(kit: Path, *args: str, entrada: bytes | None = None) -> bytes | None:
+    """A saída de um comando git no kit; None se ele falhar ou se o git não estiver instalado."""
+    try:
+        saida = subprocess.run(
+            ["git", "-C", str(kit), *args], input=entrada, capture_output=True, check=False
+        )
+    except OSError:
         return None
+    return saida.stdout if saida.returncode == 0 else None
+
+
+def _conteudos_da_tag(kit: Path, tag: str) -> Conteudos | None:
+    """A modelo/trilha/ do kit numa tag, lida pelo git, sem extrair nada; None se ela não se lê
+    (sem a tag, sem o git, clone raso ou parcial) ou não tem a pasta (antes da 2.0)."""
+    lista = _git(kit, "ls-tree", "-r", "-z", f"refs/tags/{tag}", "--", "modelo/trilha")
     itens = []
-    for registro in filter(None, lista.stdout.split(b"\0")):
+    for registro in filter(None, (lista or b"").split(b"\0")):
         info, caminho = registro.split(b"\t", 1)
         modo, tipo, objeto = info.split()
         if tipo == b"blob":
             itens.append((caminho.decode("utf-8"), modo == b"100755", objeto))
     if not itens:
         return None
-    lote = subprocess.run(
-        ["git", "-C", str(kit), "cat-file", "--batch"],
-        input=b"".join(objeto + b"\n" for _, _, objeto in itens),
-        capture_output=True,
-        check=False,
-    )
-    if lote.returncode != 0:
-        return None
-    resto, conteudos = lote.stdout, {}
+    lote = _git(kit, "cat-file", "--batch", entrada=b"".join(o + b"\n" for _, _, o in itens))
+    resto, conteudos = lote or b"", {}
     for caminho, executavel, _ in itens:  # cada um: "<objeto> blob <tamanho>\n<conteúdo>\n"
-        cabeca, resto = resto.split(b"\n", 1)
-        tamanho = int(cabeca.split()[2])
+        cabeca, _, resto = resto.partition(b"\n")
+        partes = cabeca.split()
+        if len(partes) != 3 or partes[1] != b"blob":  # "<objeto> missing": o objeto falta
+            return None
+        tamanho = int(partes[2])
         conteudos[caminho.removeprefix("modelo/trilha/")] = (resto[:tamanho], executavel)
         resto = resto[tamanho + 1 :]
     return conteudos
@@ -192,25 +193,39 @@ def _diferencas(deles: Conteudos, nossos: Conteudos) -> list[str]:
 
 def comparar_com_o_kit(raiz: Path, fonte: Path) -> tuple[list[str], list[str]]:
     """As falhas e os avisos da pasta trilha/ comparada com a da versão do projeto: a cópia de
-    trabalho do kit, na mesma versão; a tag vX.Y do kit, noutra (o kit mais novo só avisa)."""
+    trabalho do kit, na mesma versão (ou sem a linha de versão no projeto); a tag vX.Y do kit,
+    noutra, só com aviso. A versão que o kit não tem, num kit com as tags, reprova."""
     original = fonte / "modelo" / "trilha"
     if not (original / "CLAUDE-comum.md").is_file():
         return [f"a fonte {original} não existe ou não é a pasta do kit"], []
     nossa = _versao(raiz / "trilha" / "CLAUDE-comum.md")
     do_kit = _versao(original / "CLAUDE-comum.md")
-    if nossa == do_kit:
+    if not nossa or not do_kit or nossa == do_kit:
         return _diferencas(_conteudos(original), _conteudos(raiz / "trilha")), []
-    da_tag = _conteudos_da_tag(fonte, f"v{nossa}") if nossa else None
+    da_tag = _conteudos_da_tag(fonte, f"v{nossa}")
     if da_tag is None:
+        tem_a_tag = _git(fonte, "rev-parse", "-q", "--verify", f"refs/tags/v{nossa}") is not None
+        if not tem_a_tag and (_git(fonte, "tag", "--list", "v*") or b"").strip():
+            falha = (
+                f"a versão {nossa} do projeto não existe no kit (falta a tag v{nossa}): confira a "
+                "linha Versão do trilha/CLAUDE-comum.md ou atualize o kit ao lado (git pull --tags)"
+            )
+            return [falha], []
         aviso = (
-            f"o kit está na {do_kit} e não tem a tag v{nossa or '?'} da versão do projeto; a "
-            "pasta trilha/ não foi comparada"
+            f"não foi possível ler a v{nossa} do kit pelo git; a pasta trilha/ não foi comparada"
         )
         return [], [aviso]
-    aviso = (
-        f"o kit está na {do_kit} e o projeto na {nossa}: a pasta trilha/ foi comparada com a "
-        f"v{nossa}; para a versão nova, rode o kit.py atualizar do kit, com a escolha do usuário"
-    )
+    if tuple(map(int, nossa.split("."))) > tuple(map(int, do_kit.split("."))):
+        aviso = (
+            f"o kit ao lado está na {do_kit}, atrás do projeto ({nossa}): a pasta trilha/ foi "
+            f"comparada com a v{nossa}; atualize o kit ao lado (git pull)"
+        )
+    else:
+        aviso = (
+            f"o kit está na {do_kit} e o projeto na {nossa}: a pasta trilha/ foi comparada com a "
+            f"v{nossa}; para a versão nova, rode o kit.py atualizar do kit, com a escolha do "
+            "usuário"
+        )
     return _diferencas(da_tag, _conteudos(raiz / "trilha")), [aviso]
 
 

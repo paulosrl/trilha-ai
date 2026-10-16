@@ -1562,20 +1562,24 @@ class Kit(unittest.TestCase):
         self.assertIn("trilha/guarda.py difere do kit", saida.stderr)
         self.assertIn("kit.py atualizar", saida.stderr)  # nunca editar a pasta (C02)
 
-    def _kit_falso(self, tmp: str, com_tag: bool = True) -> Path:
-        """Um kit com a modelo/trilha/ de agora, commitada e com a tag da versão dela (ou sem), cuja
-        cópia de trabalho já subiu para a 9.9: o kit ao lado de um projeto atrasado (change 06)."""
+    def _kit_falso(self, tmp: str, com_tag: bool = True, versao: str = "9.9") -> Path:
+        """Um kit com a modelo/trilha/ de agora, commitada e com a tag da versão dela (ou sem tag
+        nenhuma), cuja cópia de trabalho já está noutra versão (a 9.9, à frente): o kit ao lado de
+        um projeto atrasado (change 06). Sem os ganchos e a assinatura da configuração global."""
         kit = Path(tmp) / "kit"
         shutil.copytree(MODELO / "trilha", kit / "modelo/trilha",
                         ignore=shutil.ignore_patterns("__pycache__"))
         env = {**os.environ, **GIT_TESTE}
+        git = ["git", "-C", str(kit), "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false",
+               "-c", "tag.gpgsign=false"]
         for comando in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "kit"]):
-            subprocess.run(["git", "-C", str(kit), *comando], check=True, env=env)
+            subprocess.run([*git, *comando], check=True, env=env)
         if com_tag:
-            versao = FERRAMENTA._versao(MODELO / "trilha/CLAUDE-comum.md")
-            subprocess.run(["git", "-C", str(kit), "tag", f"v{versao}"], check=True, env=env)
+            atual = FERRAMENTA._versao(MODELO / "trilha/CLAUDE-comum.md")
+            subprocess.run([*git, "tag", f"v{atual}"], check=True, env=env)
         comum = kit / "modelo/trilha/CLAUDE-comum.md"
-        texto = re.sub(r"^Versão \d+\.\d+,", "Versão 9.9,", comum.read_text(encoding="utf-8"), flags=re.M)
+        texto = re.sub(r"^Versão \d+\.\d+,", f"Versão {versao},", comum.read_text(encoding="utf-8"),
+                       flags=re.M)
         comum.write_text(texto, encoding="utf-8")
         return kit
 
@@ -1595,6 +1599,41 @@ class Kit(unittest.TestCase):
     def test_kit_mais_novo_reprova_a_copia_divergente_da_tag(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
+            guarda = pasta / "trilha/guarda.py"
+            guarda.write_text(guarda.read_text(encoding="utf-8") + "\n# afrouxada\n", encoding="utf-8")
+            saida = self._regras_no_kit(pasta, self._kit_falso(tmp))
+        self.assertEqual(saida.returncode, 1)
+        self.assertIn("trilha/guarda.py difere do kit", saida.stderr)
+        # Comparado com a tag, o comum é igual; com a cópia de trabalho (na 9.9), diferiria.
+        self.assertNotIn("trilha/CLAUDE-comum.md difere", saida.stderr)
+
+    def test_kit_atras_do_projeto_avisa_sem_mandar_atualizar(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            saida = self._regras_no_kit(self._projeto_novo(tmp), self._kit_falso(tmp, versao="1.0"))
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next((l for l in saida.stderr.splitlines() if "1.0" in l), "")
+        self.assertIn("atualize o kit ao lado", aviso, saida.stderr)
+        self.assertNotIn("kit.py atualizar", aviso)  # o atualizar rebaixaria o projeto
+
+    def test_versao_que_o_kit_nao_tem_reprova(self) -> None:
+        """Revisão de código, ponto 1: a linha Versão trocada à mão não desliga a comparação."""
+        for inventada in ("1.99", "9.98"):
+            with tempfile.TemporaryDirectory() as tmp:
+                pasta = self._projeto_novo(tmp)
+                comum = pasta / "trilha/CLAUDE-comum.md"
+                comum.write_text(re.sub(r"^Versão \d+\.\d+,", f"Versão {inventada},",
+                                        comum.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
+                saida = self._regras_no_kit(pasta, self._kit_falso(tmp))
+            self.assertEqual(saida.returncode, 1, inventada)
+            self.assertIn(f"a versão {inventada} do projeto não existe no kit", saida.stderr)
+
+    def test_comum_sem_versao_compara_com_a_copia_do_kit(self) -> None:
+        """Revisão de código, ponto 4: sem a linha Versão, as outras diferenças não se escondem."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            comum = pasta / "trilha/CLAUDE-comum.md"
+            comum.write_text(comum.read_text(encoding="utf-8").replace("Versão ", "Versao ", 1),
+                             encoding="utf-8")
             guarda = pasta / "trilha/guarda.py"
             guarda.write_text(guarda.read_text(encoding="utf-8") + "\n# afrouxada\n", encoding="utf-8")
             saida = self._regras_no_kit(pasta, self._kit_falso(tmp))

@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Cópia idêntica da pasta do método
-Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `trilha/` do projeto com a `modelo/trilha/` da versão do projeto (a linha "Versão X.Y" do `trilha/CLAUDE-comum.md`): a cópia de trabalho do kit, quando ele está na mesma versão; a tag `vX.Y` do kit, quando não está. Ela MUST reprovar, nomeando o arquivo e mandando rodar o `kit.py atualizar`, quando um arquivo estiver diferente, faltar no projeto, existir só no projeto ou tiver perdido a permissão de execução.
+Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `trilha/` do projeto com a `modelo/trilha/` da versão do projeto (a linha "Versão X.Y" do `trilha/CLAUDE-comum.md`): a cópia de trabalho do kit, na mesma versão ou sem a linha no projeto; a tag `vX.Y` do kit, noutra. Ela MUST reprovar, nomeando o arquivo e mandando rodar o `kit.py atualizar`, o arquivo diferente, faltando, a mais ou sem a permissão de execução, e a versão que um kit com as tags não tem.
 
 #### Scenario: Pasta igual à do kit
 - **WHEN** a pasta `trilha/` do projeto tem os mesmos arquivos, com o mesmo conteúdo, que a `modelo/trilha/` do kit
@@ -29,10 +29,23 @@ Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `t
 - **WHEN** a cópia de trabalho do kit está numa versão mais nova, o kit tem a tag da versão do projeto, e o `trilha/guarda.py` do projeto difere do dessa tag
 - **THEN** a conferência das regras reprova, citando `trilha/guarda.py`
 
-#### Scenario: Versão do projeto sem tag no kit
-- **WHEN** o kit está noutra versão e não tem a tag da versão do projeto
+#### Scenario: Kit sem as tags
+- **WHEN** o kit está noutra versão e não tem tag nenhuma (um clone raso, por exemplo)
 - **THEN** a conferência das regras avisa que a pasta `trilha/` não foi comparada
 - **AND** não reprova pela cópia
+
+#### Scenario: Versão que o kit não tem
+- **WHEN** o kit tem as tags `vX.Y` e nenhuma é a da versão do projeto, como a de uma linha "Versão" trocada à mão, abaixo ou acima da do kit
+- **THEN** a conferência das regras reprova, citando a versão do projeto
+
+#### Scenario: Kit atrás do projeto
+- **WHEN** a cópia de trabalho do kit está numa versão mais antiga que a do projeto e o kit tem a tag da versão do projeto
+- **THEN** a conferência das regras não reprova pela cópia
+- **AND** avisa para atualizar o kit ao lado, sem mandar rodar o `kit.py atualizar`
+
+#### Scenario: Comum sem a linha de versão
+- **WHEN** o `trilha/CLAUDE-comum.md` do projeto não tem a linha "Versão X.Y" e o `trilha/guarda.py` difere do kit
+- **THEN** a conferência das regras compara com a cópia de trabalho do kit e reprova, citando `trilha/guarda.py`
 
 ## ADDED Requirements
 

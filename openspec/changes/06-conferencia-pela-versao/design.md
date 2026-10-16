@@ -20,7 +20,7 @@ O `--fonte` está no `modelo/trilha/confere_regras.py`: a função `conferir` l�
 
 **2. A pasta da tag lida pelo git, sem extrair arquivos.** `git -C <kit> ls-tree -r -z vX.Y -- modelo/trilha` dá, por arquivo, o modo (`100755` é executável) e o objeto; `git -C <kit> cat-file --batch` dá o conteúdo de todos de uma vez. Os dois lados viram o mesmo formato (nome → conteúdo e se é executável), e uma só função compara, com as mensagens de hoje. Alternativa descartada: `git archive` extraído numa pasta temporária, que pede o `tarfile` com filtro de extração (diferente entre versões do Python) e escreve no disco.
 
-**3. Sem a tag, aviso.** O `ls-tree` que falha (tag ausente, clone raso, pasta sem git) ou que não traz a `modelo/trilha/` (tag de antes da 2.0) vira o aviso "a pasta trilha/ não foi comparada", sem falha.
+**3. A tag que não se lê.** Sem a linha de versão no projeto, a comparação é com a cópia de trabalho. Com a versão, e o kit com as tags `v*` mas sem a da versão do projeto, a conferência reprova: essa versão nunca existiu (revista depois da revisão de código, ponto 1). Sem tag nenhuma (clone raso), sem o git, ou com a tag que existe e não se lê (clone parcial sem rede), só avisa que a pasta não foi comparada. Kit atrás do projeto (os números da versão comparados) avisa para atualizar o kit, nunca o projeto.
 
 **4. As mensagens.** A falha mantém o começo de hoje ("trilha/<arquivo> difere do kit", "falta", "não é do kit", "perdeu a permissão de execução") e termina com "rode o kit.py atualizar do kit, com a escolha do usuário; não edite a pasta". O aviso da versão diferente cita as duas versões: "o kit está na A.B e o projeto na X.Y: a pasta trilha/ foi comparada com a vX.Y; rode o kit.py atualizar do kit, com a escolha do usuário".
 
@@ -48,7 +48,10 @@ Cada cenário com o teste que o comprova, rodado com `python3 -m unittest discov
 | Permissão de execução perdida | `test_copia_reprova_a_permissao_perdida` |
 | Kit numa versão mais nova | `test_kit_mais_novo_compara_pela_tag_e_avisa` |
 | Cópia divergente com o kit mais novo | `test_kit_mais_novo_reprova_a_copia_divergente_da_tag` |
-| Versão do projeto sem tag no kit | `test_versao_sem_tag_no_kit_avisa_sem_comparar` |
+| Kit sem as tags | `test_versao_sem_tag_no_kit_avisa_sem_comparar` |
+| Versão que o kit não tem | `test_versao_que_o_kit_nao_tem_reprova` |
+| Kit atrás do projeto | `test_kit_atras_do_projeto_avisa_sem_mandar_atualizar` |
+| Comum sem a linha de versão | `test_comum_sem_versao_compara_com_a_copia_do_kit` |
 | Hooks desligados pela configuração local | `test_disable_all_hooks_local_avisa` |
 | Hooks desligados pelo projeto | `test_disable_all_hooks_do_projeto_avisa` |
 | Configuração local religa os hooks | `test_disable_all_hooks_religado_pelo_local_nao_avisa` |
@@ -60,4 +63,14 @@ Execução manual (tarefa 5.1), num clone descartável do kit com a tag `v2.4` e
 
 ## Respostas à revisão
 
-A preencher depois do `/opsx:verify` e da revisão de código.
+O `/opsx:verify` não achou crítico nem aviso e fez uma sugestão. A revisão de código, num agente sem o contexto da sessão, achou 7 pontos. O usuário delegou as escolhas ("sempre a melhor escolha", na rodada 1 da auditoria); a decisão de cada um:
+
+1. **Aplicado.** A linha "Versão" trocada à mão para uma versão sem tag desligava a comparação (provado: `guarda.py` editado e versão 2.9 ou 1.99 passavam). Agora reprova num kit com as tags; teste `test_versao_que_o_kit_nao_tem_reprova`.
+2. **Recusado.** O fim de linha CRLF (`core.autocrlf=true`) e a permissão de execução no Windows nativo: o método é só para Linux ou WSL (`CLAUDE-comum.md`, segundo parágrafo), onde o git não converte o fim de linha e a permissão existe.
+3. **Aplicado.** Com o kit atrás do projeto, o aviso mandava rodar o `kit.py atualizar`, que rebaixaria o projeto. Agora manda atualizar o kit; teste `test_kit_atras_do_projeto_avisa_sem_mandar_atualizar`.
+4. **Aplicado.** Sem a linha de versão no projeto, nada era comparado. Agora compara com a cópia de trabalho; teste `test_comum_sem_versao_compara_com_a_copia_do_kit`.
+5. **Aplicado.** A tag que existe e não se lê (clone parcial, `safe.directory`) recebe a mensagem neutra "não foi possível ler a vX.Y do kit pelo git".
+6. **Aplicado.** O git ausente não quebra mais a conferência (o `OSError` vira aviso), a tag é lida por `refs/tags/vX.Y` (não pega uma branch de mesmo nome), e o objeto que falta no `cat-file` vira aviso, sem erro.
+7. **Aplicado.** O kit falso dos testes não usa os ganchos nem a assinatura da configuração global do git.
+
+Sugestão do verify, **aplicada**: o `test_kit_mais_novo_reprova_a_copia_divergente_da_tag` confere que o comum não aparece como divergente, o que só vale na comparação pela tag.
