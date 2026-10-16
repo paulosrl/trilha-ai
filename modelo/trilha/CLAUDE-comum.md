@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 2.4, de 2026-10-15. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
+Versão 2.5, de 2026-10-16. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o guarda na pasta `trilha/`, com o resto do que o método copia sem mudar, e o importa no seu `CLAUDE.md` com `@trilha/CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Em conflito, vale nesta ordem: as travas do kit; a escolha do usuário; o OpenSpec (fluxo e formato); a regra do `CLAUDE.md` do repositório declarada em "Exceções ao comum", com o motivo (fora dessa seção, regra contrária a esta não vale); este arquivo, que conta como parte do `CLAUDE.md` que o importa; o `openspec/config.yaml`; as skills `sdd:*`.
 
@@ -19,9 +19,9 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 - Faltou requisito: a pendência volta ao PRD. Faltou decisão técnica: volta ao TDD. Não improvise.
 - PRD e spec em desacordo: vale o PRD aprovado, e uma change corrige o comportamento e o spec; se o certo for o spec, o PRD ganha versão nova. O usuário escolhe qual dos dois está certo.
 - Para contrariar ou estender um ADR, pare e pergunte. Mudança de decisão técnica é uma nova versão do TDD, aprovada antes do código.
-- Ao fechar o gate 2, antes da decomposição, a stack decidida no TDD entra nos lugares que a esperam: a parte da stack do `scripts/check.sh`, os passos do `.github/workflows/verificacao.yml`, o `.github/dependabot.yml`, o bloco do `.gitignore` e a linha "Stack" do `context` do `openspec/config.yaml`. Até lá, o `check.sh` avisa que ela falta.
+- Ao fechar o gate 2, antes da decomposição, a stack decidida no TDD entra no `.github/dependabot.yml`, no bloco do `.gitignore` e na linha "Stack" do `context` do `openspec/config.yaml`. A parte da stack do `scripts/check.sh` e os passos do `.github/workflows/verificacao.yml` entram na change 01, que cria o manifesto e o primeiro teste. Até lá, o `check.sh` avisa que ela falta.
 - Projeto que nasceu sem PRD ou TDD escreve o que falta antes da próxima change que toque requisito ou tecnologia. Até lá, uma correção de comportamento que um spec já descreve nasce de um briefing curto, escrito a partir desse spec (o requisito e o cenário corrigidos, o defeito, o esperado, o que já existe), sem requisito novo nem decisão técnica, aprovado pelo usuário; o resto do ciclo é o mesmo. Nesse caso, o passo do ciclo de cada change fica no `ANDAMENTO.md`, e a change arquivada entra na tabela "Ciclo" quando a decomposição nascer. Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.
-- Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito, ajuste de teste e a cópia nova do kit (a pasta `trilha/` e o que o `kit.py atualizar` escreve) dispensam change.
+- Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito, ajuste de teste e a cópia nova do kit (a pasta `trilha/` e o que o `kit.py atualizar` escreve) dispensam change, como o pull request do Dependabot, que vai à main com a verificação verde, merge commit e o "sim" do usuário. A mudança de infraestrutura sem requisito é change com `skip_specs: true` no `.openspec.yaml`, de briefing curto com a origem no ADR.
 
 ## O ciclo de cada change (OpenSpec)
 

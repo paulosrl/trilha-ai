@@ -23,7 +23,7 @@ context: |
 # das tarefas) fica nas instruções dele, que o OpenSpec dá junto com estas.
 rules:
   proposal:
-    - Citar o RF de origem na motivação; no projeto ainda sem PRD, o requisito do spec que a change corrige.
+    - Citar o RF de origem na motivação; no projeto ainda sem PRD, o requisito do spec que a change corrige; na mudança de infraestrutura sem requisito, o ADR.
     - Listar o que fica fora da change.
   design:
     - Referenciar cada decisão técnica herdada pelo ADR do TDD; nunca redecidir tecnologia.

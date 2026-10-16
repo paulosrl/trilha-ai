@@ -50,7 +50,7 @@ Emita no chat o **relatório de recepção**: `ACEITO` | `ACEITO_COM_PENDENCIAS`
 Derive as changes dos `ESC-XXX`, aplicando os critérios:
 
 1. **Valor independente:** cada change entrega comportamento observável cujos CAs passam sem as changes seguintes.
-2. **Fundação primeiro:** a change 01 estabelece entidade central + operação primária + esqueleto dos ADRs; as demais incrementam.
+2. **Fundação primeiro:** a change 01 estabelece entidade central + operação primária + esqueleto dos ADRs, com o manifesto e a parte da stack do `scripts/check.sh` e do CI, como o `CLAUDE-comum.md` manda ao fechar o gate 2; as demais incrementam.
 3. **Tamanho de ciclo:** uma change cabe em uma sessão de implementação; grande demais divide, menor que um comportamento completo consolida.
 4. **Dependência em prosa:** ordem declarada com razão ("02 depende de 01 porque exporta o que 01 cadastra").
 5. **Fora de change, só o que o `CLAUDE-comum.md` dispensa:** a decomposição cita essa regra, sem repeti-la nem ampliá-la.
@@ -136,7 +136,7 @@ A auditoria é a revisão que o próprio OpenSpec pede ao fim do propose, antes 
 | 7 | Tasks | Task sem spec de origem; ausência de tasks de teste |
 | 8 | Pendências | Pendência herdada resolvida por improviso em vez de contornada |
 
-Emita o **laudo de auditoria**: `APROVADO` (gate 3 cumprido: a revisão terminou e o apply pode começar) ou lista numerada de defeitos, cada um com a correção a pedir ao `/opsx:update`, que revisa os artefatos sem recriá-los. Reaudite após correção.
+Emita o **laudo de auditoria**: `APROVADO` (nenhum defeito: peça ao usuário a aprovação do gate 3 e só com ela registre-o na tabela "Ciclo" e libere o apply) ou lista numerada de defeitos, cada um com a correção a pedir ao `/opsx:update`, que revisa os artefatos sem recriá-los. Reaudite após correção.
 
 ### 5. Ciclo
 
