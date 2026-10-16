@@ -47,7 +47,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 7. Execução manual
 
-- [ ] 7.1 Numa pasta descartável do scratchpad: um projeto novo; a trava rodada com os comandos de contorno da auditoria, com a saída mostrada ao usuário; o commit com `git -c core.hooksPath=/dev/null` pedido pela trava e barrado; o `kit.py atualizar` sobre o projeto com o comum numa versão mais nova, recusado sem mudar nada; a pasta apagada
+- [x] 7.1 Numa pasta descartável do scratchpad: um projeto novo; a trava rodada com os comandos de contorno da auditoria, com a saída mostrada ao usuário; o commit com `git -c core.hooksPath=/dev/null` pedido pela trava e barrado; o `kit.py atualizar` sobre o projeto com o comum numa versão mais nova, recusado sem mudar nada; a pasta apagada
 
 ## Workflow follow-up
 

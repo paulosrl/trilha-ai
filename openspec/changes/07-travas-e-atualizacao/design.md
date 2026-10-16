@@ -49,7 +49,36 @@ Nenhuma: a trava e a conferência novas chegam aos projetos com a cópia da 2.5,
 
 ## Verificação
 
-A preencher no apply, com a evidência de cada cenário.
+Cada cenário com o teste que o comprova (`python3 -m unittest discover -s testes -k <teste>`), todos com `OK` em 2026-10-16; o conjunto (194 testes), o ruff (check e format) e o `openspec validate --all --no-interactive` sem erro.
+
+| Cenário | Teste |
+|---|---|
+| Hooks desligados por -c; Hooks trocados por git config | `test_trava_barra_o_hookspath_desligado` |
+| Leitura e valor do método | `test_trava_deixa_ler_e_gravar_o_hookspath_do_metodo` |
+| Opção abreviada | `test_trava_barra_o_no_verify_abreviado` |
+| Comando que envolve outro | `test_trava_barra_o_push_forcado_atras_de_outro_comando` |
+| Palavras do shell | `test_trava_barra_o_push_forcado_nas_palavras_do_shell` |
+| Shell dentro do comando | `test_trava_barra_o_push_forcado_em_shell_aninhado` |
+| Cerquilha e aspa sem par | `test_trava_barra_o_push_forcado_com_cerquilha_ou_aspa_sem_par` |
+| Opções abreviadas e espelho | `test_trava_barra_a_forca_abreviada_e_o_espelho` |
+| O git como argumento | `test_trava_deixa_o_git_como_argumento` |
+| Palavra no argumento de outro subcomando; Opções globais antes do subcomando | `test_trava_le_o_subcomando_depois_das_opcoes_globais` |
+| Merge com -m | `test_trava_aceita_o_merge_com_m` |
+| Repositório indicado | `test_trava_confere_o_pr_no_repositorio_indicado` |
+| Verificação que não responde | `test_trava_barra_a_verificacao_que_nao_responde` |
+| Entrada sem comando | `test_trava_deixa_passar_a_entrada_sem_comando` |
+| Projeto mais novo que o kit | `test_atualizar_recusa_o_kit_atras_do_projeto` |
+| Kit sem o git | `test_atualizar_recusa_o_kit_sem_git` |
+| Kit clonado raso | `test_atualizar_recusa_o_kit_raso` |
+| TDD com a stack do modelo | `test_tdd_com_a_stack_do_modelo_avisa` |
+| Change 01 arquivada com a stack do modelo | `test_change_01_arquivada_avisa_os_cinco` |
+| Stack preenchida | `test_stack_preenchida_nao_avisa` |
+| Stack preenchida como o modelo pede | `test_stack_preenchida_como_o_modelo_pede_nao_avisa` |
+| Projeto sem TDD | `test_projeto_sem_tdd_nao_avisa_a_stack` |
+
+Antes do código falharam os testes que mudam o comportamento: 12 da trava, os 3 do `atualizar` e o do aviso da stack no gate 2. Os que guardam o que não pode mudar já passavam (a leitura do `core.hooksPath`, o git como argumento, a change 01 arquivada, a stack preenchida, o projeto sem TDD). No apply, o cenário "Projeto mais novo que o kit" mudou: o kit da 2.4 não tem a proteção, que nasce na 2.5, e o teste usa o kit atual com o projeto na 9.9. A abreviação `--forc` entrou na força (decisão 5), conservadora: o git provavelmente a recusa como ambígua.
+
+Execução manual (tarefa 7.1), num projeto novo descartável: a trava barrou, com saída 2, `git -c core.hooksPath=/dev/null commit -m x`, `git commit --no-veri -m y`, `timeout 10 git push -f`, `if true; then git push -f; fi`, `bash -lc "git push -f"`, `git push --force-w` e `echo a#b; git push -f`, e deixou passar `git log --grep commit -n 3` e `echo git push -f`. Com o comum do projeto posto na 9.9 (num commit com `--no-verify`, só para montar o cenário, fora da trava), o `kit.py atualizar` recusou ("o projeto está na 9.9 e o kit na 2.5, atrás dele…"), com saída 1 e o `git status` limpo. A pasta foi apagada.
 
 ## Respostas à revisão
 
