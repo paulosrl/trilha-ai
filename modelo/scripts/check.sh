@@ -8,7 +8,7 @@ cd "$(dirname "$(readlink -f "$0")")/.."
 # --vizinho <nome> por repositório ao lado que o ANDAMENTO.md não pode citar.
 bash trilha/verifica.sh
 
-# Parte da stack, decidida no TDD (etapa 2). Troque as linhas abaixo pelos comandos reais e
+# Parte da stack, decidida no TDD e posta na change 01. Troque as linhas abaixo pelos comandos reais e
 # apague este comentário. Exemplo para Python com uv:
 #   uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest
 echo "aviso: a parte da stack ainda não foi preenchida em scripts/check.sh (etapa 2)" >&2

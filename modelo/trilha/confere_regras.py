@@ -16,7 +16,8 @@ Confere, na raiz indicada:
 - as travas desligadas (o core.hooksPath, o guarda.py no .claude/settings.json e o
   disableAllHooks), como aviso;
 - os campos < > dos modelos do kit ainda por preencher, como aviso (a stack só vem na etapa 2);
-- com o TDD escrito (sdd/tdd-*.md), os lugares da stack ainda como o modelo os deixou, como aviso.
+- com o TDD escrito (sdd/tdd-*.md), os lugares da stack ainda como o modelo os deixou, como aviso
+  (o check.sh e o CI, só depois do primeiro spec em openspec/specs/, que a change 01 cria).
 
 Só python3, sem dependências. Sai com 1 e imprime "FALHA: ..." por problema; "ok" se nada falhar.
 """
@@ -78,8 +79,9 @@ CAMPOS_DO_MODELO = {
     "openspec/config.yaml": ("Projeto: <nome>", "<uma frase sobre o que é", "<linguagem e versão"),
 }
 
-# Os lugares da stack que o comum manda preencher ao fechar o gate 2, cada um com o texto do
-# modelo que pede o preenchimento; o teste do kit confere que cada texto está no modelo.
+# Os lugares da stack que o comum nomeia no gate 2 (dois deles entram na change 01), cada um
+# com o texto do modelo que pede o preenchimento; o teste do kit confere que cada texto está
+# no modelo.
 STACK_DO_MODELO = {
     "scripts/check.sh": "a parte da stack ainda não foi preenchida",
     ".github/workflows/verificacao.yml": "Troque o comentário pelos passos reais",
@@ -87,6 +89,9 @@ STACK_DO_MODELO = {
     ".gitignore": "apague o bloco que não for o seu e este comentário",
     "openspec/config.yaml": "<linguagem e versão",
 }
+
+# Dos lugares da stack, os que entram na change 01, que cria o manifesto e o primeiro teste.
+DA_CHANGE_01 = ("scripts/check.sh", ".github/workflows/verificacao.yml")
 
 # A hora real, ou o espaço reservado do kit recém-copiado.
 DATA_E_HORA = re.compile(r"\*\*Atualizado em:\*\* (\d{4}-\d\d-\d\d \d\d:\d\d|<AAAA-MM-DD HH:MM>)")
@@ -335,16 +340,20 @@ def avisos_da_stack(raiz: Path) -> list[str]:
     """Com o TDD escrito, os lugares da stack ainda como o modelo os deixou: aviso, não falha."""
     if not any((raiz / "sdd").glob("tdd-*.md")):
         return []
+    # O check.sh e o CI recebem a stack na change 01: só se cobram com o primeiro spec arquivado.
+    com_spec = any((raiz / "openspec" / "specs").glob("*/spec.md"))
     pendentes = [
         nome
         for nome, marcador in STACK_DO_MODELO.items()
-        if (raiz / nome).is_file() and marcador in (raiz / nome).read_text(encoding="utf-8")
+        if (com_spec or nome not in DA_CHANGE_01)
+        and (raiz / nome).is_file()
+        and marcador in (raiz / nome).read_text(encoding="utf-8")
     ]
     if not pendentes:
         return []
     aviso = (
         f"há TDD, e a parte da stack ainda é a do modelo em {', '.join(pendentes)}; preencha-a "
-        "como o CLAUDE-comum.md manda ao fechar o gate 2"
+        "como o CLAUDE-comum.md manda (o check.sh e o CI, na change 01)"
     )
     return [aviso]
 

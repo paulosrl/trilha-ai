@@ -220,6 +220,7 @@ def atualizar(pasta: Path) -> int:
 
     comum = pasta / "trilha" / "CLAUDE-comum.md"
     antes = _versao(comum if comum.is_file() else pasta / "CLAUDE-comum.md")
+    _conferir_o_kit(antes)  # antes de mudar qualquer arquivo do projeto
     migrou = _migrar(pasta)
     _copiar_trilha(pasta)
     for nome, origem in A_PREENCHER.items():
@@ -251,6 +252,37 @@ def atualizar(pasta: Path) -> int:
     if mudou:
         print(f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {antes} → {depois}")
     return 0
+
+
+def _conferir_o_kit(antes: str) -> None:
+    """O kit é um clone do git com o histórico (a atualização lê as versões antigas dele) e não
+    está atrás do projeto, que ele rebaixaria."""
+    try:
+        raso = _git(KIT, "rev-parse", "--is-shallow-repository")
+        # O ZIP extraído numa pasta versionada responde pelo repositório de cima: não é o kit.
+        if Path(_git(KIT, "rev-parse", "--show-toplevel")).resolve() != KIT.resolve():
+            raise Recusa("outro repositório")
+    except Recusa:
+        raise Recusa(
+            f"o kit em {KIT} não é um repositório git (baixado como ZIP?); a atualização lê o "
+            "histórico dele: clone-o com o git"
+        ) from None
+    if raso == "true":
+        raise Recusa(
+            f"o kit em {KIT} é um clone raso, sem o histórico que a atualização lê: rode "
+            f"git fetch --unshallow --tags, na pasta dele ({KIT})"
+        )
+    depois = _versao(MODELO / "trilha" / "CLAUDE-comum.md")
+    if "?" not in (antes, depois) and _numeros(depois) < _numeros(antes):
+        raise Recusa(
+            f"o projeto está na {antes} e o kit na {depois}, atrás dele: a atualização o "
+            f"rebaixaria; atualize o kit antes: git pull, na pasta dele ({KIT})"
+        )
+
+
+def _numeros(versao: str) -> tuple[int, int]:
+    maior, menor = versao.split(".")
+    return int(maior), int(menor)
 
 
 def _copiar_trilha(pasta: Path) -> None:

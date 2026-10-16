@@ -209,12 +209,17 @@ A conferência do método SHALL exigir que a decomposição (`sdd/decomposicao-*
 - **THEN** o título citado não conta: sem o `## 2.` de verdade, a conferência reprova, citando `## 2.`; com os três de verdade, a tabela citada não entra na comparação
 
 ### Requirement: Aviso da stack por preencher depois do TDD
-Quando a pasta `sdd/` tiver um `tdd-*.md`, a conferência das regras SHALL avisar, sem falhar, cada lugar da stack que ainda traz o texto do modelo do kit que pede o preenchimento: `scripts/check.sh`, `.github/workflows/verificacao.yml`, `.github/dependabot.yml`, `.gitignore` e a linha "Stack" do `openspec/config.yaml`. Sem TDD, ela MUST NOT dar esse aviso.
+Quando a pasta `sdd/` tiver um `tdd-*.md`, a conferência das regras SHALL avisar, sem falhar, cada lugar da stack que ainda traz o texto do modelo do kit que pede o preenchimento: o `.github/dependabot.yml`, o `.gitignore` e a linha "Stack" do `openspec/config.yaml`, desde o TDD; o `scripts/check.sh` e o `.github/workflows/verificacao.yml`, só a partir do primeiro spec em `openspec/specs/`, que a change 01 cria. Sem TDD, ela MUST NOT dar esse aviso.
 
 #### Scenario: TDD com a stack do modelo
-- **WHEN** o projeto feito do kit tem um `sdd/tdd-x.md` e os cinco lugares da stack como o modelo os deixou
-- **THEN** a conferência das regras imprime um aviso que cita os cinco
+- **WHEN** o projeto feito do kit tem um `sdd/tdd-x.md`, nenhum spec em `openspec/specs/` e os cinco lugares da stack como o modelo os deixou
+- **THEN** a conferência das regras imprime um aviso que cita o `.github/dependabot.yml`, o `.gitignore` e o `openspec/config.yaml`
+- **AND** o aviso não cita o `scripts/check.sh` nem o `.github/workflows/verificacao.yml`
 - **AND** termina com o código de saída 0
+
+#### Scenario: Change 01 arquivada com a stack do modelo
+- **WHEN** o projeto tem um `sdd/tdd-x.md`, um spec em `openspec/specs/` e os cinco lugares da stack como o modelo os deixou
+- **THEN** a conferência das regras imprime um aviso que cita os cinco
 
 #### Scenario: Stack preenchida
 - **WHEN** o projeto tem um `sdd/tdd-x.md` e nenhum dos cinco lugares traz mais o texto do modelo que pede o preenchimento
