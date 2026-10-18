@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# O envio (em trilha/, copiado sem mudar; ligado por: git config core.hooksPath trilha/hooks).
+# Repassa ao hook de envio próprio do projeto, o .githooks/pre-push, quando ele existe: os mesmos
+# argumentos, a mesma entrada e o código de saída dele. Sem ele, o envio segue. O que não pode
+# rodar recusa o envio: o git só avisaria e seguiria, desligando a verificação do projeto.
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+proprio=.githooks/pre-push
+if [ ! -e "$proprio" ] && [ ! -L "$proprio" ]; then
+  exit 0
+fi
+if [ ! -e "$proprio" ]; then
+  echo "envio recusado: $proprio é um link simbólico quebrado; corrija-o ou apague-o" >&2
+  exit 1
+fi
+if [ ! -x "$proprio" ]; then
+  echo "envio recusado: $proprio está sem a permissão de execução; rode chmod +x $proprio" >&2
+  exit 1
+fi
+exec "$proprio" "$@"

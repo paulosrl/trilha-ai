@@ -4,17 +4,17 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 0. A versão
 
-- [ ] 0.1 A linha "Versão 2.6, de <data>." no `modelo/trilha/CLAUDE-comum.md` e a `2.6.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar (design, decisão 5); o `test_kit_sem_mudanca_depois_da_tag`, o `test_versao_no_comum` e o teste da versão do plugin passam
+- [x] 0.1 A linha "Versão 2.6, de <data>." no `modelo/trilha/CLAUDE-comum.md` e a `2.6.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar (design, decisão 5); o `test_kit_sem_mudanca_depois_da_tag`, o `test_versao_no_comum` e o teste da versão do plugin passam
 
 ## 1. O envio pelo hook próprio
 
-- [ ] 1.1 O teste `test_pre_push_repassa_ao_hook_proprio` comprova o cenário "Hook próprio que aprova": o hook próprio grava os argumentos e a entrada num arquivo e sai com 0; o commit chega ao remoto, e o arquivo traz o nome e o endereço do remoto e a linha da referência. Falha antes do código (`-k test_pre_push_repassa_ao_hook_proprio`)
-- [ ] 1.2 O teste `test_pre_push_recusa_quando_o_hook_proprio_reprova` comprova o cenário "Hook próprio que reprova": o `git push` sai com código diferente de 0, e o remoto fica sem o commit. Falha antes do código (`-k test_pre_push_recusa_quando_o_hook_proprio_reprova`)
-- [ ] 1.3 O teste `test_pre_push_repassa_o_codigo_e_a_entrada` comprova o cenário "Código de saída e entrada repassados": roda o `trilha/hooks/pre-push` direto, com dois argumentos e uma linha na entrada, e um hook próprio que grava o que recebeu e sai com 3; confere o código 3 e o que o hook próprio recebeu. Falha antes do código (`-k test_pre_push_repassa_o_codigo_e_a_entrada`)
-- [ ] 1.4 O teste `test_pre_push_sem_hook_proprio_envia` comprova o cenário "Projeto sem hook próprio"; já passa e guarda o que não pode mudar (`-k test_pre_push_sem_hook_proprio_envia`)
-- [ ] 1.5 O teste `test_pre_push_recusa_o_hook_proprio_nao_executavel` comprova o cenário "Hook próprio não executável": o envio é recusado, e a mensagem cita `.githooks/pre-push` e a permissão de execução. Falha antes do código (`-k test_pre_push_recusa_o_hook_proprio_nao_executavel`)
-- [ ] 1.6 O teste `test_pre_push_recusa_o_link_quebrado` comprova o cenário "Link simbólico quebrado": o envio é recusado, e a mensagem cita `.githooks/pre-push`. Falha antes do código (`-k test_pre_push_recusa_o_link_quebrado`)
-- [ ] 1.7 O `modelo/trilha/hooks/pre-push` faz o repasse como o design manda (decisões 1 e 2) e entra no git executável, com `git add`, antes de rodar os testes do grupo: o `kit.py novo` só copia o que o git do kit lista. O `git ls-files -s modelo/trilha/hooks` dá `100755` para ele; os testes do grupo 1 passam, e o `test_copia_da_pasta_trilha_igual_passa` e o `test_copia_reprova_a_permissao_perdida` continuam passando
+- [x] 1.1 O teste `test_pre_push_repassa_ao_hook_proprio` comprova o cenário "Hook próprio que aprova": o hook próprio grava os argumentos e a entrada num arquivo e sai com 0; o commit chega ao remoto, e o arquivo traz o nome e o endereço do remoto e a linha da referência. Falha antes do código (`-k test_pre_push_repassa_ao_hook_proprio`)
+- [x] 1.2 O teste `test_pre_push_recusa_quando_o_hook_proprio_reprova` comprova o cenário "Hook próprio que reprova": o `git push` sai com código diferente de 0, e o remoto fica sem o commit. Falha antes do código (`-k test_pre_push_recusa_quando_o_hook_proprio_reprova`)
+- [x] 1.3 O teste `test_pre_push_repassa_o_codigo_e_a_entrada` comprova o cenário "Código de saída e entrada repassados": roda o `trilha/hooks/pre-push` direto, com dois argumentos e uma linha na entrada, e um hook próprio que grava o que recebeu e sai com 3; confere o código 3 e o que o hook próprio recebeu. Falha antes do código (`-k test_pre_push_repassa_o_codigo_e_a_entrada`)
+- [x] 1.4 O teste `test_pre_push_sem_hook_proprio_envia` comprova o cenário "Projeto sem hook próprio"; já passa e guarda o que não pode mudar (`-k test_pre_push_sem_hook_proprio_envia`)
+- [x] 1.5 O teste `test_pre_push_recusa_o_hook_proprio_nao_executavel` comprova o cenário "Hook próprio não executável": o envio é recusado, e a mensagem cita `.githooks/pre-push` e a permissão de execução. Falha antes do código (`-k test_pre_push_recusa_o_hook_proprio_nao_executavel`)
+- [x] 1.6 O teste `test_pre_push_recusa_o_link_quebrado` comprova o cenário "Link simbólico quebrado": o envio é recusado, e a mensagem cita `.githooks/pre-push`. Falha antes do código (`-k test_pre_push_recusa_o_link_quebrado`)
+- [x] 1.7 O `modelo/trilha/hooks/pre-push` faz o repasse como o design manda (decisões 1 e 2) e entra no git executável, com `git add`, antes de rodar os testes do grupo: o `kit.py novo` só copia o que o git do kit lista. O `git ls-files -s modelo/trilha/hooks` dá `100755` para ele; os testes do grupo 1 passam, e o `test_copia_da_pasta_trilha_igual_passa` e o `test_copia_reprova_a_permissao_perdida` continuam passando
 
 ## 2. A migração sem o aviso do pre-push
 

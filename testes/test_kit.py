@@ -2080,6 +2080,94 @@ class Kit(unittest.TestCase):
         self.assertEqual(saida.returncode, 1)
         self.assertIn("trilha/hooks/pre-commit perdeu a permissão de execução", saida.stderr)
 
+    # O envio pelo hook próprio do projeto (change 08).
+
+    def _com_remoto(self, tmp: str) -> tuple[Path, Path]:
+        """Um projeto novo e um remoto vazio, ligado a ele como `origem`."""
+        pasta, remoto = self._projeto_novo(tmp), Path(tmp) / "remoto.git"
+        subprocess.run(["git", "init", "-q", "--bare", str(remoto)], check=True)
+        subprocess.run(["git", "remote", "add", "origem", str(remoto)], cwd=pasta, check=True)
+        return pasta, remoto
+
+    def _hook_proprio(self, pasta: Path, corpo: str, executavel: bool = True) -> None:
+        hook = pasta / ".githooks/pre-push"
+        hook.parent.mkdir(exist_ok=True)
+        hook.write_text(f"#!/bin/sh\n{corpo}\n", encoding="utf-8")
+        hook.chmod(0o755 if executavel else 0o644)
+
+    def _enviar(self, pasta: Path) -> subprocess.CompletedProcess[str]:
+        """O envio com o destino explícito, sem depender do push.default da máquina."""
+        return subprocess.run(["git", "push", "-q", "origem", "HEAD:refs/heads/main"], cwd=pasta,
+                              capture_output=True, text=True, check=False)
+
+    def _main_do_remoto(self, remoto: Path) -> str:
+        return subprocess.run(["git", "-C", str(remoto), "rev-parse", "-q", "--verify", "main"],
+                              capture_output=True, text=True, check=False).stdout.strip()
+
+    def _head(self, pasta: Path) -> str:
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=pasta, capture_output=True, text=True,
+                              check=True).stdout.strip()
+
+    def test_pre_push_repassa_ao_hook_proprio(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, remoto = self._com_remoto(tmp)
+            registro = Path(tmp) / "registro"
+            self._hook_proprio(pasta, f"printf '%s\\n' \"$@\" > {registro}; cat >> {registro}; exit 0")
+            saida = self._enviar(pasta)
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            head = self._head(pasta)
+            self.assertEqual(self._main_do_remoto(remoto), head)
+            linhas = registro.read_text(encoding="utf-8").splitlines()
+        self.assertEqual(linhas[:2], ["origem", str(remoto)])
+        # A linha da referência: <ref local> <commit> <ref remota> <commit remoto>.
+        self.assertEqual(linhas[2].split()[:3], ["HEAD", head, "refs/heads/main"])
+
+    def test_pre_push_recusa_quando_o_hook_proprio_reprova(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, remoto = self._com_remoto(tmp)
+            self._hook_proprio(pasta, "exit 1")
+            saida = self._enviar(pasta)
+            self.assertNotEqual(saida.returncode, 0)
+            self.assertEqual(self._main_do_remoto(remoto), "")
+
+    def test_pre_push_repassa_o_codigo_e_a_entrada(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            registro = Path(tmp) / "registro"
+            self._hook_proprio(pasta, f"printf '%s\\n' \"$@\" > {registro}; cat >> {registro}; exit 3")
+            saida = subprocess.run([str(pasta / "trilha/hooks/pre-push"), "um remoto", "dois"],
+                                   cwd=pasta, input="a linha da entrada\n", capture_output=True,
+                                   text=True, check=False)
+            self.assertEqual(saida.returncode, 3, saida.stderr)
+            self.assertEqual(registro.read_text(encoding="utf-8"), "um remoto\ndois\na linha da entrada\n")
+
+    def test_pre_push_sem_hook_proprio_envia(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, remoto = self._com_remoto(tmp)
+            saida = self._enviar(pasta)
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertEqual(self._main_do_remoto(remoto), self._head(pasta))
+
+    def test_pre_push_recusa_o_hook_proprio_nao_executavel(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, remoto = self._com_remoto(tmp)
+            self._hook_proprio(pasta, "exit 0", executavel=False)
+            saida = self._enviar(pasta)
+            self.assertNotEqual(saida.returncode, 0)
+            self.assertEqual(self._main_do_remoto(remoto), "")
+        self.assertIn(".githooks/pre-push", saida.stderr)
+        self.assertIn("permissão de execução", saida.stderr)
+
+    def test_pre_push_recusa_o_link_quebrado(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, remoto = self._com_remoto(tmp)
+            (pasta / ".githooks").mkdir()
+            (pasta / ".githooks/pre-push").symlink_to("nao-existe")
+            saida = self._enviar(pasta)
+            self.assertNotEqual(saida.returncode, 0)
+            self.assertEqual(self._main_do_remoto(remoto), "")
+        self.assertIn(".githooks/pre-push", saida.stderr)
+
     def test_lista_do_metodo_pelos_arquivos_versionados(self) -> None:
         solto = MODELO / "trilha/.rascunho.swp"
         try:
