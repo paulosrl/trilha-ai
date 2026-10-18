@@ -32,7 +32,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 ## 4. A verificação de ponta a ponta
 
 - [x] 4.1 O conjunto dos testes e o ruff passam, cada um sozinho, com o código de saída 0
-- [ ] 4.2 Execução manual: num clone descartável do Heimdall, com um remoto `git init --bare` local, o `kit.py atualizar` da branch não avisa sobre o `.githooks/pre-push`; o `git config core.hooksPath` dá `trilha/hooks`; e um `git push` ao remoto local roda o pre-push do Heimdall (o encoding, o `openspec validate --specs` e os testes pareados), com a saída registrada na seção "Verificação" do `design.md`
+- [x] 4.2 Execução manual: num clone descartável do Heimdall, com um remoto `git init --bare` local, o `kit.py atualizar` da branch não avisa sobre o `.githooks/pre-push`; o `git config core.hooksPath` dá `trilha/hooks`; e um `git push` ao remoto local roda o pre-push do Heimdall (o encoding, o `openspec validate --specs` e os testes pareados), com a saída registrada na seção "Verificação" do `design.md`
 
 ## Workflow follow-up
 

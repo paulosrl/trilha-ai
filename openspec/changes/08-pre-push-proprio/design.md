@@ -47,6 +47,23 @@ Alternativa descartada: rodá-lo com `bash .githooks/pre-push`. Funcionaria só 
 
 Os projetos recebem o hook com a cópia da 2.6, pelo `kit.py atualizar`, sob ordem do usuário. Para voltar atrás, o `git revert` do commit da cópia no projeto. O kit na 2.5 não serve para isso: o `atualizar` recusa o projeto mais novo que o kit, que ele rebaixaria.
 
+## Verificação
+
+| O quê | Comando | Resultado |
+|---|---|---|
+| Suíte do kit | `python3 -m unittest discover -s testes` | 208 testes, OK, código 0 |
+| Ruff | `uvx ruff@0.17.0 check --isolated --line-length 100 modelo/trilha/ ferramentas/` e o mesmo com `format --check` | "All checks passed!" e "7 files already formatted", código 0 nos dois |
+| Hook no git | `git ls-files -s modelo/trilha/hooks` | `100755` no `pre-commit` e no `pre-push` |
+| Tamanho do comum | `wc -c modelo/trilha/CLAUDE-comum.md` | 16.018 bytes, abaixo dos 16.384 |
+
+**Execução manual (tarefa 4.2), em 2026-10-18,** num clone descartável do Heimdall (`master` em `b2d28f9`, comum 1.30), com um remoto `git init --bare` local e o `.env` do repositório real, que fica fora do git e falta a um teste pareado:
+
+1. `python3 ferramentas/kit.py atualizar <clone>`, da branch: código 0. A saída não cita o `.githooks/pre-push`; o `.githooks/` ficou só com ele, e o `core.hooksPath` passou a `trilha/hooks`.
+2. Envio com a cópia sem commit: o `trilha/hooks/pre-push` rodou o hook do Heimdall (encoding, `openspec validate --specs` e o `local-011`), que recusou o envio por dois testes que leem o índice do git (`teste-modos.sh` e `teste-referencias.sh`, pelos arquivos antigos ainda no índice); o remoto ficou sem o commit. É o caminho da recusa.
+3. A cópia num commit, como manda o plano: o `referencias.py` do Heimdall acusou as oito citações que o plano previu; com a marca `<!-- ref-externa -->` nelas e o link do `docs/README.md` corrigido, num segundo commit, o envio passou: as três etapas do hook, 22 testes pareados `ok`, código 0, e o `master` do remoto igual ao `HEAD` do clone (`1ffc035`). É o caminho verde.
+
+O clone foi apagado depois.
+
 ## Respostas à revisão
 
 ### Revisão dos artefatos, antes do apply
