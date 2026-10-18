@@ -314,6 +314,18 @@ def _migrar(pasta: Path) -> bool:
                 f"aviso: .githooks/{nome} não roda mais, porque a trava do commit passou a "
                 "trilha/hooks; ligue-o de outro jeito (por exemplo, chamado pelo scripts/check.sh)"
             )
+        # O que o trilha/hooks/pre-push recusaria: o aviso vem já aqui, e não só no primeiro envio.
+        envio = ganchos / "pre-push"
+        if envio.is_symlink() and not envio.exists():
+            print(
+                "aviso: .githooks/pre-push é um link simbólico quebrado; o envio será recusado até "
+                "ele ser corrigido"
+            )
+        elif envio.is_file() and not envio.stat().st_mode & 0o111:
+            print(
+                "aviso: .githooks/pre-push está sem a permissão de execução; o envio será recusado "
+                "até ele ser corrigido (chmod +x .githooks/pre-push)"
+            )
         if not proprios:
             ganchos.rmdir()
     claude = pasta / "CLAUDE.md"

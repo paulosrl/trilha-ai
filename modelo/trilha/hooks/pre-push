@@ -17,4 +17,10 @@ if [ ! -x "$proprio" ]; then
   echo "envio recusado: $proprio está sem a permissão de execução; rode chmod +x $proprio" >&2
   exit 1
 fi
+# A marca é a raiz do repositório: o hook próprio pode enviar outro repositório, não este de novo.
+if [ "${TRILHA_PRE_PUSH:-}" = "$PWD" ]; then
+  echo "envio recusado: $proprio leva de volta ao trilha/hooks/pre-push, que rodaria sem fim" >&2
+  exit 1
+fi
+export TRILHA_PRE_PUSH="$PWD"
 exec "$proprio" "$@"

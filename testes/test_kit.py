@@ -6,7 +6,9 @@ import io
 import json
 import os
 import re
+import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -2020,12 +2022,36 @@ class Kit(unittest.TestCase):
             pasta = self._projeto_da_1_30(tmp)
             proprio = pasta / ".githooks/pre-push"
             proprio.write_text("#!/bin/sh\necho o pre-push do projeto\n", encoding="utf-8")
+            proprio.chmod(0o755)
             self._commit_tudo(pasta, "um hook do projeto")
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
             self.assertEqual(proprio.read_text(encoding="utf-8"), "#!/bin/sh\necho o pre-push do projeto\n")
-            self.assertTrue((pasta / "trilha/hooks/pre-push").is_file())
-        self.assertNotIn("pre-push", saida.stdout + saida.stderr)
+            remoto = Path(tmp) / "remoto.git"
+            subprocess.run(["git", "init", "-q", "--bare", str(remoto)], check=True)
+            subprocess.run(["git", "remote", "add", "origem", str(remoto)], cwd=pasta, check=True)
+            envio = self._enviar(pasta)
+            self.assertEqual(envio.returncode, 0, envio.stderr)
+        self.assertNotIn(".githooks/pre-push não roda mais", saida.stdout)
+        self.assertIn("o pre-push do projeto", envio.stdout + envio.stderr)
+
+    def test_migracao_avisa_o_pre_push_que_nao_roda(self) -> None:
+        """O pre-push próprio que não pode rodar recusaria todo envio: a migração avisa antes."""
+        for caso in ("sem permissão", "link quebrado"):
+            with self.subTest(caso), tempfile.TemporaryDirectory() as tmp:
+                pasta = self._projeto_da_1_30(tmp)
+                proprio = pasta / ".githooks/pre-push"
+                if caso == "sem permissão":
+                    proprio.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                    proprio.chmod(0o644)
+                else:
+                    proprio.symlink_to("nao-existe")
+                self._commit_tudo(pasta, "um hook do projeto")
+                saida = self._ferramenta("atualizar", str(pasta))
+                self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+                self.assertTrue(proprio.is_symlink() or proprio.is_file())
+                aviso = next((l for l in saida.stdout.splitlines() if ".githooks/pre-push" in l), "")
+                self.assertIn("o envio será recusado", aviso, saida.stdout)
 
     def test_migracao_troca_a_parte_fixa_com_vizinhos(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2131,7 +2157,7 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             pasta, remoto = self._com_remoto(tmp)
             registro = Path(tmp) / "registro"
-            self._hook_proprio(pasta, f"printf '%s\\n' \"$@\" > {registro}; cat >> {registro}; exit 0")
+            self._hook_proprio(pasta, f"printf '%s\\n' \"$@\" > {shlex.quote(str(registro))}; cat >> {shlex.quote(str(registro))}; exit 0")
             saida = self._enviar(pasta)
             self.assertEqual(saida.returncode, 0, saida.stderr)
             head = self._head(pasta)
@@ -2153,7 +2179,7 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
             registro = Path(tmp) / "registro"
-            self._hook_proprio(pasta, f"printf '%s\\n' \"$@\" > {registro}; cat >> {registro}; exit 3")
+            self._hook_proprio(pasta, f"printf '%s\\n' \"$@\" > {shlex.quote(str(registro))}; cat >> {shlex.quote(str(registro))}; exit 3")
             saida = subprocess.run([str(pasta / "trilha/hooks/pre-push"), "um remoto", "dois"],
                                    cwd=pasta, input="a linha da entrada\n", capture_output=True,
                                    text=True, check=False)
@@ -2186,6 +2212,26 @@ class Kit(unittest.TestCase):
             self.assertNotEqual(saida.returncode, 0)
             self.assertEqual(self._main_do_remoto(remoto), "")
         self.assertIn(".githooks/pre-push", saida.stderr)
+
+    def test_pre_push_recusa_o_repasse_a_si_mesmo(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, remoto = self._com_remoto(tmp)
+            (pasta / ".githooks").mkdir()
+            (pasta / ".githooks/pre-push").symlink_to("../trilha/hooks/pre-push")
+            # Num grupo de processos próprio: se o repasse rodar sem fim, o prazo encerra o grupo
+            # inteiro, e o hook não sobrevive ao teste.
+            envio = subprocess.Popen(["git", "push", "-q", "origem", "HEAD:refs/heads/main"], cwd=pasta,
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                                     start_new_session=True)
+            try:
+                _, erro = envio.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                os.killpg(envio.pid, signal.SIGKILL)
+                envio.communicate()
+                self.fail("o repasse rodou sem fim")
+            self.assertNotEqual(envio.returncode, 0)
+            self.assertEqual(self._main_do_remoto(remoto), "")
+        self.assertIn(".githooks/pre-push", erro)
 
     def test_lista_do_metodo_pelos_arquivos_versionados(self) -> None:
         solto = MODELO / "trilha/.rascunho.swp"
