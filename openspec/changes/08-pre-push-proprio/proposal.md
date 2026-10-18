@@ -6,7 +6,7 @@ Pedido do usuário, de 2026-10-18, na etapa 1 do plano de migração dos projeto
 
 ## What Changes
 
-- Um hook novo, o `trilha/hooks/pre-push`, roda o `.githooks/pre-push` do projeto quando ele existe. Passa a ele os mesmos argumentos e a mesma entrada e devolve o código de saída dele. Sem o hook próprio, sai com 0 e o envio segue.
+- Um hook novo, o `trilha/hooks/pre-push`, roda o `.githooks/pre-push` do projeto quando ele existe. Passa a ele os mesmos argumentos e a mesma entrada e devolve o código de saída dele. Sem o hook próprio, sai com 0 e o envio segue. Com um hook próprio que não pode rodar (sem a permissão de execução ou link simbólico quebrado), recusa o envio.
 - A migração do layout antigo mantém o `.githooks/pre-push` e deixa de avisar que ele não roda. Para outro arquivo que sobrar em `.githooks/`, o aviso continua.
 - O comum ganha meia frase: o hook de envio próprio do projeto fica em `.githooks/pre-push` e roda pela `trilha/hooks`.
 - A versão passa a 2.6 e o plugin `sdd` a 2.6.0.
