@@ -281,6 +281,12 @@ class Kit(unittest.TestCase):
         self.assertIn("registro de processo", comum)
         self.assertIn("é opcional; quem o mantém declara no `CLAUDE.md`", comum)
 
+    def test_comum_cita_o_hook_de_envio_proprio(self) -> None:
+        """Change 08: o hook de envio do projeto fica em .githooks/pre-push e roda pela trilha/hooks."""
+        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("`.githooks/pre-push`", comum)
+        self.assertIn("`trilha/hooks/pre-push`", comum)
+
     def test_comum_cita_a_skill_briefing(self) -> None:
         """A skill do plugin chama-se sdd:briefing, para não colidir com a openspec-propose nativa do OpenSpec."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")

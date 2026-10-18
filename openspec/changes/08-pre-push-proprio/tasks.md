@@ -25,13 +25,13 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 3. O texto do método
 
-- [ ] 3.1 O teste `test_comum_cita_o_hook_de_envio_proprio` confere que o comum cita o `.githooks/pre-push` e o `trilha/hooks/pre-push`; falha antes do texto (`-k test_comum_cita_o_hook_de_envio_proprio`)
-- [ ] 3.2 O `modelo/trilha/CLAUDE-comum.md` ganha a meia frase no item "As travas do kit não se contornam"; o teste 3.1 e o `test_comum_cabe_em_metade_do_teto` passam
-- [ ] 3.3 O `README.md` cita o `hooks/pre-push` na linha da pasta `trilha/`, ao lado do `hooks/pre-commit`; conferido pela leitura da linha
+- [x] 3.1 O teste `test_comum_cita_o_hook_de_envio_proprio` confere que o comum cita o `.githooks/pre-push` e o `trilha/hooks/pre-push`; falha antes do texto (`-k test_comum_cita_o_hook_de_envio_proprio`)
+- [x] 3.2 O `modelo/trilha/CLAUDE-comum.md` ganha a meia frase no item "As travas do kit não se contornam"; o teste 3.1 e o `test_comum_cabe_em_metade_do_teto` passam
+- [x] 3.3 O `README.md` cita o `hooks/pre-push` na linha da pasta `trilha/`, ao lado do `hooks/pre-commit`; conferido pela leitura da linha
 
 ## 4. A verificação de ponta a ponta
 
-- [ ] 4.1 O conjunto dos testes e o ruff passam, cada um sozinho, com o código de saída 0
+- [x] 4.1 O conjunto dos testes e o ruff passam, cada um sozinho, com o código de saída 0
 - [ ] 4.2 Execução manual: num clone descartável do Heimdall, com um remoto `git init --bare` local, o `kit.py atualizar` da branch não avisa sobre o `.githooks/pre-push`; o `git config core.hooksPath` dá `trilha/hooks`; e um `git push` ao remoto local roda o pre-push do Heimdall (o encoding, o `openspec validate --specs` e os testes pareados), com a saída registrada na seção "Verificação" do `design.md`
 
 ## Workflow follow-up

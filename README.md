@@ -20,7 +20,7 @@ A ordem:
 
    | Arquivo | O que fazer |
    |---|---|
-   | `trilha/` | copiar a pasta inteira **sem mudar nada**: o comum, os verificadores, o `verifica.sh` (a parte fixa da verificação), o gerador da página, a trava do Claude Code (`guarda.py`) e a do commit (`hooks/pre-commit`, ligada com `git config core.hooksPath trilha/hooks`, uma vez por clone) |
+   | `trilha/` | copiar a pasta inteira **sem mudar nada**: o comum, os verificadores, o `verifica.sh` (a parte fixa da verificação), o gerador da página, a trava do Claude Code (`guarda.py`), a do commit (`hooks/pre-commit`, ligada com `git config core.hooksPath trilha/hooks`, uma vez por clone) e o `hooks/pre-push`, que roda a cada envio o `.githooks/pre-push` do projeto, quando ele existe |
    | `esqueleto-CLAUDE.md` | copiar como `CLAUDE.md`; preencher o que está entre `<` e `>`; apagar o que não se aplica |
    | `ANDAMENTO.md` | preencher a etapa e a hora; nasce "nada em andamento" |
    | `openspec/config.yaml` | preencher o contexto; as regras por artefato ficam como estão |
