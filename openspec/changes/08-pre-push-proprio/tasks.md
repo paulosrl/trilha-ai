@@ -34,6 +34,17 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 - [x] 4.1 O conjunto dos testes e o ruff passam, cada um sozinho, com o código de saída 0
 - [x] 4.2 Execução manual: num clone descartável do Heimdall, com um remoto `git init --bare` local, o `kit.py atualizar` da branch não avisa sobre o `.githooks/pre-push`; o `git config core.hooksPath` dá `trilha/hooks`; e um `git push` ao remoto local roda o pre-push do Heimdall (o encoding, o `openspec validate --specs` e os testes pareados), com a saída registrada na seção "Verificação" do `design.md`
 
+## 5. As respostas à revisão
+
+- [ ] 5.1 O teste `test_pre_push_recusa_o_repasse_a_si_mesmo` comprova o cenário "Repasse que volta a si mesmo", com um prazo no `git push` para não travar a suíte; falha antes do código (`-k test_pre_push_recusa_o_repasse_a_si_mesmo`)
+- [ ] 5.2 O `modelo/trilha/hooks/pre-push` recusa o repasse que volta a si mesmo pela marca `TRILHA_PRE_PUSH` (design, decisão 2); o teste 5.1 e os do grupo 1 passam
+- [ ] 5.3 O teste `test_migracao_avisa_o_pre_push_que_nao_roda` comprova o cenário "Hook de envio do projeto que não pode rodar", com o hook sem a permissão de execução e com o link quebrado; falha antes do código (`-k test_migracao_avisa_o_pre_push_que_nao_roda`)
+- [ ] 5.4 O `_migrar` do `ferramentas/kit.py` avisa o `pre-push` que não pode rodar (design, decisão 3); o teste 5.3 e os do grupo 2 passam
+- [ ] 5.5 O `test_migracao_preserva_o_pre_push_sem_aviso` dá o `chmod` no hook, confere só a ausência da frase do aviso e faz um `git push` depois da migração, comprovando o cenário "Hook de envio do projeto preservado" inteiro; já passa e guarda o que não pode mudar (`-k test_migracao_preserva_o_pre_push_sem_aviso`)
+- [ ] 5.6 Os testes do repasse põem o caminho do arquivo de registro no script com o `shlex.quote`; os testes do grupo 1 passam
+- [ ] 5.7 O conjunto dos testes e o ruff passam, cada um sozinho, com o código de saída 0
+- [ ] 5.8 Execução manual: num projeto feito pelo `kit.py novo`, com um remoto `git init --bare` local, o `.githooks/pre-push` como link para o `trilha/hooks/pre-push` recusa o envio sem travar; num clone descartável do Heimdall com o hook sem a permissão de execução, o `kit.py atualizar` avisa; a saída vai à seção "Verificação" do `design.md`
+
 ## Workflow follow-up
 
 - O `/opsx:verify` e o `/code-review <número do PR>`, numa sessão nova ou num agente sem o contexto desta; cada sugestão, aplicada ou recusada com o motivo, vai à seção "Respostas à revisão" do `design.md`.

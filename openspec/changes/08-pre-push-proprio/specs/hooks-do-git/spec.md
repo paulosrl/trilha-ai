@@ -28,7 +28,7 @@ A cada `git push`, o `trilha/hooks/pre-push` SHALL rodar o `.githooks/pre-push` 
 - **THEN** o envio chega ao remoto
 
 ### Requirement: Hook próprio que não pode rodar
-Quando o `.githooks/pre-push` existe sem a permissão de execução, ou é um link simbólico quebrado, o `trilha/hooks/pre-push` SHALL recusar o envio, citando o arquivo, e MUST NOT deixar o envio seguir sem ele, como o git faz com um hook dele que não é executável: só avisa e segue.
+Quando o `.githooks/pre-push` existe sem a permissão de execução, é um link simbólico quebrado ou leva de volta ao próprio `trilha/hooks/pre-push` no mesmo repositório, o `trilha/hooks/pre-push` SHALL recusar o envio, citando o arquivo, e MUST NOT deixar o envio seguir sem ele, como o git faz com um hook dele que não é executável (só avisa e segue), nem rodar sem fim.
 
 #### Scenario: Hook próprio não executável
 - **WHEN** o projeto tem um `.githooks/pre-push` sem a permissão de execução e roda um `git push`
@@ -38,4 +38,9 @@ Quando o `.githooks/pre-push` existe sem a permissão de execução, ou é um li
 #### Scenario: Link simbólico quebrado
 - **WHEN** o `.githooks/pre-push` do projeto é um link simbólico para um arquivo que não existe e o projeto roda um `git push`
 - **THEN** o git recusa o envio
+- **AND** a mensagem cita `.githooks/pre-push`
+
+#### Scenario: Repasse que volta a si mesmo
+- **WHEN** o `.githooks/pre-push` do projeto é um link simbólico para o `trilha/hooks/pre-push` e o projeto roda um `git push`
+- **THEN** o git recusa o envio, sem ficar rodando sem fim
 - **AND** a mensagem cita `.githooks/pre-push`

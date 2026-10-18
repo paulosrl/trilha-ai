@@ -28,10 +28,11 @@ Alternativa descartada: rodar o hook próprio como subprocesso e repassar o cód
 **2. O hook próprio que não pode rodar recusa o envio.** Com um hook dele que não é executável, o git só avisa (o `hint` do `advice.ignoredHook`) e deixa o envio seguir. Aqui o hook próprio existe porque o projeto quer a verificação; seguir sem ele seria o desligamento que esta change evita. Por isso o envio é recusado em dois casos, com uma mensagem que cita o arquivo:
 - o `.githooks/pre-push` sem a permissão de execução, com o `chmod +x` na mensagem;
 - o link simbólico quebrado: o `[ -e ]` dá falso nele, e só o `[ -L ]` o acha; sem isso ele contaria como "não existe" e o envio seguiria.
+- o repasse que volta a si mesmo (o `.githooks/pre-push` como link para o `trilha/hooks/pre-push`, ou um hook próprio que chama o repasse): antes do `exec`, o repasse grava a raiz do repositório na variável `TRILHA_PRE_PUSH`; se ela já traz a mesma raiz quando ele começa, recusa em vez de rodar sem fim. A marca é pela raiz, e não um "já passei" qualquer, para que um hook próprio que envie outro repositório não seja barrado. Alternativa descartada: comparar o caminho real dos dois arquivos, que não pega o hook próprio que chama o repasse.
 
 Alternativa descartada: rodá-lo com `bash .githooks/pre-push`. Funcionaria só para script de shell e esconderia a permissão perdida.
 
-**3. O aviso da migração deixa de citar o `pre-push`.** No `_migrar`, o `pre-push` sai da lista dos hooks que "não rodam mais". O texto do aviso para os outros fica como está. O `.githooks/` continua sendo apagado só quando fica vazio.
+**3. O aviso da migração deixa de citar o `pre-push` que roda.** No `_migrar`, o `pre-push` sai da lista dos hooks que "não rodam mais". Quando ele está sem a permissão de execução ou é um link quebrado, a migração avisa que o envio será recusado até ele ser corrigido: sem isso, a saída ficaria muda e só o primeiro envio mostraria o problema. O texto do aviso para os outros fica como está. O `.githooks/` continua sendo apagado só quando fica vazio.
 
 **4. A conferência das regras não muda.** O arquivo novo de `modelo/trilha/` entra sozinho na comparação com o kit e na conferência da permissão de execução, que valem para todo arquivo da pasta.
 
@@ -77,3 +78,21 @@ Feita por um agente sem o contexto da sessão. Nenhum achado grave; os sete, apl
 5. O link simbólico quebrado contaria como "não existe": aplicado, o cenário "Link simbólico quebrado", a decisão 2 e a tarefa 1.6.
 6. O hook novo precisa entrar no git antes dos testes, porque o `kit.py novo` copia o que o git lista: aplicado, na tarefa 1.7.
 7. O envio dos testes dependeria da configuração do git da máquina: aplicado, o destino explícito na nota das tarefas.
+
+### Verify, depois do apply
+
+Feito por um agente sem o contexto da sessão: pronta para o archive, sem crítico nem aviso. Uma sugestão:
+
+1. O `assertNotIn("pre-push", …)` do `test_migracao_preserva_o_pre_push_sem_aviso` reprovaria qualquer saída que citasse o hook novo: aplicado, o teste confere só a frase do aviso (é o item 5 do code review, abaixo).
+
+### Code review do PR #8
+
+Feito por um agente sem o contexto da sessão, pela skill `code-review`, sem comentários no PR. Nenhum achado grave; os cinco, aplicados com a escolha do usuário:
+
+1. Médio: a migração ficava muda com o `.githooks/pre-push` sem a permissão de execução ou como link quebrado, e só o primeiro envio mostraria o problema: aplicado, o cenário "Hook de envio do projeto que não pode rodar" e a decisão 3.
+2. Leve: o teste da migração usava um hook sem a permissão de execução, e nenhum teste automático provava que o envio do projeto migrado chega ao hook dele: aplicado, o teste dá o `chmod` e faz um `git push` depois da migração.
+3. Leve: o repasse que volta a si mesmo rodaria sem fim: aplicado, o cenário "Repasse que volta a si mesmo" e a marca `TRILHA_PRE_PUSH` (decisão 2).
+4. Leve: o caminho do arquivo de registro entrava sem aspas no script gerado pelos testes: aplicado, com o `shlex.quote`.
+5. Leve: a conferência ampla demais do item do verify: aplicado.
+
+O agente deixou fora, por não terem efeito, quatro pontos da skill, e a recusa fica: a pasta no lugar do hook (o envio já é recusado, só a mensagem é a do bash); generalizar o repasse para todos os hooks (contraria a escolha do que fica fora, no `proposal.md`); a configuração global do git nos testes (o resto da suíte também não a isola, e o destino explícito já tira a dependência que importa); o gerador dentro do `for` no `_migrar` (estilo).

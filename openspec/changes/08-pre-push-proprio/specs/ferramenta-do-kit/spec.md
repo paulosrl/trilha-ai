@@ -15,6 +15,12 @@ Num projeto com as cópias do método na raiz, em `scripts/` e em `.githooks/pre
 - **WHEN** o projeto tem, além do `.githooks/pre-commit`, um `.githooks/pre-push` próprio
 - **THEN** depois da migração o `.githooks/pre-push` continua em `.githooks/`, sem mudança
 - **AND** a ferramenta não avisa que ele deixou de rodar, porque o `trilha/hooks/pre-push` o roda
+- **AND** um `git push` do projeto migrado roda o `.githooks/pre-push`
+
+#### Scenario: Hook de envio do projeto que não pode rodar
+- **WHEN** o `.githooks/pre-push` do projeto está sem a permissão de execução ou é um link simbólico quebrado
+- **THEN** a migração o mantém como está
+- **AND** a ferramenta avisa que o envio será recusado até ele ser corrigido, citando o arquivo
 
 #### Scenario: Outro hook do projeto preservado
 - **WHEN** o projeto tem, além do `.githooks/pre-commit`, outro hook próprio em `.githooks/` (por exemplo, `commit-msg`)
