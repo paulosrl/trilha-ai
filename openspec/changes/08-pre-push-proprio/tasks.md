@@ -18,10 +18,10 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 2. A migração sem o aviso do pre-push
 
-- [ ] 2.1 O teste `test_migracao_preserva_o_pre_push_sem_aviso` comprova o cenário "Hook de envio do projeto preservado": o `.githooks/pre-push` fica igual, e a saída do `atualizar` não diz que ele não roda mais. Falha antes do código (`-k test_migracao_preserva_o_pre_push_sem_aviso`)
-- [ ] 2.2 O `test_migracao_preserva_e_avisa_o_hook_proprio` passa a usar um `.githooks/commit-msg` e comprova o cenário "Outro hook do projeto preservado"; já passa e guarda o que não pode mudar (`-k test_migracao_preserva_e_avisa_o_hook_proprio`)
-- [ ] 2.3 O `test_migra_o_projeto_antigo` e o `test_migracao_parcial_troca_a_importacao` continuam comprovando os cenários "Projeto da versão 1.30 migrado" e "Migração parcial", sem mudança (`-k test_migra_o_projeto_antigo` e `-k test_migracao_parcial_troca_a_importacao`)
-- [ ] 2.4 O `_migrar` do `ferramentas/kit.py` deixa de avisar sobre o `pre-push` (design, decisão 3); os testes do grupo 2 passam
+- [x] 2.1 O teste `test_migracao_preserva_o_pre_push_sem_aviso` comprova o cenário "Hook de envio do projeto preservado": o `.githooks/pre-push` fica igual, e a saída do `atualizar` não diz que ele não roda mais. Falha antes do código (`-k test_migracao_preserva_o_pre_push_sem_aviso`)
+- [x] 2.2 O `test_migracao_preserva_e_avisa_o_hook_proprio` passa a usar um `.githooks/commit-msg` e comprova o cenário "Outro hook do projeto preservado"; já passa e guarda o que não pode mudar (`-k test_migracao_preserva_e_avisa_o_hook_proprio`)
+- [x] 2.3 O `test_migra_o_projeto_antigo` e o `test_migracao_parcial_troca_a_importacao` continuam comprovando os cenários "Projeto da versão 1.30 migrado" e "Migração parcial", sem mudança (`-k test_migra_o_projeto_antigo` e `-k test_migracao_parcial_troca_a_importacao`)
+- [x] 2.4 O `_migrar` do `ferramentas/kit.py` deixa de avisar sobre o `pre-push` (design, decisão 3); os testes do grupo 2 passam
 
 ## 3. O texto do método
 

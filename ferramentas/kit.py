@@ -308,7 +308,8 @@ def _migrar(pasta: Path) -> bool:
     ganchos = pasta / ".githooks"
     if antigas and ganchos.is_dir():
         proprios = sorted(arquivo.name for arquivo in ganchos.iterdir())
-        for nome in proprios:
+        # O pre-push próprio roda pelo trilha/hooks/pre-push; os outros ficam sem quem os chame.
+        for nome in (nome for nome in proprios if nome != "pre-push"):
             print(
                 f"aviso: .githooks/{nome} não roda mais, porque a trava do commit passou a "
                 "trilha/hooks; ligue-o de outro jeito (por exemplo, chamado pelo scripts/check.sh)"

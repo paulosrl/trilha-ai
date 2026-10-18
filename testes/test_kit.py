@@ -1999,14 +1999,27 @@ class Kit(unittest.TestCase):
     def test_migracao_preserva_e_avisa_o_hook_proprio(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_da_1_30(tmp)
+            proprio = pasta / ".githooks/commit-msg"
+            proprio.write_text("#!/bin/sh\necho o commit-msg do projeto\n", encoding="utf-8")
+            self._commit_tudo(pasta, "um hook do projeto")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertEqual(proprio.read_text(encoding="utf-8"), "#!/bin/sh\necho o commit-msg do projeto\n")
+            self.assertFalse((pasta / ".githooks/pre-commit").exists())
+            self.assertIn(".githooks/commit-msg não roda mais", saida.stdout)
+
+    def test_migracao_preserva_o_pre_push_sem_aviso(self) -> None:
+        """O .githooks/pre-push roda pelo trilha/hooks/pre-push (change 08): nada a avisar."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_1_30(tmp)
             proprio = pasta / ".githooks/pre-push"
             proprio.write_text("#!/bin/sh\necho o pre-push do projeto\n", encoding="utf-8")
             self._commit_tudo(pasta, "um hook do projeto")
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
             self.assertEqual(proprio.read_text(encoding="utf-8"), "#!/bin/sh\necho o pre-push do projeto\n")
-            self.assertFalse((pasta / ".githooks/pre-commit").exists())
-            self.assertIn(".githooks/pre-push não roda mais", saida.stdout)
+            self.assertTrue((pasta / "trilha/hooks/pre-push").is_file())
+        self.assertNotIn("pre-push", saida.stdout + saida.stderr)
 
     def test_migracao_troca_a_parte_fixa_com_vizinhos(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
