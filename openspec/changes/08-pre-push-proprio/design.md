@@ -65,6 +65,14 @@ Os projetos recebem o hook com a cópia da 2.6, pelo `kit.py atualizar`, sob ord
 
 O clone foi apagado depois.
 
+**Depois das respostas à revisão (tarefas 5.7 e 5.8), em 2026-10-18:**
+
+- Suíte do kit: 210 testes, OK, código 0; o ruff, `check` e `format --check`, com código 0.
+- Num projeto feito pelo `kit.py novo`, com o `.githooks/pre-push` como link para `../trilha/hooks/pre-push`: o `git push` a um remoto local saiu com 1 em menos de um segundo, com "envio recusado: .githooks/pre-push leva de volta ao trilha/hooks/pre-push, que rodaria sem fim", e o remoto ficou vazio.
+- Num clone descartável do Heimdall, com a permissão de execução do `.githooks/pre-push` tirada num commit (feito como os testes fazem, sem a trava, que o clone ainda não tinha): o `kit.py atualizar` saiu com 0 e avisou "aviso: .githooks/pre-push está sem a permissão de execução; o envio será recusado até ele ser corrigido (chmod +x .githooks/pre-push)"; o envio seguinte foi recusado com "envio recusado: .githooks/pre-push está sem a permissão de execução; rode chmod +x .githooks/pre-push", e o remoto ficou vazio. Uma primeira tentativa, com o `chmod` sem commit, não valeu: o `atualizar` recusa o projeto com mudança por commitar.
+
+Os dois projetos de ensaio foram apagados depois.
+
 ## Respostas à revisão
 
 ### Revisão dos artefatos, antes do apply
