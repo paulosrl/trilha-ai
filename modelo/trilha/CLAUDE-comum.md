@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 2.5, de 2026-10-16. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
+Versão 2.6, de 2026-10-18. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL. Cada repositório o guarda na pasta `trilha/`, com o resto do que o método copia sem mudar, e o importa no seu `CLAUDE.md` com `@trilha/CLAUDE-comum.md`. Este arquivo só traz o que vale para todo projeto; o que é de um projeto (o que ele é, comandos, stack, dados, armadilhas próprias) fica no `CLAUDE.md` dele, no esqueleto da última seção. Em conflito, vale nesta ordem: as travas do kit; a escolha do usuário; o OpenSpec (fluxo e formato); a regra do `CLAUDE.md` do repositório declarada em "Exceções ao comum", com o motivo (fora dessa seção, regra contrária a esta não vale); este arquivo, que conta como parte do `CLAUDE.md` que o importa; o `openspec/config.yaml`; as skills `sdd:*`.
 
@@ -76,7 +76,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 
 ## Armadilhas
 
-- As travas do kit não se contornam: o `trilha/hooks/pre-commit` (ligado por `git config core.hooksPath trilha/hooks`) confere as regras e o método antes de cada commit, e o `trilha/guarda.py`, hook do Claude Code no `.claude/settings.json`, barra o envio forçado, o `--no-verify`, o desligamento da trava do commit, o `pkill -f` e o `pgrep -f` (o padrão casa o próprio shell: encerre processos pelo PID guardado) e o merge sem `--merge` ou sem a verificação verde. Trava que barrar algo legítimo volta ao usuário.
+- As travas do kit não se contornam: o `trilha/hooks/pre-commit` (ligado por `git config core.hooksPath trilha/hooks`) confere as regras e o método antes de cada commit, o `trilha/hooks/pre-push` roda, a cada envio, o hook próprio do projeto em `.githooks/pre-push`, quando ele existe, e o `trilha/guarda.py`, hook do Claude Code no `.claude/settings.json`, barra o envio forçado, o `--no-verify`, o desligamento da trava do commit, o `pkill -f` e o `pgrep -f` (o padrão casa o próprio shell: encerre processos pelo PID guardado) e o merge sem `--merge` ou sem a verificação verde. Trava que barrar algo legítimo volta ao usuário.
 - Nunca pare, remova ou mate processo ou container de outro projeto sem ordem explícita.
 - Senha, chave ou token nunca entram no git; o CI os procura no histórico (gitleaks). Achado real: troque a chave antes de qualquer outra coisa, porque apagá-la do git não a desfaz no histórico; falso positivo vai ao `.gitleaksignore`, com a escolha do usuário.
 - Dado real nunca serve a teste manual: use uma cópia descartável e prove, antes e depois, que o real não mudou.

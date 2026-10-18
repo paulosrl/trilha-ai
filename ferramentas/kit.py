@@ -308,10 +308,23 @@ def _migrar(pasta: Path) -> bool:
     ganchos = pasta / ".githooks"
     if antigas and ganchos.is_dir():
         proprios = sorted(arquivo.name for arquivo in ganchos.iterdir())
-        for nome in proprios:
+        # O pre-push próprio roda pelo trilha/hooks/pre-push; os outros ficam sem quem os chame.
+        for nome in (nome for nome in proprios if nome != "pre-push"):
             print(
                 f"aviso: .githooks/{nome} não roda mais, porque a trava do commit passou a "
                 "trilha/hooks; ligue-o de outro jeito (por exemplo, chamado pelo scripts/check.sh)"
+            )
+        # O que o trilha/hooks/pre-push recusaria: o aviso vem já aqui, e não só no primeiro envio.
+        envio = ganchos / "pre-push"
+        if envio.is_symlink() and not envio.exists():
+            print(
+                "aviso: .githooks/pre-push é um link simbólico quebrado; o envio será recusado até "
+                "ele ser corrigido"
+            )
+        elif envio.is_file() and not envio.stat().st_mode & 0o111:
+            print(
+                "aviso: .githooks/pre-push está sem a permissão de execução; o envio será recusado "
+                "até ele ser corrigido (chmod +x .githooks/pre-push)"
             )
         if not proprios:
             ganchos.rmdir()
