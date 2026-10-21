@@ -19,7 +19,7 @@ O `trilha/tempo.py` SHALL rodar só quando chamado, de dentro de um repositório
 - **AND** nenhum arquivo é criado na pasta de dados do usuário
 
 ### Requirement: Conversas do repositório
-O comando SHALL ler as conversas do Claude Code da pasta `projects` da configuração do Claude Code (`CLAUDE_CONFIG_DIR`, ou `~/.claude` quando ela falta ou é vazia), inclusive as dos subagentes, e MUST considerar só as linhas cujo `cwd` é a raiz do repositório ou uma pasta dentro dela que não é de outro repositório git aninhado. Um worktree do próprio repositório dentro da raiz conta como dela.
+O comando SHALL ler as conversas do Claude Code da pasta `projects` da configuração do Claude Code (`CLAUDE_CONFIG_DIR`, ou `~/.claude` quando ela falta ou é vazia), inclusive as dos subagentes, e MUST considerar só as linhas cujo `cwd` é a raiz do repositório ou uma pasta dentro dela que não é de outro repositório git aninhado. Um worktree do próprio repositório dentro da raiz conta como dela. A subpasta cujo `.git` não se consegue conferir (sem permissão) MUST contar como da raiz, sem o comando falhar.
 
 #### Scenario: Conversa de outro repositório
 - **WHEN** uma conversa tem todas as linhas com `cwd` num repositório vizinho cujo nome começa com o nome deste
@@ -44,6 +44,10 @@ O comando SHALL ler as conversas do Claude Code da pasta `projects` da configura
 #### Scenario: Worktree do próprio repositório dentro da raiz
 - **WHEN** a raiz tem um worktree dela mesma em `.claude/worktrees/w1`, e uma conversa tem `cwd` nele
 - **THEN** as horas dessa conversa entram na apuração da raiz
+
+#### Scenario: Subpasta sem permissão
+- **WHEN** uma conversa tem `cwd` em `fechada/sub`, dentro da raiz, e a pasta `fechada` não se abre, por falta de permissão
+- **THEN** o comando termina com o código de saída 0, e as horas dessa conversa entram na apuração da raiz
 
 ### Requirement: Pedido do usuário
 O comando SHALL contar como pedido do usuário só a mensagem escrita por ele: uma linha de usuário que não é de metadados, nem de subagente, nem resumo de compactação, e cujo conteúdo não é só o resultado de uma ferramenta. As demais linhas com hora, do assistente e dos resultados de ferramentas, MUST contar como ação da IA.
@@ -286,7 +290,7 @@ A página SHALL ter os dados da apuração só no bloco de dados, e o nome do re
 - **THEN** o bloco de dados da página não traz o texto `<!--`
 
 ### Requirement: Repositório que mudou de pasta
-Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz, e esse caminho já não tem um repositório git (a pasta `.git`), o comando SHALL juntar as conversas dele às deste resumo, renomear o arquivo dele e a página dele com o sufixo `.juntado`, sem apagá-los nem sobrescrever um `.juntado` anterior, e avisar, sem falhar, citando-o; quando o resumo dele não se lê, o comando SHALL avisar, citando-o, sem juntá-lo nem renomeá-lo. Quando esse caminho ainda tem um repositório e não há resumo para o caminho da raiz, o comando SHALL só avisar, citando o outro resumo. O comando MUST NOT tomar por ele o resumo de um repositório cujo nome só começa com o deste.
+Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz, e esse caminho já não tem um repositório git (a pasta `.git`), o comando SHALL juntar as conversas dele às deste resumo, renomear o arquivo dele e a página dele com o sufixo `.juntado`, sem apagá-los nem sobrescrever um `.juntado` anterior, e avisar, sem falhar, citando-o; quando o resumo dele não se lê, o comando SHALL avisar, citando-o e dizendo que se corrija ou mova o arquivo, sem juntá-lo nem renomeá-lo. Quando não se consegue conferir o `.git` desse caminho (sem permissão, um caminho inválido), o comando MUST NOT juntar nem renomear o resumo dele, MUST avisar em toda execução que não conseguiu conferir, citando o resumo, e MUST terminar com o código de saída 0. Quando esse caminho ainda tem um repositório e não há resumo para o caminho da raiz, o comando SHALL só avisar, citando o outro resumo. O comando MUST NOT tomar por ele o resumo de um repositório cujo nome só começa com o deste.
 
 #### Scenario: Pasta trocada
 - **WHEN** o comando já rodou com a raiz em `/a/proj`, `/a/proj` ainda tem um repositório, e ele roda agora com a raiz em `/b/proj`
@@ -311,11 +315,19 @@ Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz,
 
 #### Scenario: Resumo antigo que não se lê
 - **WHEN** a pasta `/a/proj` já não existe, e o resumo dela é de uma versão que o comando não conhece
-- **THEN** a saída traz um aviso que cita esse resumo, que continua com o nome de antes, e as horas dele não entram
+- **THEN** a saída traz um aviso que cita esse resumo e diz "corrija-o ou mova-o", o resumo continua com o nome de antes, e as horas dele não entram
 
 #### Scenario: Pasta antiga com um .git que o git recusa
 - **WHEN** a pasta `/a/proj` ainda tem um `.git`, mas o git não a abre
 - **THEN** o resumo de `/a/proj` não é juntado nem renomeado
+
+#### Scenario: Pasta antiga sem permissão
+- **WHEN** a pasta acima de `/a/proj` não se abre, por falta de permissão
+- **THEN** o comando termina com o código de saída 0, o resumo de `/a/proj` não é juntado nem renomeado, e a saída de cada execução traz um aviso de que não deu para conferir `/a/proj`, citando o resumo
+
+#### Scenario: Raiz antiga com caminho inválido
+- **WHEN** o resumo de mesmo nome tem gravada uma raiz com um caractere nulo no caminho
+- **THEN** o comando termina com o código de saída 0, com o aviso de que não deu para conferir, e o resumo não é juntado nem renomeado
 
 #### Scenario: Vizinho de nome parecido
 - **WHEN** a pasta dos dados tem só o resumo de um repositório `proj-antigo`, e o comando roda na raiz `proj`
