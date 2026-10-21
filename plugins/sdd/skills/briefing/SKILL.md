@@ -1,7 +1,7 @@
 ---
 name: briefing
 description: >
-  Estágio 3 do pipeline PRD → TDD → OpenSpec, antes do /opsx:propose: confere o PRD e o TDD aprovados, decompõe o escopo em changes ordenadas (sdd/decomposicao-<nome>.md), escreve o briefing de cada change para o propose e audita os artefatos que ele gerou. Use quando o usuário, com PRD e TDD aprovados, pedir para decompor em changes, preparar o OpenSpec, gerar ou auditar o briefing. Nunca escreve proposal, spec, design nem tasks.
+  Estágio 3 do pipeline PRD → TDD → OpenSpec, antes do /opsx:propose: confere o PRD e o TDD aprovados, decompõe o escopo em changes ordenadas (sdd/decomposicao-<nome>.md), escreve o briefing de cada change para o propose e audita os artefatos que ele gerou. Use quando o usuário pedir para decompor em changes, preparar o OpenSpec, gerar ou auditar o briefing, com PRD e TDD aprovados ou, sem eles, o briefing curto de uma correção. Nunca escreve proposal, spec, design nem tasks.
 ---
 
 # Skill: Ponte para o OpenSpec (Estágio 3 — adaptador)
