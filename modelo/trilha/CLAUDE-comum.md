@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 2.12, de 2026-10-21. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
+Versão 2.13, de 2026-10-21. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL; o que é de um projeto fica no `CLAUDE.md` dele, no esqueleto da última seção. Em conflito, vale nesta ordem: as travas do kit; a escolha do usuário; o OpenSpec (fluxo e formato); a regra do `CLAUDE.md` do repositório declarada em "Exceções ao comum", com o motivo (fora dessa seção, regra contrária a esta não vale); este arquivo, que conta como parte do `CLAUDE.md` que o importa; o `openspec/config.yaml`; as skills `sdd:*`.
 
@@ -35,11 +35,13 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 
 - O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele, e o que se sobrepuser muda no método, não no OpenSpec. O ciclo acima usa todos os passos que ele oferece; quando um comando oferece pular um (arquivar sem o verify, aplicar antes da revisão, arquivar sem atualizar os specs), quem escolhe é o usuário, com a recomendação de não pular.
 - Os specs em `openspec/specs/` mudam pelos caminhos do OpenSpec: o delta, que o archive aplica, e a edição direta que as instruções dele pedem (o Purpose de um spec novo). Fora disso, à mão, só typo ou link; outra edição à mão pede uma change retroativa.
+- Nome das pastas: a change ativa nasce como `NN-nome` (dois dígitos até 99, três a partir de 100, sem renomear as anteriores), e o archive acrescenta a data (`AAAA-MM-DD-NN-nome`); os specs seguem o nome que o OpenSpec dá (o comportamento, em kebab-case, sem data nem número), e o delta de um spec existente, o nome exato da pasta principal. Confira com `ls` antes de criar e depois de arquivar. O número de tarefas de uma change vem de `openspec instructions apply --change <nome> --json` (`progress.total`), nunca da contagem à mão.
 - Espere a escolha do usuário antes de ampliar o escopo de uma change aprovada. Achado fora do escopo vira outra change ou revisão do PRD ou do TDD; achado que o spec já cobre é correção dentro da change, com o teste que falha escrito antes.
 
 ## Registrar cada decisão no artefato dono dela
 
 - Decisão de produto: nova versão do PRD. Decisão técnica: nova versão do TDD. Decisão local de uma change: o `design.md` dela; o OpenSpec o cria só quando cabe, e, sem ele, o `notas.md` da pasta da change faz as vezes dele em todo lugar do método que cita o `design.md`. Os marcos de cada change (briefing, auditoria, archive): a tabela "Ciclo" da decomposição, atualizada no commit do passo de cada marco; o passo em curso, o `ANDAMENTO.md`. Desvio ou incidente, às claras e nunca escondido: o `design.md` da change em curso, ou a decomposição se estiver fora de change. Nada fica só na conversa.
+- Correção de texto no PRD, no TDD ou na decomposição que não muda o sentido (redação, erro, referência) não sobe a versão dele nem a linha "de origem" de quem o cita: fica no registro de processo, se houver, ou no commit. Só a mudança de sentido é versão nova, aprovada pelo usuário; ela atualiza a linha "de origem" de quem o cita, sem versão nova dele.
 
 ## Trabalho interrompível: saber onde parou
 
@@ -59,12 +61,12 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 - Pedido curto, com erro de digitação ou com mais de uma leitura: diga a leitura adotada antes de agir.
 - Pedido que contraria requisito ou ADR volta ao usuário com opções; nunca é atendido em silêncio.
 - Delegação ("escolha o melhor") não dispensa o gate: siga a recomendação já apresentada e registre a delegação.
-- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho: não muda o `ANDAMENTO.md` nem o registro de processo. A escolha, com ou sem correção, é unidade de trabalho: atualiza o `ANDAMENTO.md` e o registro, se houver. Uma auditoria fecha com a verificação do repositório verde e sem contradição; o que for menor fica no relatório.
+- Revisão ou auditoria: relatório e opções, sem editar nada; corrija só depois da escolha, com a causa raiz provada. Até a escolha, a auditoria não é unidade de trabalho: não muda o `ANDAMENTO.md` nem o registro de processo. A escolha, com ou sem correção, é unidade de trabalho: atualiza o `ANDAMENTO.md` e leva o relatório ao registro, se houver. Uma auditoria fecha com a verificação do repositório verde e sem contradição; o que for menor fica no relatório e se corrige quando o arquivo mudar por outro motivo.
 - Ao fechar trabalho seu, releia o diff inteiro e corrija antes de entregar.
 - Publique, faça deploy ou mude versão só com "sim" explícito para aquela alteração; o envio ao GitHub segue a regra dos envios, em "Trabalho interrompível".
 - Um "sim" isolado responde só à pergunta principal da mensagem; o envio ao remoto perguntado à parte pede "sim" para ele (ou "sim, em tudo"). Em pergunta com mais de uma decisão, confirme cada uma.
 - Não escreva em outro repositório nem troque de projeto sem ordem explícita nomeando-o.
-- Sugira `/clear` em uma linha no fim da mensagem em todo corte natural (etapa fechada, change com o merge feito, antes de outra frente), só com tudo em disco e commitado; diga o que o usuário recupera ao voltar e mostre, num bloco de código, o comando exato a dar na próxima sessão.
+- Sugira `/clear` em uma linha no fim da mensagem em todo corte natural (etapa fechada, change com o merge feito, antes de outra frente), só com tudo em disco e commitado, nunca no meio de uma tarefa; diga o que o usuário recupera ao voltar e mostre, num bloco de código, o comando exato a dar na próxima sessão.
 
 ## Convenções
 

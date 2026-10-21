@@ -241,5 +241,3 @@ Após salvar:
 3. Declare: "Gate 2 cumprido. Próximos passos: a stack nos arquivos do repositório, como o `CLAUDE-comum.md` manda ao fechar o gate 2, e depois a decomposição e os briefings (skill `briefing`), que alimentam o `/opsx:propose`."
 
 **Não** exiba o TDD completo no chat — o arquivo é a entrega.
-
-Correção de texto no TDD que não muda decisão (redação, erro, referência) não sobe a versão dele nem a linha "de origem" de quem o cita: fica no registro de processo, se houver, ou na mensagem do commit. Só a mudança de sentido é versão nova, aprovada pelo usuário; ela atualiza a linha "de origem" de quem o cita, sem versão nova dele.

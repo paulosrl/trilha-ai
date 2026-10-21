@@ -270,6 +270,7 @@ class Kit(unittest.TestCase):
         """v1.34: quem sugere o /clear mostra o comando exato a dar ao voltar, pronto para copiar."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("e mostre, num bloco de código, o comando exato a dar na próxima sessão", comum)
+        self.assertIn("nunca no meio de uma tarefa", comum)
 
     def test_comum_sem_repetir_o_openspec_nem_a_si_mesmo(self) -> None:
         """v1.32: a instrução do propose já manda ler o projeto e os specs; o pkill -f num lugar só."""
@@ -325,8 +326,8 @@ class Kit(unittest.TestCase):
 
     def test_specs_com_o_nome_do_openspec(self) -> None:
         """v1.11: só as changes levam número e data; os specs seguem o nome que o OpenSpec dá."""
-        briefing = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("Os specs seguem o nome que o OpenSpec dá", briefing)
+        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("os specs seguem o nome que o OpenSpec dá", comum)
 
     def test_auditoria_nao_e_unidade_de_trabalho(self) -> None:
         """v1.12: até a escolha do usuário, a auditoria não muda o ANDAMENTO.md nem o registro de processo."""
@@ -334,12 +335,11 @@ class Kit(unittest.TestCase):
         self.assertIn("Até a escolha, a auditoria não é unidade de trabalho", comum)
 
     def test_correcao_de_texto_nao_sobe_versao(self) -> None:
-        """v1.14: só a mudança de sentido sobe a versão do PRD, do TDD ou da decomposição."""
-        for skill in ("prd", "tdd", "briefing"):
-            texto = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
-            self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário", texto, skill)
-            if skill != "briefing":
-                self.assertIn("não sobe a versão dele nem a linha \"de origem\" de quem o cita", texto, skill)
+        """v1.14: só a mudança de sentido sobe a versão do PRD, do TDD ou da decomposição. v2.13: no
+        comum, porque a correção de texto acontece fora das sessões das skills."""
+        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário", comum)
+        self.assertIn("não sobe a versão dele nem a linha \"de origem\" de quem o cita", comum)
 
     def test_prd_e_spec_em_desacordo(self) -> None:
         """v1.15: o PRD aprovado manda sobre o spec; se o certo for o spec, o PRD ganha versão nova."""
@@ -353,7 +353,7 @@ class Kit(unittest.TestCase):
         self.assertIn("Um \"sim\" isolado responde só à pergunta principal da mensagem", comum)
         briefing = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("rode `openspec list`", briefing)
-        self.assertIn("(`progress.total`)", briefing)
+        self.assertIn("(`progress.total`)", comum)  # v2.13: no apply e no archive, sem a skill
         self.assertIn("desfaça-a por edição inversa, nunca com `git checkout`", comum)
 
     def test_remoto_privado_no_github(self) -> None:
@@ -518,9 +518,8 @@ class Kit(unittest.TestCase):
 
     def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
         """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
-        for skill in ("prd", "tdd"):
-            texto = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
-            self.assertIn("atualiza a linha \"de origem\" de quem o cita, sem versão nova dele", texto, skill)
+        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("atualiza a linha \"de origem\" de quem o cita, sem versão nova dele", comum)
 
     def test_ciclo_guarda_os_marcos_e_o_andamento_o_passo(self) -> None:
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
@@ -576,6 +575,8 @@ class Kit(unittest.TestCase):
         quando um comando oferece pular um passo, quem escolhe é o usuário."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("A escolha, com ou sem correção, é unidade de trabalho", comum)
+        self.assertIn("leva o relatório ao registro", comum)
+        self.assertIn("se corrige quando o arquivo mudar por outro motivo", comum)
         self.assertIn("a cópia nova do kit (a pasta `trilha/`", comum)
         self.assertIn("O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele", comum)
         self.assertIn("quem escolhe é o usuário, com a recomendação de não pular", comum)
@@ -587,6 +588,10 @@ class Kit(unittest.TestCase):
         self.assertNotIn("Dados a proteger", config)
         self.assertNotIn("Documentos que mandam", config)
         self.assertIn("CLAUDE-comum.md e no CLAUDE.md, que o agente já carrega; este contexto não as repete", config)
+        # v2.13: o config diz que o nome das pastas está no comum; ele precisa estar lá.
+        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("o nome das pastas", config)
+        self.assertIn("Nome das pastas: a change ativa nasce como `NN-nome`", comum)
 
     def test_metodo_sem_sobrepor_o_openspec(self) -> None:
         """v1.19: o design.md é do OpenSpec, que o cria só quando cabe (o notas.md o substitui); os specs

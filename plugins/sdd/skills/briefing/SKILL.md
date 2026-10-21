@@ -83,9 +83,7 @@ Os títulos `## 1.`, `## 2.` e `## Ciclo`, e o número da change na primeira col
 
 ### 3. Briefing — a entrada do /opsx:propose
 
-Antes de propor, rode `openspec list`: evita change duplicada ou em colisão com outra change ativa. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
-
-Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
+Antes de propor, rode `openspec list`: evita change duplicada ou em colisão com outra change ativa.
 
 Para a change da vez, emita o briefing como bloco de texto pronto para colar no comando nativo, dentro do repositório:
 
@@ -158,5 +156,3 @@ Depois do merge da change, que vem após o archive e os passos que o `openspec/c
 Arquivos desta skill: apenas `sdd/decomposicao-<nome>.md` (tabela aprovada, o que dispensa change e a tabela "Ciclo") e, por ciclo, `sdd/briefing-openspec/briefing-change-NN-<nome>.md`. Artefatos OpenSpec vivem no repositório, gerados pela ferramenta nativa — nunca por esta skill.
 
 Resumo por etapa no chat: recepção (veredicto), decomposição (nº de changes), briefing (change e recorte), auditoria (laudo).
-
-Correção de texto na decomposição que não muda escopo nem ordem (redação, erro, referência) não sobe a versão dela: fica no registro de processo, se houver, ou na mensagem do commit. Só a mudança de sentido é versão nova, aprovada pelo usuário.
