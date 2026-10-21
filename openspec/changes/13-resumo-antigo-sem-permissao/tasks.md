@@ -20,3 +20,10 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 - [x] 4.1 O conjunto dos testes e o ruff passam
 - [x] 4.2 A execução manual, por último: numa pasta de dados à parte, com o resumo de uma raiz antiga sob uma pasta sem permissão, o comando roda num repositório de teste, termina com 0 e deixa o resumo antigo com o nome de antes; o resultado vai a "Verificação", no `design.md`
+
+## 5. As respostas ao verify e ao code review
+
+Do `/opsx:verify` e do `/code-review 13`, de 2026-10-21; a decisão de cada ponto fica em "Respostas à revisão", no `design.md`.
+
+- [x] 5.1 O `test_tempo_pasta_antiga_sem_permissao` passa a conferir o aviso de que não deu para conferir em duas execuções, e os testes `test_tempo_raiz_antiga_com_caminho_invalido` e `test_tempo_subpasta_sem_permissao` comprovam os cenários "Raiz antiga com caminho inválido" e "Subpasta sem permissão"; os três falham antes do código, e os de permissão se pulam como root ou sem o `os.geteuid` (`-k sem_permissao`, `-k caminho_invalido`)
+- [x] 5.2 O `tempo.py` com o `_tem_git` nos dois lugares e o aviso próprio (D1); os testes e o ruff passam
