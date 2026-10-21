@@ -2353,6 +2353,12 @@ class Kit(unittest.TestCase):
         self.assertTrue(presente("fi", {"fi"}))
         self.assertFalse(presente("fi", {"find ."}))
         self.assertFalse(presente("run: |", {"run: |x"}))
+        # Change 09: a chamada por uma função do projeto, depois de um espaço.
+        self.assertTrue(presente("bash trilha/verifica.sh",
+                                 {'etapa "regras" bash trilha/verifica.sh --vizinho trilha-ai'}))
+        self.assertTrue(presente("bash trilha/verifica.sh", {'etapa "regras" bash trilha/verifica.sh'}))
+        self.assertFalse(presente("bash trilha/verifica.sh", {"xbash trilha/verifica.sh"}))
+        self.assertFalse(presente("bash trilha/verifica.sh", {"bash trilha/verifica.sh2"}))
 
     def test_migracao_parcial_troca_a_importacao(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2583,6 +2589,35 @@ class Kit(unittest.TestCase):
             saida = self._atualizar_com_gitignore(tmp, ("*.log\n", ""))
         self.assertIn("a parte fixa de .gitignore difere do modelo do kit", saida)
         self.assertIn("  + *.log", saida)
+
+    def _atualizar_com_check(self, tmp: str, troca: tuple[str, str]) -> str:
+        """O atualizar de um projeto na versão atual, com o scripts/check.sh trocado como pedido."""
+        pasta = self._projeto_novo(tmp)
+        check = pasta / "scripts/check.sh"
+        texto = check.read_text(encoding="utf-8")
+        self.assertIn(troca[0], texto)
+        check.write_text(texto.replace(troca[0], troca[1]), encoding="utf-8")
+        self._commit_tudo(pasta, "check.sh preenchido")
+        saida = self._ferramenta("atualizar", str(pasta))
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        return saida.stdout
+
+    def test_parte_fixa_aceita_a_chamada_dentro_de_uma_funcao(self) -> None:
+        """Change 09: o projeto que chama o verifica.sh por uma função própria (o etapa do Xavier)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            saida = self._atualizar_com_check(
+                tmp, ("\nbash trilha/verifica.sh\n", '\netapa "regras" bash trilha/verifica.sh --vizinho trilha-ai\n'))
+        self.assertNotIn("+ bash trilha/verifica.sh", saida)
+
+    def test_parte_fixa_sem_o_bloco_da_parte_da_stack(self) -> None:
+        """Change 09: o bloco "Parte da stack" trocado pelos comandos da stack não vira aviso."""
+        modelo = (MODELO / "scripts/check.sh").read_text(encoding="utf-8")
+        inicio = modelo.index("# Parte da stack")
+        bloco = modelo[inicio:]
+        with tempfile.TemporaryDirectory() as tmp:
+            saida = self._atualizar_com_check(tmp, (bloco, "# A stack do projeto.\nuv run pytest\n"))
+        self.assertNotIn("a parte da stack ainda não foi preenchida", saida)
+        self.assertNotIn("a parte fixa de scripts/check.sh", saida)
 
     def test_parte_fixa_sem_o_bloco_da_stack(self) -> None:
         """Change 09: o bloco da stack que o projeto apaga de propósito não vira aviso."""

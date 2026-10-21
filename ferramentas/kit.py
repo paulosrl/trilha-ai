@@ -93,8 +93,10 @@ COM_PARTE_FIXA = (
     ".github/workflows/verificacao.yml",
     ".github/dependabot.yml",
 )
-# Os títulos dos blocos da stack no modelo do .gitignore: o projeto apaga o que não é o seu, e a
-# falta deles não vira aviso.
+# Os blocos da parte da stack nos modelos: o projeto troca ou apaga o que não é o seu, e a falta
+# deles não vira aviso. Em todo arquivo, os do comentário "Parte da stack"; no .gitignore, também
+# os de título Python e Node.
+PARTE_DA_STACK = "# Parte da stack"
 BLOCOS_DA_STACK = {"# Python", "# Node"}
 # A língua dos artefatos, no context do openspec/config.yaml, como o `openspec init --language`
 # a escreve (core/init.js do OpenSpec), mais os acentos: assim o init a reconhece.
@@ -542,15 +544,14 @@ def _linhas_fixas(texto: str) -> set[str]:
 
 
 def _sem_blocos_da_stack(nome: str, texto: str) -> str:
-    """O modelo sem os blocos da stack que o projeto apaga de propósito (só no .gitignore)."""
-    if nome != ".gitignore":
-        return texto
-    blocos = re.split(r"\n\s*\n", texto)
-    return "\n\n".join(
-        bloco
-        for bloco in blocos
-        if not BLOCOS_DA_STACK & {linha.strip() for linha in bloco.splitlines()}
-    )
+    """O modelo sem os blocos da parte da stack, que o projeto troca ou apaga de propósito."""
+    titulos = BLOCOS_DA_STACK if nome == ".gitignore" else set()
+
+    def da_stack(bloco: str) -> bool:
+        linhas = {linha.strip() for linha in bloco.splitlines()}
+        return bool(titulos & linhas) or any(linha.startswith(PARTE_DA_STACK) for linha in linhas)
+
+    return "\n\n".join(bloco for bloco in re.split(r"\n\s*\n", texto) if not da_stack(bloco))
 
 
 def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
@@ -582,8 +583,9 @@ def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
 
 
 def _presente(linha: str, projeto: set[str]) -> bool:
-    """A linha do kit está no projeto: igual, ou seguida de espaço e argumentos (os --vizinho)."""
-    return any(nossa == linha or nossa.startswith(f"{linha} ") for nossa in projeto)
+    """A linha do kit está no projeto: igual, seguida de espaço e argumentos (os --vizinho) ou
+    chamada dentro de uma linha dele, depois de um espaço (por uma função do projeto)."""
+    return any(f" {linha} " in f" {nossa} " for nossa in projeto)
 
 
 def _com_lingua(cabeca: str) -> str:
