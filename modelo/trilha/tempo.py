@@ -145,8 +145,9 @@ Eventos = dict[tuple[float, str], set[int]]
 def _eventos(
     configuracao: Path, raiz: Path, ignorados: dict[str, list]
 ) -> tuple[dict[str, Eventos], dict[str, list]]:
-    """Os eventos de cada conversa que passou pela raiz, (instante, tipo), com o tipo "pedido",
-    "ia" ou "fora", e os arquivos de onde cada um veio: a linha repetida em dois arquivos (a
+    """Os eventos de cada conversa que citou a raiz, (instante, tipo), com o tipo "pedido",
+    "ia" ou "fora" (a conversa só com eventos "fora" vem também, para o resumo da 2.8), e os
+    arquivos de onde cada um veio: a linha repetida em dois arquivos (a
     conversa retomada) é um evento só, dos dois. E os arquivos lidos sem nada da raiz, com a data
     e o tamanho: enquanto eles não mudam, não se leem de novo."""
     projetos = configuracao / "projects"
@@ -187,8 +188,6 @@ def _eventos(
                     achou = achou or tipo != FORA
         if not achou:
             sem_a_raiz[chave] = assinatura
-    # A conversa que só passou por fora da raiz não é dela.
-    conversas = {s: e for s, e in conversas.items() if any(t != FORA for _, t in e)}
     return conversas, sem_a_raiz
 
 
@@ -602,7 +601,12 @@ def main() -> int:
         # O resumo da 2.8 guarda as horas que ela contava a mais (o tempo fora da raiz, o de um
         # repositório aninhado): a conversa que ainda existe é recalculada, sem juntar com elas.
         guardadas = conversas.get(sessao, []) if versao == VERSAO_DO_RESUMO else []
-        conversas[sessao] = _juntar(guardadas, _intervalos(da_conversa))
+        juntos = _juntar(guardadas, _intervalos(da_conversa))
+        # A conversa sem hora da raiz (só passou por fora dela) não fica no resumo.
+        if juntos:
+            conversas[sessao] = juntos
+        else:
+            conversas.pop(sessao, None)
     commits, de_outros_emails = _commits(raiz)
     dias = _apurar(conversas, commits)
 

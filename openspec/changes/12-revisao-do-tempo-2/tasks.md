@@ -4,12 +4,12 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 1. A versão
 
-- [ ] 1.1 "Versão 2.10, de <data do apply>." no `modelo/trilha/CLAUDE-comum.md` e `2.10.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar (D7). Os testes `test_kit_sem_mudanca_depois_da_tag`, `test_versao_no_comum` e o da versão do plugin passam
+- [x] 1.1 "Versão 2.10, de <data do apply>." no `modelo/trilha/CLAUDE-comum.md` e `2.10.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar (D7). Os testes `test_kit_sem_mudanca_depois_da_tag`, `test_versao_no_comum` e o da versão do plugin passam
 
 ## 2. A conversa do repositório aninhado no resumo da versão 1
 
-- [ ] 2.1 O teste `test_tempo_aninhado_no_resumo_antigo` comprova o cenário "Conversa do repositório aninhado no resumo antigo"; falha antes do código (`-k test_tempo_aninhado_no_resumo_antigo`)
-- [ ] 2.2 O `_eventos` e o `main` fazem o D2; os testes do grupo e os de antes passam (`-k test_tempo`)
+- [x] 2.1 O teste `test_tempo_aninhado_no_resumo_antigo` comprova o cenário "Conversa do repositório aninhado no resumo antigo"; falha antes do código (`-k test_tempo_aninhado_no_resumo_antigo`)
+- [x] 2.2 O `_eventos` e o `main` fazem o D2; os testes do grupo e os de antes passam (`-k test_tempo`)
 
 ## 3. A leitura do arquivo que só cita a raiz
 

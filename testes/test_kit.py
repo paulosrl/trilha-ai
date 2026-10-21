@@ -3469,6 +3469,19 @@ class HorasDeTrabalho(unittest.TestCase):
         self.assertEqual(fora, {"joao silva@x": 1})
         self.assertEqual(len(tempo._ler_commits(saida, None)), 2)
 
+    # A segunda revisão do tempo.py (change 12)
+
+    def test_tempo_aninhado_no_resumo_antigo(self) -> None:
+        aninhado = self.raiz / "vendor" / "lib"
+        subprocess.run(["git", "init", "-q", str(aninhado)], check=True)
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", aninhado),
+                        self._ia("2026-10-01T09:20:00Z", aninhado)])
+        resumo = self._resumo_da_2_8(
+            {"s1": [["2026-10-01T09:00:00+00:00", "2026-10-01T09:20:00+00:00", "ia"]]})
+        self._ok()
+        self.assertNotIn("2026-10-01", self._dias())
+        self.assertNotIn("s1", json.loads(resumo.read_text(encoding="utf-8"))["conversas"])
+
 
 if __name__ == "__main__":
     unittest.main()
