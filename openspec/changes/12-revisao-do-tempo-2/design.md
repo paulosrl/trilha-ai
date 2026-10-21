@@ -60,7 +60,7 @@ Se a gravação do resumo atual falha, o antigo fica com o nome de sempre, e a e
 - Na página, `palavra(n, um, varios)` devolve só a palavra, e o `pl` a usa. A frase "dia(s) com trabalho", em que o número fica em destaque separado, e o "commit(s)" do `dayTip` passam por ela.
 
 ### D7. A versão
-"Versão 2.10, de <data do apply>." no comum e `2.10.0` no plugin, antes de qualquer outro arquivo de `modelo/` mudar.
+"Versão 2.10, de 2026-10-21." no comum e `2.10.0` no plugin, antes de qualquer outro arquivo de `modelo/` mudar.
 
 ## Risks / Trade-offs
 

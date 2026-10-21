@@ -4,7 +4,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 1. A versão
 
-- [x] 1.1 "Versão 2.10, de <data do apply>." no `modelo/trilha/CLAUDE-comum.md` e `2.10.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar (D7). Os testes `test_kit_sem_mudanca_depois_da_tag`, `test_versao_no_comum` e o da versão do plugin passam
+- [x] 1.1 "Versão 2.10, de 2026-10-21." no `modelo/trilha/CLAUDE-comum.md` e `2.10.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar (D7). Os testes `test_kit_sem_mudanca_depois_da_tag`, `test_versao_no_comum` e o da versão do plugin passam
 
 ## 2. A conversa do repositório aninhado no resumo da versão 1
 
