@@ -175,17 +175,25 @@ def _eventos(
             continue
         achou = False
         with entrada:
-            # Primeiro, se o arquivo cita a raiz; só então, cada linha com cwd, de dentro ou de
-            # fora dela, porque a saída para outra pasta corta o tempo da conversa.
-            if any(marca in texto for texto in entrada for marca in marcas):
+            # Primeiro, só as linhas que citam a raiz, até uma delas ser um evento da raiz: a
+            # conversa de outro repositório que só cita o caminho não passa disso. Achado o
+            # evento, cada linha com cwd, do começo, de dentro ou de fora da raiz, porque a saída
+            # para outra pasta corta o tempo da conversa.
+            achados = []
+            for texto in entrada:
+                citada = any(marca in texto for marca in marcas)
+                evento = _evento(texto, raiz, comum, vistos) if citada else None
+                if evento is not None and evento[2] != FORA:
+                    achou = True
+                    break
+                if evento is not None:
+                    achados.append(evento)
+            if achou:
                 entrada.seek(0)
-                for texto in entrada:
-                    evento = _evento(texto, raiz, comum, vistos) if '"cwd"' in texto else None
-                    if evento is None:
-                        continue
-                    sessao, instante, tipo = evento
-                    conversas.setdefault(sessao, {}).setdefault((instante, tipo), set()).add(numero)
-                    achou = achou or tipo != FORA
+                com_cwd = (texto for texto in entrada if '"cwd"' in texto)
+                achados = filter(None, (_evento(t, raiz, comum, vistos) for t in com_cwd))
+            for sessao, instante, tipo in achados:
+                conversas.setdefault(sessao, {}).setdefault((instante, tipo), set()).add(numero)
         if not achou:
             sem_a_raiz[chave] = assinatura
     return conversas, sem_a_raiz

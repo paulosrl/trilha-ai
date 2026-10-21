@@ -13,8 +13,8 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 3. A leitura do arquivo que só cita a raiz
 
-- [ ] 3.1 O teste `test_tempo_arquivo_que_so_cita_a_raiz` confere o D1, sem cenário próprio: um arquivo de outro repositório com uma linha que cita a raiz e muitas linhas com `"cwd"` fora dela é decodificado só na linha que cita a raiz (contando as chamadas do `_evento`, com o módulo carregado como no `test_tempo_email_com_espaco_e_vazio`); falha antes do código (`-k test_tempo_arquivo_que_so_cita_a_raiz`)
-- [ ] 3.2 O `_eventos` faz o D1; os testes do grupo e os de antes passam (`-k test_tempo`)
+- [x] 3.1 O teste `test_tempo_arquivo_que_so_cita_a_raiz` confere o D1, sem cenário próprio: um arquivo de outro repositório com uma linha que cita a raiz e muitas linhas com `"cwd"` fora dela é decodificado só na linha que cita a raiz (contando as chamadas do `_evento`, com o módulo carregado como no `test_tempo_email_com_espaco_e_vazio`); falha antes do código (`-k test_tempo_arquivo_que_so_cita_a_raiz`)
+- [x] 3.2 O `_eventos` faz o D1; os testes do grupo e os de antes passam (`-k test_tempo`)
 
 ## 4. Os e-mails
 

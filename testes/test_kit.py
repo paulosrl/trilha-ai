@@ -3482,6 +3482,26 @@ class HorasDeTrabalho(unittest.TestCase):
         self.assertNotIn("2026-10-01", self._dias())
         self.assertNotIn("s1", json.loads(resumo.read_text(encoding="utf-8"))["conversas"])
 
+    @staticmethod
+    def _modulo_tempo():
+        spec = importlib.util.spec_from_file_location("tempo", TEMPO)
+        tempo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tempo)
+        return tempo
+
+    def test_tempo_arquivo_que_so_cita_a_raiz(self) -> None:
+        fora = Path(self._tmp.name) / "outra"
+        linhas = [self._pedido("2026-10-01T09:00:00Z", fora, texto=f"veja {self.raiz}")]
+        linhas += [self._ia(f"2026-10-01T09:{minuto:02d}:00Z", fora) for minuto in range(1, 40)]
+        self._conversa(linhas, pasta="-outra")
+        tempo = self._modulo_tempo()
+        original, chamadas = tempo._evento, []
+        tempo._evento = lambda *args: chamadas.append(1) or original(*args)
+        conversas, ignorados = tempo._eventos(self.config, self.raiz, {})
+        self.assertEqual(len(chamadas), 1)
+        self.assertEqual(len(ignorados), 1)
+        self.assertEqual(tempo._intervalos(conversas.get("s1", {})), [])
+
 
 if __name__ == "__main__":
     unittest.main()
