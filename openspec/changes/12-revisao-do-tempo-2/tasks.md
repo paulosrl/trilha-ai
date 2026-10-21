@@ -35,5 +35,5 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 7. Integração
 
-- [ ] 7.1 O conjunto dos testes e o ruff passam
-- [ ] 7.2 A execução manual, por último, no Xavier, só lendo, com uma pasta de dados vazia: o total igual ao da 2.9 (o D1 e as limpezas não mudam as horas), e o `git status --porcelain` igual antes e depois. Depois, numa cópia da pasta de dados, com o resumo renomeado como se a raiz tivesse vindo de outra pasta já apagada: as horas voltam e o antigo vira `.juntado`. O resultado vai a "Verificação", no `design.md`
+- [x] 7.1 O conjunto dos testes e o ruff passam
+- [x] 7.2 A execução manual, por último, no Xavier, só lendo, com uma pasta de dados vazia: o total igual ao da 2.9 (o D1 e as limpezas não mudam as horas), e o `git status --porcelain` igual antes e depois. Depois, numa cópia da pasta de dados, com o resumo renomeado como se a raiz tivesse vindo de outra pasta já apagada: as horas voltam e o antigo vira `.juntado`. O resultado vai a "Verificação", no `design.md`

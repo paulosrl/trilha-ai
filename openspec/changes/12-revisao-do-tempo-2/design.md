@@ -73,6 +73,14 @@ Se a gravação do resumo atual falha, o antigo fica com o nome de sempre, e a e
 
 Nada a migrar: o resumo continua na versão 2. O resumo da versão 1 que a 2.9 já gravou como versão 2 fica como está (fora, no proposal).
 
+## Verificação
+
+**Execução manual (tarefa 7.2), em 2026-10-21,** no Xavier, só lendo; o `git status --porcelain` igual antes e depois, nas duas rodadas.
+
+- **Com pastas de dados vazias:** a 2.9 (da `main`) e a 2.10 deram `26/05/2026 a 21/10/2026: 58 dias, 176 h`, com os 57 dias de antes de hoje iguais. Em 21/10, a 2.10 rodada depois da 2.9 deu 2,8 minutos a mais; na ordem inversa, a 2.9 deu 0,1 minuto a mais. A diferença segue a ordem das rodadas, então vem das conversas em andamento no Xavier, e não do D1 nem das limpezas.
+- **Junção:** numa pasta de dados à parte, o resumo da 2.10, com as 130 conversas, gravado como o de `/home/pl/antigo/xavier`, que não existe, e sem resumo do caminho atual. A execução juntou as conversas, deu o mesmo total (176 h, sem contar duas vezes as conversas que existem nos dois), renomeou o resumo e a página antigos para `.juntado` e avisou, citando o arquivo renomeado.
+- **A página:** gerada com um dia e um commit, no Chromium headless do Playwright, diz "1 dia com trabalho" e "1 dia corrido", sem nenhum "1 dias". O `pl(1, "commit", "commits")` do tooltip dá "1 commit", conferido no Node, porque o tooltip só aparece com o ponteiro.
+
 ## Respostas à revisão
 
 ### Revisão dos artefatos, antes do apply
