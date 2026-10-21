@@ -29,6 +29,10 @@ O comando SHALL ler as conversas do Claude Code da pasta `projects` da configura
 - **WHEN** uma conversa tem `cwd` numa subpasta do repositório
 - **THEN** as horas dela entram na apuração
 
+#### Scenario: Caminho com acento
+- **WHEN** a raiz do repositório tem acento no nome (`projeto-ação`) e a conversa foi gravada com os acentos como são
+- **THEN** as horas dela entram na apuração
+
 #### Scenario: Pasta de configuração trocada
 - **WHEN** `CLAUDE_CONFIG_DIR` aponta para outra pasta, com as conversas dentro dela
 - **THEN** o comando lê as conversas dessa pasta
@@ -55,6 +59,10 @@ Em cada conversa, o intervalo entre dois eventos seguidos SHALL contar como temp
 - **WHEN** uma conversa tem um pedido às 09:00, a última ação da IA às 09:05 e o pedido seguinte às 10:00
 - **THEN** o intervalo das 09:05 às 10:00 não conta, e o dia tem 5 minutos de total
 
+#### Scenario: Atividade de segundos
+- **WHEN** a única conversa de um dia tem dois eventos com 2 segundos de distância, e o dia tem um commit
+- **THEN** o dia conta como sem tempo apurado das conversas, e as horas dele vêm do commit
+
 ### Requirement: Conversas em paralelo
 O tempo em que duas ou mais conversas estavam ativas ao mesmo tempo SHALL contar uma vez só. O tempo do usuário MUST ser a união dos intervalos do usuário; o total, a união de todos; e o tempo da IA sozinha, o total menos o tempo do usuário.
 
@@ -73,12 +81,20 @@ As horas SHALL ser contadas no fuso horário local da máquina, e um intervalo q
 - **WHEN** a IA está ativa das 23:50 de um dia às 00:10 do dia seguinte, no fuso local
 - **THEN** cada um dos dois dias recebe 10 minutos
 
+#### Scenario: Dia da mudança de horário
+- **WHEN** a IA está ativa das 23:00 às 23:20, pelo relógio local, no dia em que o horário de verão termina
+- **THEN** a faixa do dia na página vai dos 1380 aos 1400 minutos, a posição pelo relógio
+
 ### Requirement: Estimativa pelos commits nos dias sem conversa
-O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas pelos commits do repositório (todas as branches e tags, cada commit uma vez, pela data de autor): commits com até 2 horas de intervalo formam uma sessão, e cada sessão começa 30 minutos antes do primeiro commit. O dia com tempo apurado das conversas MUST usar só as conversas.
+O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas pelos commits do repositório (todas as branches e tags, cada commit uma vez, pela data de autor): commits com até 2 horas de intervalo formam uma sessão, e cada sessão começa 30 minutos antes do primeiro commit, sem passar da meia-noite do dia dele. O dia com tempo apurado das conversas MUST usar só as conversas.
 
 #### Scenario: Sessões de commits
 - **WHEN** um dia sem conversa tem commits às 10:00, 11:00 e 14:00
 - **THEN** o dia tem 2 horas estimadas: das 09:30 às 11:00 e das 13:30 às 14:00
+
+#### Scenario: Commit logo depois da meia-noite
+- **WHEN** o único commit de um dia sem conversa é às 00:10
+- **THEN** o dia tem 10 minutos estimados, e o dia anterior não ganha horas
 
 #### Scenario: Dia com conversa e commits
 - **WHEN** um dia tem tempo apurado das conversas e também commits
@@ -96,7 +112,7 @@ Cada dia apurado SHALL dizer a fonte das suas horas: "conversas", com o tempo do
 - **THEN** a fonte do dia é "commits" e ele não traz a divisão entre o usuário e a IA
 
 ### Requirement: Resumo fora do repositório
-O comando SHALL guardar, na pasta `trilha-ai/tempo/` dos dados do usuário (`XDG_DATA_HOME`, ou `~/.local/share` quando ela falta ou é vazia), um resumo por repositório só com identificadores de conversa, datas, horas e tipos de intervalo. O resumo MUST NOT conter texto das conversas, e o comando MUST NOT escrever nada dentro do repositório.
+O comando SHALL guardar, na pasta `trilha-ai/tempo/` dos dados do usuário (`XDG_DATA_HOME`, ou `~/.local/share` quando ela falta ou é vazia), um resumo por repositório só com o caminho da raiz, identificadores de conversa, datas, horas e tipos de intervalo, e o caminho, o tamanho e a data dos arquivos de conversa lidos sem nada do repositório. O resumo MUST NOT conter texto das conversas, e o comando MUST NOT escrever nada dentro do repositório.
 
 #### Scenario: Nenhum texto no resumo
 - **WHEN** uma conversa tem um pedido com o texto "frase-que-nao-pode-vazar"
@@ -111,15 +127,42 @@ O comando SHALL guardar, na pasta `trilha-ai/tempo/` dos dados do usuário (`XDG
 - **THEN** o resumo e a página são gravados em `trilha-ai/tempo/` dentro dela
 
 ### Requirement: Horas que sobrevivem às conversas
-A cada execução, o comando SHALL completar o resumo com as conversas que ainda existem, e MUST continuar contando as horas guardadas de uma conversa que já foi apagada.
+A cada execução, o comando SHALL juntar ao resumo as horas das conversas que ainda existem, e MUST continuar contando as horas guardadas de uma conversa, ou de parte dela, cujo arquivo já foi apagado.
 
 #### Scenario: Conversa apagada depois da primeira execução
 - **WHEN** o comando roda, a conversa é apagada e o comando roda de novo
 - **THEN** as horas de cada dia são as mesmas nas duas execuções
 
+#### Scenario: Arquivo de subagente apagado
+- **WHEN** um subagente preencheu 50 minutos de uma conversa, o arquivo dele é apagado depois da primeira execução e o da conversa principal continua
+- **THEN** a segunda execução conta os mesmos minutos que a primeira
+
 #### Scenario: Conversa que cresceu
 - **WHEN** uma conversa ganha um pedido novo entre duas execuções
 - **THEN** a segunda execução conta o intervalo novo uma vez só
+
+### Requirement: Resumo ilegível preservado
+Quando o resumo existe e não se lê (não é JSON, é de outra versão ou tem uma entrada fora do formato), o comando SHALL terminar com código diferente de 0, citando o arquivo, e MUST NOT sobrescrevê-lo nem gravar a página: ele é a única cópia das horas das conversas já apagadas.
+
+#### Scenario: Resumo corrompido
+- **WHEN** o resumo do repositório tem um texto que não é JSON
+- **THEN** o comando termina com código diferente de 0, com uma mensagem que cita o resumo
+- **AND** o resumo continua igual
+
+#### Scenario: Entrada fora do formato
+- **WHEN** uma conversa do resumo tem um intervalo com dois campos em vez de três
+- **THEN** o comando termina com código diferente de 0, sem rastro de exceção, e o resumo continua igual
+
+### Requirement: Leitura só do que mudou
+O comando SHALL guardar no resumo o caminho, o tamanho e a data de modificação de cada arquivo de conversa lido que não tem nenhuma linha do repositório, e MUST NOT lê-lo de novo enquanto o tamanho e a data não mudarem. O arquivo com alguma linha do repositório MUST ser lido a cada execução.
+
+#### Scenario: Arquivo de outro repositório sem mudança
+- **WHEN** um arquivo de conversa sem nada do repositório é trocado, entre duas execuções, por um de mesmo tamanho e mesma data com uma conversa do repositório
+- **THEN** a segunda execução não conta essa conversa
+
+#### Scenario: Arquivo que mudou
+- **WHEN** a data de modificação desse arquivo muda
+- **THEN** a execução seguinte o lê e conta a conversa
 
 ### Requirement: Página das horas
 O comando SHALL gerar uma página HTML na mesma pasta do resumo, com as horas de cada dia numa linha do tempo semana a semana, do primeiro ao último dia apurado, as horas somadas por dia da semana, a fonte de cada dia e o método da apuração, e MUST imprimir o caminho dela. A página MUST NOT carregar nada da rede.
@@ -139,6 +182,10 @@ O comando SHALL avisar, sem falhar, quando o `cleanupPeriodDays` do `settings.js
 - **WHEN** o `settings.json` do usuário não tem `cleanupPeriodDays`
 - **THEN** a saída traz um aviso que cita `"cleanupPeriodDays": 3650`
 - **AND** o comando termina com o código de saída 0
+
+#### Scenario: Guarda curta definida
+- **WHEN** o `settings.json` do usuário tem `"cleanupPeriodDays": 90`
+- **THEN** o aviso cita os 90 dias e não fala em prazo padrão
 
 #### Scenario: Guarda longa
 - **WHEN** o `settings.json` do usuário tem `"cleanupPeriodDays": 3650`

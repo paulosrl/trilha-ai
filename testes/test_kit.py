@@ -3136,6 +3136,125 @@ class HorasDeTrabalho(unittest.TestCase):
         saida = self._ok()
         self.assertNotIn("cleanupPeriodDays", saida.stderr)
 
+    # As respostas à revisão (verify e code review da change 10)
+
+    def test_tempo_caminho_com_acento(self) -> None:
+        acento = Path(self._tmp.name) / "projeto-ação"
+        subprocess.run(["git", "init", "-q", "-b", "main", str(acento)], check=True)
+        arquivo = self.config / "projects" / "-projeto-acao" / "s1.jsonl"
+        arquivo.parent.mkdir(parents=True)
+        linhas = [self._pedido("2026-10-01T09:00:00Z", acento), self._ia("2026-10-01T09:20:00Z", acento)]
+        # O Claude Code grava os acentos como são, sem o escape \\u do json.dumps padrão.
+        arquivo.write_text("".join(json.dumps(l, ensure_ascii=False) + "\n" for l in linhas),
+                           encoding="utf-8")
+        saida = self._rodar(cwd=acento)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 20)
+
+    def test_tempo_atividade_de_segundos(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:00:02Z", self.raiz)])
+        self._ok()
+        dia = self._dias()["2026-10-01"]
+        self.assertEqual((dia["fonte"], dia["total"]), ("commits", 30))
+
+    def test_tempo_dia_da_mudanca_de_horario(self) -> None:
+        # 01/11/2026 é o fim do horário de verão nesse fuso: 23:00 local é 04:00 UTC do dia 2.
+        self._conversa([self._ia("2026-11-02T04:00:00Z", self.raiz),
+                        self._ia("2026-11-02T04:20:00Z", self.raiz)])
+        self._ok(TZ="EST5EDT,M3.2.0,M11.1.0")
+        self.assertEqual(self._dias()["2026-11-01"]["faixas"], [[1380, 1400]])
+
+    def test_tempo_commit_depois_da_meia_noite(self) -> None:
+        self._commit("2026-10-02T00:10:00Z")
+        self._ok()
+        dias = self._dias()
+        self.assertNotIn("2026-10-01", dias)
+        self.assertEqual(dias["2026-10-02"]["total"], 10)
+
+    def test_tempo_subagente_apagado_continua(self) -> None:
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:55:00Z", self.raiz)])
+        passos = []
+        for minuto in (10, 20, 30, 40, 50):
+            passo = self._ia(f"2026-10-01T09:{minuto}:00Z", self.raiz)
+            passo["isSidechain"] = True
+            passos.append(passo)
+        subagente = self._conversa(passos, subagente=True)
+        self._ok()
+        primeira = self._dias()["2026-10-01"]["total"]
+        subagente.unlink()
+        self._ok()
+        self.assertEqual(primeira, 55)
+        self.assertEqual(self._dias()["2026-10-01"]["total"], primeira)
+
+    def _resumo_trocado(self, texto: str) -> tuple[Path, subprocess.CompletedProcess]:
+        """O resumo de uma primeira execução trocado pelo texto dado, e a execução seguinte."""
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok()
+        resumo = next(self._pasta_tempo().glob("*.json"))
+        resumo.write_text(texto, encoding="utf-8")
+        return resumo, self._rodar()
+
+    def test_tempo_resumo_corrompido_preservado(self) -> None:
+        resumo, saida = self._resumo_trocado("isto não é json")
+        self.assertNotEqual(saida.returncode, 0)
+        self.assertIn(resumo.name, saida.stderr)
+        self.assertEqual(resumo.read_text(encoding="utf-8"), "isto não é json")
+
+    def test_tempo_entrada_fora_do_formato(self) -> None:
+        texto = json.dumps({"versao": 1, "raiz": str(self.raiz),
+                            "conversas": {"s1": [["2026-10-01T09:00:00+00:00", "ia"]]}})
+        resumo, saida = self._resumo_trocado(texto)
+        self.assertNotEqual(saida.returncode, 0)
+        self.assertNotIn("Traceback", saida.stderr)
+        self.assertEqual(resumo.read_text(encoding="utf-8"), texto)
+
+    def _arquivo_de_outro_repositorio(self) -> tuple[Path, os.stat_result]:
+        """Uma conversa de um vizinho com o caminho do mesmo tamanho, lida numa primeira execução e
+        depois trocada pela deste repositório, com o mesmo tamanho e a mesma data."""
+        vizinho = Path(str(self.raiz)[:-1] + "X")
+        arquivo = self._conversa([self._pedido("2026-10-01T09:00:00Z", vizinho),
+                                  self._ia("2026-10-01T09:20:00Z", vizinho)], pasta="-viz")
+        self._ok()
+        antes = arquivo.stat()
+        arquivo.write_text(arquivo.read_text(encoding="utf-8").replace(str(vizinho), str(self.raiz)),
+                           encoding="utf-8")
+        os.utime(arquivo, ns=(antes.st_atime_ns, antes.st_mtime_ns))
+        self.assertEqual(arquivo.stat().st_size, antes.st_size)
+        return arquivo, antes
+
+    def test_tempo_arquivo_sem_mudanca_nao_e_relido(self) -> None:
+        self._arquivo_de_outro_repositorio()
+        self._ok()
+        self.assertNotIn("2026-10-01", self._dias())
+
+    def test_tempo_arquivo_que_mudou_e_relido(self) -> None:
+        arquivo, antes = self._arquivo_de_outro_repositorio()
+        os.utime(arquivo, ns=(antes.st_atime_ns, antes.st_mtime_ns + 10**10))
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 20)
+
+    def test_tempo_guarda_curta_definida(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        (self.config / "settings.json").write_text('{"cleanupPeriodDays": 90}', encoding="utf-8")
+        saida = self._ok()
+        self.assertIn("90 dias", saida.stderr)
+        self.assertNotIn("padrão", saida.stderr)
+
+    def test_tempo_temporario_antigo_nao_atrapalha(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok()
+        resumo = next(self._pasta_tempo().glob("*.json"))
+        resumo.with_name(resumo.name + ".tmp").mkdir()  # o que uma execução interrompida deixaria
+        self._ok()
+
+    def test_tempo_um_dia_no_singular(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        saida = self._ok()
+        self.assertIn(": 1 dia,", saida.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

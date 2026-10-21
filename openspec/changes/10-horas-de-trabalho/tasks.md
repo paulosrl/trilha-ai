@@ -62,6 +62,22 @@ Os testes do `tempo.py` rodam o script por subprocesso, com estas condições:
 - [x] 6.1 O conjunto dos testes e o ruff passam (os três comandos do início, cada um sozinho, com o código de saída conferido)
 - [x] 6.2 A execução manual, a última tarefa: rodar o `tempo.py` do kit dentro do Xavier, só lendo, e abrir a página gerada. Conferir que o `git status` do Xavier não mudou, que a página mostra 26/05/2026 como primeiro dia e que os dias com conversa trazem a divisão entre o usuário e a IA. Tirar uma captura de tela, no tamanho de computador e no de celular, e registrar o resultado no `design.md`
 
+## 7. As respostas à revisão
+
+Do `/opsx:verify` e do `/code-review 10`, de 2026-10-21; a decisão de cada ponto fica na seção "Respostas à revisão" do `design.md`.
+
+- [x] 7.1 O teste `test_tempo_caminho_com_acento` comprova o cenário "Caminho com acento"; falha antes do código (`-k test_tempo_caminho_com_acento`)
+- [x] 7.2 O teste `test_tempo_atividade_de_segundos` comprova o cenário "Atividade de segundos"; falha antes do código (`-k test_tempo_atividade_de_segundos`)
+- [x] 7.3 O teste `test_tempo_dia_da_mudanca_de_horario` comprova o cenário "Dia da mudança de horário", com `TZ=EST5EDT,M3.2.0,M11.1.0`; falha antes do código (`-k test_tempo_dia_da_mudanca_de_horario`)
+- [x] 7.4 O teste `test_tempo_commit_depois_da_meia_noite` comprova o cenário "Commit logo depois da meia-noite"; falha antes do código (`-k test_tempo_commit_depois_da_meia_noite`)
+- [x] 7.5 O teste `test_tempo_subagente_apagado_continua` comprova o cenário "Arquivo de subagente apagado"; falha antes do código (`-k test_tempo_subagente_apagado_continua`)
+- [x] 7.6 Os testes `test_tempo_resumo_corrompido_preservado` e `test_tempo_entrada_fora_do_formato` comprovam os cenários "Resumo corrompido" e "Entrada fora do formato"; falham antes do código (`-k test_tempo_resumo_corrompido_preservado` e `-k test_tempo_entrada_fora_do_formato`)
+- [x] 7.7 Os testes `test_tempo_arquivo_sem_mudanca_nao_e_relido` e `test_tempo_arquivo_que_mudou_e_relido` comprovam os cenários "Arquivo de outro repositório sem mudança" e "Arquivo que mudou"; o primeiro falha antes do código, e o segundo já passa (`-k test_tempo_arquivo_`)
+- [x] 7.8 O teste `test_tempo_guarda_curta_definida` comprova o cenário "Guarda curta definida"; falha antes do código (`-k test_tempo_guarda_curta_definida`)
+- [x] 7.9 Os testes `test_tempo_temporario_antigo_nao_atrapalha` (o temporário de nome fixo, achado 5) e `test_tempo_um_dia_no_singular` (o "1 dias") falham antes do código, sem cenário próprio: são da gravação e da saída (`-k test_tempo_temporario_antigo_nao_atrapalha` e `-k test_tempo_um_dia_no_singular`)
+- [x] 7.10 O `tempo.py` com as correções, como as respostas do `design.md` dizem; os testes do grupo 7 e os de antes passam, e o ruff passa
+- [x] 7.11 A execução manual de novo no Xavier, só lendo: o mesmo total de horas de antes, ou a diferença explicada, e o `git status` igual; o resultado vai ao `design.md`
+
 ## Workflow follow-up
 
 - `/opsx:verify` e o `/code-review <número do PR>`, numa sessão nova ou num agente sem o contexto da sessão, com as respostas na seção "Respostas à revisão" do `design.md`.
