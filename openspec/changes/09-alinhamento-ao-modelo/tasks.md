@@ -10,6 +10,10 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 - [x] 1.4 O `test_atualizar_avisa_a_parte_fixa_que_mudou_no_kit` passa a esperar o texto "difere do modelo do kit" (design, "Testes que mudam")
 - [x] 1.5 O `_avisar_parte_fixa` do `ferramentas/kit.py` compara o modelo atual inteiro, sem os blocos da stack do `.gitignore`, com o projeto, e mantém as linhas que sobram pela diferença entre as versões (design, decisão 1); os testes do grupo 1 passam
 
+- [ ] 1.6 O teste `test_parte_fixa_aceita_a_chamada_dentro_de_uma_funcao` comprova o cenário "Chamada dentro de uma função do projeto": o `scripts/check.sh` do projeto com `etapa "regras" bash trilha/verifica.sh --vizinho trilha-ai`; o `atualizar` não avisa `bash trilha/verifica.sh`. O `test_aviso_da_parte_fixa_preciso` ganha o mesmo caso no `_presente` e mantém o `fi` diante de `find .`. Falha antes do código (`-k test_parte_fixa_aceita_a_chamada_dentro_de_uma_funcao` e `-k test_aviso_da_parte_fixa_preciso`)
+- [ ] 1.7 O teste `test_parte_fixa_sem_o_bloco_da_parte_da_stack` comprova o cenário "Bloco da parte da stack trocado": o bloco "Parte da stack" do `scripts/check.sh` trocado por um comando da stack; o `atualizar` não avisa o `echo` dele. Confere também que o `modelo/scripts/check.sh` ainda tem o comentário `# Parte da stack`. Falha antes do código (`-k test_parte_fixa_sem_o_bloco_da_parte_da_stack`)
+- [ ] 1.8 O `_presente` e a separação dos blocos do `ferramentas/kit.py` seguem a decisão 1 do design, com os dois casos novos; os testes do grupo 1 passam
+
 ## 2. A versão
 
 - [x] 2.1 A linha "Versão 2.7, de <data>." no `modelo/trilha/CLAUDE-comum.md` e a `2.7.0` no `plugins/sdd/.claude-plugin/plugin.json`, só com o "sim" do usuário para a versão e antes de qualquer outro arquivo de `modelo/` mudar (design, decisão 6); o `test_kit_sem_mudanca_depois_da_tag`, o `test_versao_no_comum` e o teste da versão do plugin passam
@@ -46,4 +50,4 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 ## 6. O fechamento
 
 - [x] 6.1 A suíte inteira (`python3 -m unittest discover -s testes`) e o ruff (`check` e `format --check`) verdes, cada um sozinho, com o código de saída conferido
-- [ ] 6.2 A execução manual, com o usuário olhando: o `kit.py atualizar` numa cópia descartável do Xavier anterior ao alinhamento (o commit `e2115a8`) avisa as oito linhas do `.gitignore`; a conferência das regras dessa cópia, com `--fonte`, reprova as regras próprias; a conferência do método, com o perfil antigo por `XDG_CONFIG_HOME`, avisa as skills que o `update` apagaria. O resultado de cada uma vai à seção "Verificação" do `design.md`
+- [ ] 6.2 A execução manual, com o usuário olhando: o `kit.py atualizar` numa cópia descartável do Xavier anterior ao alinhamento (o commit `e2115a8`) avisa as seis linhas do `.gitignore` fora dos blocos da stack e nenhuma do `scripts/check.sh`; a conferência das regras dessa cópia, com `--fonte`, reprova as regras próprias; a conferência do método, com o perfil antigo por `XDG_CONFIG_HOME`, avisa as skills que o `update` apagaria. O resultado de cada uma vai à seção "Verificação" do `design.md`

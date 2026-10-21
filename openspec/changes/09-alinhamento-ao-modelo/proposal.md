@@ -11,7 +11,7 @@ Pedido do usuário, de 2026-10-20 ("faça tudo que vc sugere"), depois da confer
 
 ## What Changes
 
-- O aviso da parte fixa do `kit.py atualizar` passa a citar toda linha do modelo atual que falta no projeto, e não só as acrescentadas desde a versão dele. No `.gitignore`, os blocos da stack (Python e Node) ficam de fora, porque o projeto apaga de propósito o que não é seu. O aviso das linhas que o kit tirou continua igual.
+- O aviso da parte fixa do `kit.py atualizar` passa a citar toda linha do modelo atual que falta no projeto, e não só as acrescentadas desde a versão dele. Os blocos da parte da stack ficam de fora, porque o projeto troca ou apaga de propósito o que não é seu: os marcados "Parte da stack", em qualquer arquivo, e os de Python e Node do `.gitignore`. A linha do kit chamada dentro de uma linha do projeto (por uma função dele) conta como presente. O aviso das linhas que o kit tirou continua igual.
 - Com `--fonte`, a conferência das regras reprova o projeto cujo bloco `rules:` do `openspec/config.yaml` difere do modelo do kit na versão do projeto. Também reprova quando falta, no `operations` do projeto, uma linha do `operations` do kit. Linhas próprias a mais no `operations` e chaves próprias no topo (o `githubCopilot`) passam.
 - A conferência do método avisa, sem falhar, quando o `openspec update` mudaria os arquivos gerados do OpenSpec que o projeto versiona. O teste é o ensaio do próprio OpenSpec numa pasta temporária. O aviso nomeia os arquivos que ele apagaria, criaria ou trocaria.
 - A mesma conferência avisa, sem falhar, quando a versão do OpenSpec da máquina difere da fixada no CI do projeto.
@@ -31,12 +31,12 @@ Pedido do usuário, de 2026-10-20 ("faça tudo que vc sugere"), depois da confer
 
 ### Modified Capabilities
 
-- `ferramenta-do-kit`: o "Aviso da parte fixa que mudou no kit" passa a valer para toda linha do modelo atual que falta no projeto, fora dos blocos da stack do `.gitignore`.
+- `ferramenta-do-kit`: o "Aviso da parte fixa que mudou no kit" passa a valer para toda linha do modelo atual que falta no projeto, fora dos blocos da parte da stack, e aceita a linha do kit chamada dentro de uma linha do projeto.
 - `conferencias`: um requisito novo, as regras por artefato do `openspec/config.yaml` iguais às do kit na versão do projeto.
 
 ## Impact
 
-- `ferramentas/kit.py`: `_avisar_parte_fixa` e uma função nova que separa os blocos da stack do `.gitignore`.
+- `ferramentas/kit.py`: `_avisar_parte_fixa`, o `_presente` e uma função nova que separa os blocos da parte da stack.
 - `modelo/trilha/confere_regras.py`: a comparação do `config.yaml` com o modelo, ao lado da comparação da pasta `trilha/`.
 - `modelo/trilha/confere_metodo.py`: os avisos do OpenSpec, atrás do `--sem-plugin`, que a trava do commit já usa.
 - `testes/test_kit.py`: os testes de cada cenário, sem rede e sem o OpenSpec instalado.

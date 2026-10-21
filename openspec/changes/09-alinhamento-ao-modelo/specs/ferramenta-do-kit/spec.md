@@ -6,7 +6,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Aviso da parte fixa que falta no projeto
-O `kit.py atualizar` SHALL avisar cada linha da parte fixa do modelo atual dos arquivos preenchidos que o projeto não tem, qualquer que seja a versão do projeto, aceitando como presente só a linha igual ou a mesma linha seguida de espaço e argumentos. No `.gitignore`, MUST NOT avisar as linhas dos blocos da stack (os de comentário `# Python` e `# Node`). O aviso das linhas que o kit tirou SHALL seguir pela diferença entre a versão do projeto e a atual.
+O `kit.py atualizar` SHALL avisar cada linha da parte fixa do modelo atual que o projeto não tem, em qualquer versão dele, aceitando como presente a linha igual, a mesma seguida de espaço e argumentos ou ela como comando dentro de uma linha do projeto, depois de um espaço. MUST NOT avisar os blocos da parte da stack (comentário "# Parte da stack" e, no `.gitignore`, `# Python` e `# Node`). O que o kit tirou SHALL seguir pela diferença entre as versões.
 
 #### Scenario: Chamada com os vizinhos
 - **WHEN** o `scripts/check.sh` migrado tem `bash trilha/verifica.sh --vizinho trilha-ai \`
@@ -23,3 +23,11 @@ O `kit.py atualizar` SHALL avisar cada linha da parte fixa do modelo atual dos a
 #### Scenario: Bloco da stack apagado
 - **WHEN** o `.gitignore` do projeto não tem o bloco `# Python` do modelo
 - **THEN** a ferramenta não avisa que falta `.venv/`
+
+#### Scenario: Chamada dentro de uma função do projeto
+- **WHEN** o `scripts/check.sh` do projeto chama `etapa "regras" bash trilha/verifica.sh --vizinho trilha-ai`
+- **THEN** a ferramenta não avisa que falta `bash trilha/verifica.sh`
+
+#### Scenario: Bloco da parte da stack trocado
+- **WHEN** o `scripts/check.sh` do projeto trocou o bloco "Parte da stack" do modelo pelos comandos da stack dele
+- **THEN** a ferramenta não avisa a linha `echo` daquele bloco
