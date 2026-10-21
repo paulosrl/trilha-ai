@@ -78,4 +78,6 @@ Alternativa descartada: um mapa próprio entre os fluxos do perfil e as pastas d
 
 ## Respostas à revisão
 
-(o verify e o `/code-review` preenchem: cada sugestão aplicada ou recusada, com o motivo)
+**Verify (2026-10-20):** nenhum problema crítico; 32 de 32 tarefas, os 5 requisitos implementados, os 24 cenários cobertos pelos 27 testes das tarefas.
+- Aviso: o "sem consultar a rede" do requisito do ensaio não tinha teste. Aplicado: `test_openspec_ensaio_sem_a_rede`, com o `openspec` falso gravando as três variáveis do ambiente do ensaio.
+- Sugestão: o corte em cinco nomes por grupo, com "e mais N", só fora visto na execução manual. Aplicada: `test_openspec_aviso_corta_a_lista`, com sete arquivos apagados.

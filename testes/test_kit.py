@@ -1135,6 +1135,28 @@ class Kit(unittest.TestCase):
         self.assertIn("apagaria: .claude/skills/openspec-propose/SKILL.md", aviso, saida.stderr)
         self.assertIn("openspec config list", aviso)
 
+    def test_openspec_ensaio_sem_a_rede(self) -> None:
+        """Verify da change 09: o ensaio roda com a consulta da versão nova e a telemetria desligadas."""
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = self._projeto_com_gerados(tmp)
+            with tempfile.TemporaryDirectory() as falsos:
+                grava = f'echo "$OPENSPEC_NO_UPDATE_CHECK $OPENSPEC_TELEMETRY $DO_NOT_TRACK" > "{falsos}/ambiente"'
+                self._openspec_falso(Path(falsos), update=grava)
+                subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_metodo.py")],
+                               capture_output=True, check=False, env={**os.environ, "PATH": falsos})
+                ambiente = (Path(falsos) / "ambiente").read_text(encoding="utf-8").split()
+        self.assertEqual(ambiente, ["1", "0", "1"])
+
+    def test_openspec_aviso_corta_a_lista(self) -> None:
+        """Verify da change 09: até cinco nomes por grupo, e o resto em contagem."""
+        gerados = tuple(f".claude/skills/openspec-s{i}/SKILL.md" for i in range(7))
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, _ = self._metodo_com_openspec(self._projeto_com_gerados(tmp, gerados=gerados),
+                                                 update='rm -r "$2/.claude/skills"')
+        aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
+        self.assertIn("openspec-s4/SKILL.md e mais 2", aviso, saida.stderr)
+        self.assertNotIn("openspec-s5", aviso)
+
     def test_openspec_em_dia_nao_avisa(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp))
