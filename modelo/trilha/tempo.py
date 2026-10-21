@@ -105,6 +105,19 @@ def _diretorio_comum(raiz: Path) -> Path | None:
     return (raiz / caminho).resolve() if caminho else None
 
 
+def _tem_git(pasta: Path) -> bool | None:
+    """A pasta tem um .git; None quando não se confere (sem permissão, um caminho inválido). O
+    stat direto, e não o exists(), porque o exists() muda com o Python: até o 3.13 levanta o erro
+    de permissão, e no 3.14 devolve False."""
+    try:
+        (pasta / ".git").stat()
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    except (OSError, ValueError):
+        return None
+    return True
+
+
 def _de_outro_repositorio(git: Path, comum: Path | None) -> bool:
     """A pasta com este .git é outro repositório: um .git em pasta, ou um em arquivo que não
     aponta para um worktree da raiz (o de um submódulo aponta para .git/modules/)."""
@@ -122,7 +135,8 @@ def _de_outro_repositorio(git: Path, comum: Path | None) -> bool:
 
 def _eh_da_raiz(cwd: str, raiz: Path, comum: Path | None, vistos: dict[str, bool]) -> bool:
     """O cwd é a raiz, ou uma pasta dentro dela que não é de outro repositório git aninhado; um
-    worktree da própria raiz conta como dela. A pasta que já não existe conta para a raiz."""
+    worktree da própria raiz conta como dela. A pasta que já não existe, ou cujo .git não se
+    confere, conta para a raiz."""
     texto_da_raiz = str(raiz)
     if cwd == texto_da_raiz:
         return True
@@ -131,8 +145,7 @@ def _eh_da_raiz(cwd: str, raiz: Path, comum: Path | None, vistos: dict[str, bool
     if cwd not in vistos:
         pasta, da_raiz = Path(cwd), True
         while pasta != raiz and pasta != pasta.parent:
-            git = pasta / ".git"
-            if git.exists() and _de_outro_repositorio(git, comum):
+            if _tem_git(pasta) and _de_outro_repositorio(pasta / ".git", comum):
                 da_raiz = False
                 break
             pasta = pasta.parent
@@ -588,12 +601,6 @@ def _outros_resumos(pasta: Path, raiz: Path) -> list[tuple[Path, str]]:
     return achados
 
 
-def _ainda_repositorio(caminho: str) -> bool:
-    """O caminho ainda tem o .git de um repositório: a pasta que sobrou lá sem ele não conta, e
-    a que o git recusa (de outro dono, sem permissão) conta, para não juntar uma cópia viva."""
-    return (Path(caminho) / ".git").exists()
-
-
 def _renomear_juntado(arquivo: Path) -> Path:
     """Renomeia com o sufixo .juntado, sem sobrescrever um anterior (o repositório que foi e
     voltou): o novo ganha um número."""
@@ -641,11 +648,19 @@ def main() -> int:
             conversas[sessao] = juntos
         else:
             conversas.pop(sessao, None)
-    # O resumo de outro caminho de mesmo nome: se a raiz dele não é mais um repositório, o
-    # repositório mudou de pasta, e as horas guardadas lá vêm para cá; se ainda é, é outra cópia.
+    # O resumo de outro caminho de mesmo nome: se a raiz dele não tem mais o .git, o repositório
+    # mudou de pasta, e as horas guardadas lá vêm para cá; se tem, é outra cópia, mesmo que o git
+    # a recuse (de outro dono); se não se confere, nada vem, e o aviso sai em toda execução.
     juntados, avisos_de_pasta = [], []
     for outro, antiga in _outros_resumos(pasta, raiz):
-        if _ainda_repositorio(antiga):
+        tem_git = _tem_git(Path(antiga))
+        if tem_git is None:
+            avisos_de_pasta.append(
+                f"aviso: não deu para conferir se {antiga} ainda é um repositório (sem permissão, "
+                f"por exemplo), e as horas guardadas no resumo de lá ({outro}) não vieram para este"
+            )
+            continue
+        if tem_git:
             if not existia:
                 avisos_de_pasta.append(
                     f"aviso: não há resumo deste caminho, mas há o de {antiga} ({outro}); se o "
@@ -657,7 +672,8 @@ def main() -> int:
         except ResumoIlegivel as erro:
             avisos_de_pasta.append(
                 f"aviso: {antiga} não é mais um repositório, mas o resumo de lá ({outro}) não se "
-                f"lê ({erro}), e as horas guardadas nele não vieram para este"
+                f"lê ({erro}), e as horas guardadas nele não vieram para este: corrija-o ou "
+                "mova-o, e rode de novo"
             )
             continue
         for sessao, intervalos in guardadas.items():

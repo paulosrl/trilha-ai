@@ -3604,6 +3604,7 @@ class HorasDeTrabalho(unittest.TestCase):
         saida = self._ok()
         self.assertTrue(antigo.exists())
         self.assertIn(antigo.name, saida.stderr)
+        self.assertIn("corrija-o ou mova-o", saida.stderr)
         self.assertNotIn("2026-10-02", self._dias())
 
     def test_tempo_pasta_antiga_com_git_que_falha(self) -> None:
@@ -3614,6 +3615,47 @@ class HorasDeTrabalho(unittest.TestCase):
         self._ok()
         self.assertTrue(antigo.exists())
         self.assertNotIn("2026-10-02", self._dias())
+
+    # O resumo antigo sem permissão (change 13)
+
+    SEM_PERMISSAO = not hasattr(os, "geteuid") or os.geteuid() == 0  # o root abre qualquer pasta
+
+    @unittest.skipIf(SEM_PERMISSAO, "sem como tirar a permissão de uma pasta")
+    def test_tempo_pasta_antiga_sem_permissao(self) -> None:
+        fechada = Path(self._tmp.name) / "fechada"
+        antigo = self._resumo_antigo(fechada / "proj", pagina=False)
+        fechada.mkdir()
+        fechada.chmod(0)
+        try:
+            saidas = [self._rodar(), self._rodar()]
+        finally:
+            fechada.chmod(0o755)
+        for saida in saidas:
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertIn("não deu para conferir", saida.stderr)
+            self.assertIn(antigo.name, saida.stderr)
+        self.assertTrue(antigo.exists())
+        self.assertNotIn("2026-10-02", self._dias())
+
+    def test_tempo_raiz_antiga_com_caminho_invalido(self) -> None:
+        antigo = self._resumo_antigo(Path("/x\x00") / "proj", pagina=False)
+        saida = self._ok()
+        self.assertIn("não deu para conferir", saida.stderr)
+        self.assertTrue(antigo.exists())
+
+    @unittest.skipIf(SEM_PERMISSAO, "sem como tirar a permissão de uma pasta")
+    def test_tempo_subpasta_sem_permissao(self) -> None:
+        fechada = self.raiz / "fechada"
+        (fechada / "sub").mkdir(parents=True)
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", fechada / "sub"),
+                        self._ia("2026-10-01T09:20:00Z", fechada / "sub")])
+        fechada.chmod(0)
+        try:
+            saida = self._rodar()
+        finally:
+            fechada.chmod(0o755)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 20)
 
 
 if __name__ == "__main__":
