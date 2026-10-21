@@ -85,8 +85,8 @@ Na migração, quando o `scripts/check.sh` do projeto tiver a parte fixa do kit,
 - **AND** a ferramenta diz que a chamada a `bash trilha/verifica.sh` deve ser posta à mão
 - **AND** a atualização termina com o código de saída 1, sem sugerir o commit
 
-### Requirement: Aviso da parte fixa que mudou no kit
-O `kit.py atualizar` SHALL avisar cada linha que o kit acrescentou à parte fixa dos arquivos preenchidos desde a versão do projeto e que o projeto não tem, aceitando como presente só a linha igual ou a mesma linha seguida de espaço e argumentos.
+### Requirement: Aviso da parte fixa que falta no projeto
+O `kit.py atualizar` SHALL avisar cada linha da parte fixa do modelo atual que falta no projeto, em qualquer versão dele; vale como presente a linha igual, com argumentos ou chamada dentro de uma linha dele, após um espaço, e a ação (`uses:`) noutra versão. MUST NOT avisar os blocos da parte da stack (os que abrem com "# Parte da stack" e, no `.gitignore`, `# Python` e `# Node`). O que o kit tirou SHALL seguir pela diferença entre as versões.
 
 #### Scenario: Chamada com os vizinhos
 - **WHEN** o `scripts/check.sh` migrado tem `bash trilha/verifica.sh --vizinho trilha-ai \`
@@ -95,6 +95,30 @@ O `kit.py atualizar` SHALL avisar cada linha que o kit acrescentou à parte fixa
 #### Scenario: Linha curta que falta
 - **WHEN** o kit acrescentou à parte fixa a linha `fi` e o projeto só tem uma linha que começa com `fi` sem ser ela (por exemplo, `find .`)
 - **THEN** a ferramenta avisa que falta `fi`
+
+#### Scenario: Linha que o projeto nunca copiou
+- **WHEN** o modelo do `.gitignore` já trazia `*.log` na versão do projeto e o `.gitignore` do projeto não o tem
+- **THEN** a ferramenta avisa que falta `*.log`
+
+#### Scenario: Bloco da stack apagado
+- **WHEN** o `.gitignore` do projeto não tem o bloco `# Python` do modelo
+- **THEN** a ferramenta não avisa que falta `.venv/`
+
+#### Scenario: Chamada dentro de uma função do projeto
+- **WHEN** o `scripts/check.sh` do projeto chama `etapa "regras" bash trilha/verifica.sh --vizinho trilha-ai`
+- **THEN** a ferramenta não avisa que falta `bash trilha/verifica.sh`
+
+#### Scenario: Bloco da parte da stack trocado
+- **WHEN** o `scripts/check.sh` do projeto trocou o bloco "Parte da stack" do modelo pelos comandos da stack dele
+- **THEN** a ferramenta não avisa a linha `echo` daquele bloco
+
+#### Scenario: Ação atualizada pelo Dependabot
+- **WHEN** o CI do projeto tem `actions/checkout` fixada noutro commit que o do modelo
+- **THEN** a ferramenta não avisa a linha do `actions/checkout`
+
+#### Scenario: Passo fixo do CI ao lado do comentário da stack
+- **WHEN** o CI do projeto não tem o passo `actions/setup-node` do modelo, que fica no mesmo bloco do comentário "Parte da stack"
+- **THEN** a ferramenta avisa que falta a linha do `actions/setup-node`
 
 ### Requirement: Perfil do OpenSpec com o verify no projeto novo
 O `kit.py novo` SHALL listar, nos próximos passos, o `openspec config profile` com o verify marcado, e MUST avisar, sem falhar, quando o perfil do OpenSpec da máquina não trouxer o verify ou quando o OpenSpec não estiver instalado. A ferramenta só lê o perfil, nunca o muda.

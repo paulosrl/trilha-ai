@@ -11,10 +11,15 @@ Confere, na raiz do repositório:
   pasta dele: a do kit, ligada, na versão do trilha/CLAUDE-comum.md e, se o .claude/settings.json
   a declara, instalada no projeto; só aviso, nunca falha, e
   nada sem o Claude Code (o CI), sem a resposta dele no prazo ou com --sem-plugin, que a trava do
-  commit usa para não esperar a cada commit.
+  commit usa para não esperar a cada commit;
+- o OpenSpec da máquina: o que o `openspec update` mudaria nos arquivos gerados que o projeto
+  versiona, pelo ensaio dele numa pasta temporária, sem a rede, e a versão instalada diante da
+  fixada no CI do projeto; só aviso, e nada sem o openspec, sem a configuração global dele (o CI),
+  sem resposta no prazo ou com --sem-plugin, que pula tudo o que depende da máquina.
 
 Roda no check.sh (e, por ele, no CI) e na trava do commit (trilha/hooks/pre-commit): documento do
-método fora do formato barra o commit e o merge; o que depende da máquina (o plugin) só avisa.
+método fora do formato barra o commit e o merge; o que depende da máquina (o plugin e o OpenSpec)
+só avisa.
 Sem a pasta `sdd/`, avisa que ela falta; sem a decomposição ou o TDD (o repositório que ainda não
 os escreveu), a conferência deles é pulada com aviso. Só python3, sem dependências. Sai com 1 e
 imprime "FALHA: ..." por problema; "ok" se nada falhar.
@@ -23,9 +28,12 @@ imprime "FALHA: ..." por problema; "ok" se nada falhar.
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -45,6 +53,16 @@ ESCOPOS_DO_PROJETO = ("local", "project")
 CONFIGURACOES = (("local", ".claude/settings.local.json"), ("project", ".claude/settings.json"))
 # Quanto esperar pela lista de plugins do Claude Code; sem resposta nele, segue sem aviso.
 PRAZO_DO_CLAUDE = 10
+# O OpenSpec: quanto esperar por ele (o ensaio do update leva menos de um segundo) e o ambiente
+# sem a rede, com a consulta da versão nova e a telemetria desligadas.
+PRAZO_DO_OPENSPEC = 60
+SEM_REDE = {"OPENSPEC_NO_UPDATE_CHECK": "1", "OPENSPEC_TELEMETRY": "0", "DO_NOT_TRACK": "1"}
+# Os arquivos que o OpenSpec gera para as ferramentas: as skills, os comandos e a marca do Codex.
+GERADO = re.compile(r"(^|/)(openspec-[^/]+/SKILL\.md|opsx[^/]*(/.*)?|\.openspec-target)$")
+# A versão fixada no CI, só quando é um número (o "latest" não se compara).
+PIN_DO_OPENSPEC = re.compile(r"@fission-ai/openspec@(\d+\.\d+\.\d+[^\s\"']*)")
+# Quantos nomes de cada grupo o aviso do ensaio mostra; o resto vira contagem.
+MOSTRADOS = 5
 NUMERO = re.compile(r"\d{2,3}")
 # Os títulos da decomposição, como o esqueleto da skill sdd:briefing os traz.
 TITULOS = ("## 1.", "## 2.", "## Ciclo")
@@ -242,6 +260,107 @@ def avisar_plugin() -> list[str]:
     return avisos
 
 
+def _saida(comando: list[str], ambiente: dict[str, str] | None = None) -> str | None:
+    """A saída de um comando na raiz do projeto, sem a rede; None se ele faltar, falhar ou não
+    responder no prazo. O nome de arquivo fora do UTF-8 chega como o sistema o guarda."""
+    try:
+        saida = subprocess.run(
+            comando,
+            capture_output=True,
+            text=True,
+            errors="surrogateescape",
+            timeout=PRAZO_DO_OPENSPEC,
+            check=False,
+            cwd=RAIZ,
+            env={**os.environ, **SEM_REDE, **(ambiente or {})},
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return saida.stdout if saida.returncode == 0 else None
+
+
+def _aviso_da_versao() -> list[str]:
+    """A versão do openspec da máquina diante da que o CI do projeto instala."""
+    ci = RAIZ / ".github" / "workflows" / "verificacao.yml"
+    texto = ci.read_text(encoding="utf-8", errors="replace") if ci.is_file() else ""
+    pin = PIN_DO_OPENSPEC.search(texto)
+    resposta = _saida(["openspec", "--version"]) if pin else None
+    instalada = re.search(r"\d+\.\d+\.\d+\S*", resposta or "")
+    if pin is None or instalada is None or instalada.group(0) == pin.group(1):
+        return []
+    aviso = (
+        f"o OpenSpec da máquina está na {instalada.group(0)} e o CI do projeto instala a "
+        f"{pin.group(1)}: rode `npm install -g @fission-ai/openspec@{pin.group(1)}`"
+    )
+    return [aviso]
+
+
+def _nomes(nomes: list[str]) -> str:
+    resto = len(nomes) - MOSTRADOS
+    return ", ".join(nomes[:MOSTRADOS]) + (f" e mais {resto}" if resto > 0 else "")
+
+
+def _aviso_do_update() -> list[str]:
+    """O que o `openspec update` mudaria nos arquivos gerados que o projeto versiona, pelo ensaio
+    dele numa pasta temporária, com a cópia desses arquivos e do config.yaml, e com a cópia da
+    configuração global (a migração do OpenSpec a regrava); nem o projeto nem a máquina mudam."""
+    configuracao = _saida(["openspec", "config", "path"])
+    if configuracao is None or not Path(configuracao.strip()).is_file():
+        return []
+    lista = _saida(["git", "ls-files", "-z"])
+    gerados = sorted(
+        nome
+        for nome in (lista or "").split("\0")
+        if GERADO.search(nome) and (RAIZ / nome).is_file()
+    )
+    config = "openspec/config.yaml"
+    if not gerados or not (RAIZ / config).is_file():
+        return []
+    with tempfile.TemporaryDirectory() as tmp:
+        ensaio, xdg = Path(tmp) / "projeto", Path(tmp) / "xdg"
+        for nome in (*gerados, config):
+            (ensaio / nome).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(RAIZ / nome, ensaio / nome)
+        (xdg / "openspec").mkdir(parents=True)
+        shutil.copyfile(configuracao.strip(), xdg / "openspec" / "config.json")
+        if _saida(["openspec", "update", str(ensaio)], {"XDG_CONFIG_HOME": str(xdg)}) is None:
+            return []
+        apagaria = [nome for nome in gerados if not (ensaio / nome).is_file()]
+        trocaria = [
+            nome
+            for nome in gerados
+            if (ensaio / nome).is_file()
+            and (ensaio / nome).read_bytes() != (RAIZ / nome).read_bytes()
+        ]
+        novos = (
+            arquivo.relative_to(ensaio).as_posix()
+            for arquivo in ensaio.rglob("*")
+            if arquivo.is_file()
+        )
+        criaria = sorted(
+            nome
+            for nome in novos
+            if nome not in (*gerados, config)
+            and not (
+                (RAIZ / nome).is_file()
+                and (RAIZ / nome).read_bytes() == (ensaio / nome).read_bytes()
+            )
+        )
+    grupos = (("apagaria", apagaria), ("criaria", criaria), ("trocaria", trocaria))
+    partes = [f"{verbo}: {_nomes(nomes)}" for verbo, nomes in grupos if nomes]
+    if not partes:
+        return []
+    aviso = (
+        f"o openspec update mudaria arquivos gerados do OpenSpec ({'; '.join(partes)}): confira o "
+        "perfil com `openspec config list` antes de rodá-lo"
+    )
+    return [aviso]
+
+
+def avisar_openspec() -> list[str]:
+    return _aviso_da_versao() + _aviso_do_update()
+
+
 def main(argv: list[str]) -> int:
     sem_plugin = "--sem-plugin" in argv
     argv = [opcao for opcao in argv if opcao != "--sem-plugin"]
@@ -269,7 +388,7 @@ def main(argv: list[str]) -> int:
     if ANDAMENTO.is_file():
         falhas += conferir_andamento(ANDAMENTO.read_text(encoding="utf-8"), vizinhos)
     if not sem_plugin:
-        avisos += avisar_plugin()
+        avisos += avisar_plugin() + avisar_openspec()
 
     for aviso in avisos:
         print(f"aviso: {aviso}", file=sys.stderr)

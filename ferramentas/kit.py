@@ -93,6 +93,12 @@ COM_PARTE_FIXA = (
     ".github/workflows/verificacao.yml",
     ".github/dependabot.yml",
 )
+# Os blocos da parte da stack nos modelos: o projeto troca ou apaga o que não é o seu, e a falta
+# deles não vira aviso. Em todo arquivo, os que abrem com o comentário "Parte da stack" (no CI, ele
+# fica no meio do bloco dos passos fixos, e o bloco fica); no .gitignore, também os de título
+# Python e Node.
+PARTE_DA_STACK = "# Parte da stack"
+BLOCOS_DA_STACK = {"# Python", "# Node"}
 # A língua dos artefatos, no context do openspec/config.yaml, como o `openspec init --language`
 # a escreve (core/init.js do OpenSpec), mais os acentos: assim o init a reconhece.
 LINGUA = (
@@ -538,39 +544,62 @@ def _linhas_fixas(texto: str) -> set[str]:
     return {linha for linha in linhas if linha}
 
 
+def _sem_blocos_da_stack(nome: str, texto: str) -> str:
+    """O modelo sem os blocos da parte da stack, que o projeto troca ou apaga de propósito."""
+    titulos = BLOCOS_DA_STACK if nome == ".gitignore" else set()
+
+    def da_stack(bloco: str) -> bool:
+        linhas = [linha.strip() for linha in bloco.splitlines()]
+        abre = bool(linhas) and linhas[0].startswith(PARTE_DA_STACK)
+        return abre or bool(titulos & set(linhas))
+
+    return "\n\n".join(bloco for bloco in re.split(r"\n\s*\n", texto) if not da_stack(bloco))
+
+
 def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
-    """Diz o que o kit mudou na parte fixa desde a versão do projeto; a cópia fica com o usuário."""
-    if antes == "?":
-        return
-    # O commit que trouxe a versão do comum do projeto; o que o kit mudou depois dele vale avisar.
+    """Diz o que falta da parte fixa do modelo atual no projeto e o que o kit tirou dela desde a
+    versão do projeto; a cópia fica com o usuário."""
+    # O commit que trouxe a versão do comum do projeto; só por ele se sabe o que o kit tirou.
     comum = _caminhos("trilha/CLAUDE-comum.md")
     desde = _git(KIT, "log", "--format=%h", "-S", f"Versão {antes},", "--", *comum)
-    if not desde:
-        return
+    desde = "" if antes == "?" else desde
     for nome in COM_PARTE_FIXA:
         origem = A_PREENCHER[nome]
         if not (pasta / nome).is_file():
             continue
-        velho = _na_versao(desde.split()[-1], origem)
+        velho = _na_versao(desde.split()[-1], origem) if desde else ""
         novo = (MODELO / origem).read_text(encoding="utf-8")
         projeto = _linhas_fixas((pasta / nome).read_text(encoding="utf-8"))
+        acoes = {_sem_versao_da_acao(linha) for linha in projeto}
         faltam = sorted(
             linha
-            for linha in _linhas_fixas(novo) - _linhas_fixas(velho)
-            if not _presente(linha, projeto)
+            for linha in _linhas_fixas(_sem_blocos_da_stack(nome, novo))
+            if not _presente(_sem_versao_da_acao(linha), acoes)
         )
-        sobram = sorted((_linhas_fixas(velho) - _linhas_fixas(novo)) & projeto)
+        do_kit = {_sem_versao_da_acao(linha) for linha in _linhas_fixas(novo)}
+        sobram = sorted(
+            linha
+            for linha in (_linhas_fixas(velho) - _linhas_fixas(novo)) & projeto
+            if _sem_versao_da_acao(linha) not in do_kit
+        )
         if faltam or sobram:
-            print(f"aviso: a parte fixa de {nome} mudou no kit desde a {antes}; traga à mão:")
+            print(f"aviso: a parte fixa de {nome} difere do modelo do kit; traga à mão:")
             for linha in faltam:
                 print(f"  + {linha}")
             for linha in sobram:
                 print(f"  - {linha}")
 
 
+def _sem_versao_da_acao(linha: str) -> str:
+    """A linha com a ação do CI (`uses: dono/acao@versão`) sem a versão: o Dependabot a atualiza
+    no projeto, e a ação noutra versão não é linha que falta nem que sobra."""
+    return re.sub(r"(uses:\s*[^@\s]+)@\S+", r"\1@", linha)
+
+
 def _presente(linha: str, projeto: set[str]) -> bool:
-    """A linha do kit está no projeto: igual, ou seguida de espaço e argumentos (os --vizinho)."""
-    return any(nossa == linha or nossa.startswith(f"{linha} ") for nossa in projeto)
+    """A linha do kit está no projeto: igual, seguida de espaço e argumentos (os --vizinho) ou
+    chamada dentro de uma linha dele, depois de um espaço (por uma função do projeto)."""
+    return any(f" {linha} " in f" {nossa} " for nossa in projeto)
 
 
 def _com_lingua(cabeca: str) -> str:
