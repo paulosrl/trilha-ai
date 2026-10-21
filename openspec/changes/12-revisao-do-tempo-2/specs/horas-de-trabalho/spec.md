@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Estimativa pelos commits nos dias sem conversa
-O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas pelos commits do usuário (todas as branches e tags, cada commit uma vez, pela data de autor; com o e-mail de autor do git, que é o `GIT_AUTHOR_EMAIL`, o `author.email` ou o `user.email`, só os commits dos e-mails do usuário): commits com até 2 horas de intervalo formam uma sessão, que começa 30 minutos antes do primeiro, sem passar da meia-noite do dia dele, e o dia com commit tem pelo menos 1 minuto. O dia com tempo das conversas MUST usar só as conversas.
+O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas pelos commits do usuário (todas as branches e tags, cada commit uma vez, pela data de autor; com o e-mail de autor do git, que é o `GIT_AUTHOR_EMAIL`, o `author.email` ou o `user.email` de qualquer configuração do git, ou o `EMAIL` quando nenhum deles existe, só os commits dos e-mails do usuário): commits com até 2 horas de intervalo formam uma sessão, que começa 30 minutos antes do primeiro, sem passar da meia-noite do dia dele, e o dia com commit tem pelo menos 1 minuto. O dia com tempo das conversas MUST usar só as conversas.
 
 #### Scenario: Sessões de commits
 - **WHEN** um dia sem conversa tem commits às 10:00, 11:00 e 14:00
@@ -26,7 +26,7 @@ O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas 
 - **THEN** esse dia não aparece na apuração
 
 #### Scenario: Sem e-mail configurado
-- **WHEN** o repositório não tem `user.email` nem `author.email`, o `GIT_AUTHOR_EMAIL` não está definido, e um dia sem conversa tem um commit de qualquer autor
+- **WHEN** o git não tem `user.email` nem `author.email`, o `GIT_AUTHOR_EMAIL` e o `EMAIL` não estão definidos, e um dia sem conversa tem um commit de qualquer autor
 - **THEN** o dia aparece, estimado pelos commits
 
 #### Scenario: Commit à meia-noite em ponto
@@ -40,6 +40,14 @@ O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas 
 #### Scenario: E-mail de autor no ambiente
 - **WHEN** o `user.email` é `eu@exemplo.br`, o comando roda com `GIT_AUTHOR_EMAIL=amb@exemplo.br`, e um dia sem conversa só tem um commit de `amb@exemplo.br`
 - **THEN** o dia aparece, estimado pelos commits
+
+#### Scenario: E-mail da configuração global
+- **WHEN** o `user.email` do repositório é `eu@exemplo.br`, o da configuração global é `velho@exemplo.br`, e um dia sem conversa só tem um commit de `velho@exemplo.br`
+- **THEN** o dia aparece, estimado pelos commits
+
+#### Scenario: Variável EMAIL
+- **WHEN** o git não tem e-mail configurado, o comando roda com `EMAIL=var@exemplo.br`, e há um commit de `var@exemplo.br` num dia e um de `outro@exemplo.br` noutro
+- **THEN** só o dia do commit de `var@exemplo.br` aparece
 
 ### Requirement: Outros e-mails do usuário
 Os e-mails gravados em `trilha.email` no git do repositório SHALL contar como do usuário na estimativa pelos commits, ao lado dos e-mails de autor do git. Quando algum commit fica fora por causa do e-mail, o comando MUST avisar, sem falhar, até três dos e-mails que ficaram fora, sem os de robôs (com `[bot]`) e sem os gravados em `trilha.outro`, com o comando que inclui um deles (`trilha.email`) e o que o tira do aviso (`trilha.outro`).
@@ -62,10 +70,10 @@ Os e-mails gravados em `trilha.email` no git do repositório SHALL contar como d
 - **THEN** a saída não traz o aviso dos e-mails, e o commit continua fora da estimativa
 
 ### Requirement: Repositório que mudou de pasta
-Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz, e esse caminho já não é a raiz de um repositório git, o comando SHALL juntar as conversas dele às deste resumo, renomear o arquivo dele e a página dele com o sufixo `.juntado`, sem apagá-los nem sobrescrever um `.juntado` anterior, e avisar, sem falhar, citando-o. Quando esse caminho ainda é a raiz de um repositório e não há resumo para o caminho da raiz, o comando SHALL só avisar, citando o outro resumo. O comando MUST NOT tomar por ele o resumo de um repositório cujo nome só começa com o deste.
+Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz, e esse caminho já não tem um repositório git (a pasta `.git`), o comando SHALL juntar as conversas dele às deste resumo, renomear o arquivo dele e a página dele com o sufixo `.juntado`, sem apagá-los nem sobrescrever um `.juntado` anterior, e avisar, sem falhar, citando-o; quando o resumo dele não se lê, o comando SHALL avisar, citando-o, sem juntá-lo nem renomeá-lo. Quando esse caminho ainda tem um repositório e não há resumo para o caminho da raiz, o comando SHALL só avisar, citando o outro resumo. O comando MUST NOT tomar por ele o resumo de um repositório cujo nome só começa com o deste.
 
 #### Scenario: Pasta trocada
-- **WHEN** o comando já rodou com a raiz em `/a/proj`, `/a/proj` ainda é um repositório, e ele roda agora com a raiz em `/b/proj`
+- **WHEN** o comando já rodou com a raiz em `/a/proj`, `/a/proj` ainda tem um repositório, e ele roda agora com a raiz em `/b/proj`
 - **THEN** a saída traz um aviso que cita o resumo de `/a/proj`
 - **AND** o comando termina com o código de saída 0
 
@@ -84,6 +92,14 @@ Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz,
 #### Scenario: Pasta antiga juntada depois da primeira execução
 - **WHEN** o comando já rodou em `/b/proj` antes de `/a/proj` deixar de existir, e roda de novo depois
 - **THEN** a execução conta as horas guardadas no resumo de `/a/proj`, e ele ganha o sufixo `.juntado`
+
+#### Scenario: Resumo antigo que não se lê
+- **WHEN** a pasta `/a/proj` já não existe, e o resumo dela é de uma versão que o comando não conhece
+- **THEN** a saída traz um aviso que cita esse resumo, que continua com o nome de antes, e as horas dele não entram
+
+#### Scenario: Pasta antiga com um .git que o git recusa
+- **WHEN** a pasta `/a/proj` ainda tem um `.git`, mas o git não a abre
+- **THEN** o resumo de `/a/proj` não é juntado nem renomeado
 
 #### Scenario: Vizinho de nome parecido
 - **WHEN** a pasta dos dados tem só o resumo de um repositório `proj-antigo`, e o comando roda na raiz `proj`

@@ -37,3 +37,11 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 - [x] 7.1 O conjunto dos testes e o ruff passam
 - [x] 7.2 A execução manual, por último, no Xavier, só lendo, com uma pasta de dados vazia: o total igual ao da 2.9 (o D1 e as limpezas não mudam as horas), e o `git status --porcelain` igual antes e depois. Depois, numa cópia da pasta de dados, com o resumo renomeado como se a raiz tivesse vindo de outra pasta já apagada: as horas voltam e o antigo vira `.juntado`. O resultado vai a "Verificação", no `design.md`
+
+## 8. As respostas ao verify e ao code review
+
+Do `/opsx:verify` e do `/code-review 12`, de 2026-10-21; a decisão de cada ponto fica em "Respostas à revisão", no `design.md`.
+
+- [x] 8.1 Os testes `test_tempo_email_da_configuracao_global` e `test_tempo_email_da_variavel_email` comprovam os cenários "E-mail da configuração global" e "Variável EMAIL"; falham antes do código. O `_rodar` dos testes tira também o `EMAIL` herdado (`-k test_tempo_email_da`)
+- [x] 8.2 Os testes `test_tempo_resumo_antigo_que_nao_se_le` e `test_tempo_pasta_antiga_com_git_que_falha` comprovam os cenários "Resumo antigo que não se lê" e "Pasta antiga com um .git que o git recusa"; falham antes do código (`-k test_tempo_resumo_antigo_que_nao_se_le` e `-k test_tempo_pasta_antiga_com_git_que_falha`)
+- [x] 8.3 O `tempo.py` com as respostas aplicadas (D3 e D5); os testes e o ruff passam

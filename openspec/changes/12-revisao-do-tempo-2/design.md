@@ -33,7 +33,7 @@ O `_eventos` deixa de descartar a conversa só com eventos "fora". Para cada con
 O arquivo sem evento da raiz continua indo para os ignorados, como na 2.9: a conversa dele já foi recalculada nesta execução.
 
 ### D3. Os e-mails de autor do git
-O git escolhe o e-mail de autor do commit nesta ordem: `GIT_AUTHOR_EMAIL`, `author.email`, `user.email`. O comando junta os três que existirem, não vazios, aos do `trilha.email`: os três são do usuário, e o commit antigo pode ter sido feito com qualquer um. Sem nenhum dos três, contam os commits de todos, como hoje.
+O git escolhe o e-mail de autor do commit nesta ordem: `GIT_AUTHOR_EMAIL`, `author.email`, `user.email` e, sem eles, a variável `EMAIL`. O comando junta os três primeiros que existirem, não vazios, aos do `trilha.email`: os três são do usuário, e o commit antigo pode ter sido feito com qualquer um. O `author.email` e o `user.email` se leem com o `--get-all`, de todas as configurações (a do sistema, a global e a do repositório), um por linha: o e-mail global antigo, trocado depois só no repositório, ainda é do usuário. Sem nenhum dos três, vale o `EMAIL`, como no git; sem ele também, contam os commits de todos, como hoje.
 
 *Alternativa:* o `git var GIT_AUTHOR_IDENT`. Recusada: sem e-mail configurado, ele inventa um a partir do nome da máquina (ou falha, com o `user.useConfigOnly`), e o caso "sem e-mail, contam todos" deixaria de valer.
 
@@ -45,8 +45,8 @@ O `trilha.email` e o `trilha.outro` se leem um por linha, e não por palavra: o 
 *Alternativa:* guardar no resumo os e-mails já avisados e avisar só os novos. Recusada: o aviso perdido na primeira execução nunca mais sairia, e os commits do usuário ficariam fora sem que ele soubesse.
 
 ### D5. O resumo de outra pasta
-Os outros resumos se acham como na 2.9: o nome exato `<nome>-<8 hexadecimais>.json`, com a `raiz` gravada de mesmo nome e diferente da atual; o ilegível é ignorado. A busca agora roda em toda execução, depois de ler o resumo deste caminho. A raiz gravada "ainda é um repositório" quando `git -C <raiz antiga> rev-parse --show-toplevel` devolve ela mesma; uma pasta que sobrou lá sem o repositório não basta.
-- **a raiz gravada não é mais um repositório:** as conversas dele entram no resumo atual, cada uma pelo `_juntar` com a deste resumo, se houver. O resumo atual é gravado, e só depois o antigo e a página dele são renomeados com o sufixo `.juntado`, sem serem apagados. Se o `.juntado` já existe (o repositório foi e voltou), o novo ganha a data e a hora no nome, e nenhum se sobrescreve. O aviso diz que as horas de `<raiz antiga>` vieram e cita o resumo renomeado;
+Os outros resumos se acham como na 2.9: o nome exato `<nome>-<8 hexadecimais>.json`, com a `raiz` gravada de mesmo nome e diferente da atual; o que nem a `raiz` deixa ler é ignorado. A busca agora roda em toda execução, depois de ler o resumo deste caminho. A raiz gravada "ainda é um repositório" quando ela ainda tem a pasta (ou o arquivo) `.git`: uma pasta que sobrou lá sem o repositório não basta, e a que o git recusa abrir (de outro dono, sem permissão) basta, para não juntar uma cópia viva. Só o resumo que vai ser juntado se lê por inteiro, com o `_ler_resumo`; o que não se lê não é juntado nem renomeado, e o comando avisa, citando-o.
+- **a raiz gravada não é mais um repositório:** as conversas dele entram no resumo atual, cada uma pelo `_juntar` com a deste resumo, se houver. O resumo atual é gravado, e só depois o antigo e a página dele são renomeados com o sufixo `.juntado`, sem serem apagados. Se o `.juntado` já existe (o repositório foi e voltou), o novo ganha um número (`.juntado-2`, `.juntado-3`), e nenhum se sobrescreve. O aviso diz que as horas de `<raiz antiga>` vieram e cita o resumo renomeado;
 - **a raiz gravada ainda é um repositório** (outra cópia dele): só o aviso de hoje, e só quando não há resumo para este caminho.
 
 As conversas do resumo antigo não se recalculam aqui: o `cwd` delas é a raiz antiga, que não é a atual. Elas entram como estão, qualquer que seja a versão do resumo antigo; as horas a mais de um resumo antigo da versão 1 ficam (fora, no proposal). Os ignorados do resumo antigo não vêm: as datas e os tamanhos deles valiam para a raiz antiga.
@@ -66,8 +66,9 @@ Se a gravação do resumo atual falha, o antigo fica com o nome de sempre, e a e
 
 - [Um repositório de mesmo nome, apagado, que não era este (outro projeto com o mesmo nome de pasta)] → As horas dele entrariam neste. É raro: pede o mesmo nome, a mesma pasta de dados e a pasta antiga apagada. O aviso cita a raiz antiga, e o arquivo `.juntado` fica para conferência.
 - [A pasta antiga numa unidade desmontada parece apagada] → O mesmo caso: o aviso cita a raiz e o arquivo fica.
+- [A variável `EMAIL`, definida para outro programa] → Ela só vale sem nenhum e-mail no git, como no próprio git.
 - [O `GIT_AUTHOR_EMAIL` do ambiente de quem roda o comando] → Ele vale para os commits dessa sessão; contá-lo como do usuário é o que o git faz.
-- [Os testes herdavam o `GIT_AUTHOR_EMAIL` da máquina] → O `_rodar` dos testes o tira do ambiente, salvo quando o teste o passa.
+- [Os testes herdavam o `GIT_AUTHOR_EMAIL` e o `EMAIL` da máquina] → O `_rodar` dos testes os tira do ambiente, salvo quando o teste os passa.
 
 ## Migration Plan
 
@@ -93,3 +94,22 @@ Feita por um agente sem o contexto da sessão, em 2026-10-21; nada grave. Os 6 p
 4. A página antiga ficaria ao lado da nova, e os testes que leem a única página da pasta falhariam pela montagem. Aplicado: a página antiga também ganha o `.juntado` (D5).
 5. O `trilha.email` e o `trilha.outro` lidos por palavra partiriam o e-mail com espaço, e o aviso dele nunca se calaria. Aplicado: lidos um por linha (D4).
 6. O aviso com os dois comandos numa linha à parte quebraria o `test_tempo_aviso_com_tres_emails`. Aplicado: o aviso continua numa linha só (D4).
+
+### Verify e code review, depois do apply
+
+O `/opsx:verify` e o `/code-review 12`, cada um por um agente sem o contexto da sessão, em 2026-10-21. O verify não achou nada crítico nem aviso. As decisões, com a escolha do usuário:
+
+| # | Origem | Achado | Decisão |
+|---|---|---|---|
+| 1 | review 1 | Uma falha do git (a pasta de outro dono, sem permissão) fazia uma cópia viva parecer apagada, e as horas dela viriam para cá. | Aplicado: a raiz antiga ainda é um repositório quando tem o `.git` (D5). Cenário "Pasta antiga com um .git que o git recusa". A unidade desmontada continua no risco aceito. |
+| 2 | review 2 e 7 | O resumo antigo que não se lia era ignorado em silêncio, e cada um se decodificava duas vezes. | Aplicado: só a `raiz` se lê de todos; o resumo inteiro, só o que vai ser juntado, e o que não se lê gera um aviso (D5). Cenário "Resumo antigo que não se lê". |
+| 3 | review 3 | Só o `user.email` efetivo contava: o global antigo, trocado só no repositório, ficava fora. | Aplicado: `--get-all` no `author.email` e no `user.email` (D3). Cenário "E-mail da configuração global". |
+| 4 | review 4 | O git usa o `EMAIL` sem e-mail configurado, e o comando não. | Aplicado: o `EMAIL` vale quando nenhum dos três existe (D3). Cenário "Variável EMAIL". |
+| 5 | review 10 | Dois esquemas de nome no `.juntado`. | Aplicado: só o número (D5). |
+| 6 | verify | A explicação do `_eventos` com as linhas quebradas fora do padrão. | Aplicado. |
+| 7 | review 5 | O `trilha.email` com dois e-mails num valor, separados por espaço, deixa de valer. | Recusado: a 2.9 durou um dia, e o comando que ela ensinava grava um e-mail por vez. |
+| 8 | review 6 | O aviso da outra cópia viva sai uma vez só. | Recusado: com as duas cópias vivas, cada uma guarda o próprio resumo, e nenhuma hora se perde. |
+| 9 | review 8 | As linhas antes do primeiro evento da raiz se decodificam duas vezes. | Recusado: é o custo aceito no D1, só dessas linhas. |
+| 10 | review 9 | Quatro chamadas ao `git config` por execução. | Recusado: juntá-las ganharia milissegundos e complicaria a leitura. |
+
+**Execução manual depois das respostas, em 2026-10-21,** no Xavier, só lendo, com uma pasta de dados vazia: `26/05/2026 a 21/10/2026: 58 dias, 176 h`, igual; o `git status --porcelain` igual antes e depois. Lá o git só tem um `user.email`, sem `author.email` nem `EMAIL`.

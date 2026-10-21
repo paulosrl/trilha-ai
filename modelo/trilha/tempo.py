@@ -146,11 +146,11 @@ Eventos = dict[tuple[float, str], set[int]]
 def _eventos(
     configuracao: Path, raiz: Path, ignorados: dict[str, list]
 ) -> tuple[dict[str, Eventos], dict[str, list]]:
-    """Os eventos de cada conversa que citou a raiz, (instante, tipo), com o tipo "pedido",
-    "ia" ou "fora" (a conversa só com eventos "fora" vem também, para o resumo da 2.8), e os
-    arquivos de onde cada um veio: a linha repetida em dois arquivos (a
-    conversa retomada) é um evento só, dos dois. E os arquivos lidos sem nada da raiz, com a data
-    e o tamanho: enquanto eles não mudam, não se leem de novo."""
+    """Os eventos de cada conversa que citou a raiz, (instante, tipo), com o tipo "pedido", "ia"
+    ou "fora" (a conversa só com eventos "fora" vem também, para o resumo da 2.8), e os arquivos
+    de onde cada um veio: a linha repetida em dois arquivos (a conversa retomada) é um evento só,
+    dos dois. E os arquivos lidos sem nada da raiz, com a data e o tamanho: enquanto eles não
+    mudam, não se leem de novo."""
     projetos = configuracao / "projects"
     if not projetos.is_dir():
         return {}, {}
@@ -345,9 +345,9 @@ def _lista(raiz: Path, chave: str) -> list[str]:
 def _commits(raiz: Path) -> tuple[list[float], Counter[str]]:
     """O instante de cada commit do usuário nas branches, nas remotas e nas tags, uma vez, pela
     data de autor, e quantos commits de cada outro e-mail ficaram fora. Os e-mails do usuário são
-    os de autor do git (o GIT_AUTHOR_EMAIL, o author.email e o user.email, na ordem em que o git
-    os escolhe no commit) e os do trilha.email; sem nenhum de autor, contam os de todos. A
-    assinatura fica fora da saída."""
+    os de autor do git (o GIT_AUTHOR_EMAIL, o author.email e o user.email de todas as
+    configurações, ou, sem eles, o EMAIL, como o git os escolhe no commit) e os do trilha.email;
+    sem nenhum de autor, contam os de todos. A assinatura fica fora da saída."""
     saida = _git_texto(
         raiz,
         "log",
@@ -357,12 +357,11 @@ def _commits(raiz: Path) -> tuple[list[float], Counter[str]]:
         "--no-show-signature",
         "--format=%H%x00%ae%x00%aI",
     )
-    de_autor = [
-        os.environ.get("GIT_AUTHOR_EMAIL", "").strip(),
-        (_git_texto(raiz, "config", "author.email") or "").strip(),
-        (_git_texto(raiz, "config", "user.email") or "").strip(),
-    ]
-    de_autor = [email for email in de_autor if email]
+    ambiente = os.environ.get("GIT_AUTHOR_EMAIL", "").strip()
+    de_autor = [ambiente] if ambiente else []
+    de_autor += _lista(raiz, "author.email") + _lista(raiz, "user.email")
+    if not de_autor and os.environ.get("EMAIL", "").strip():
+        de_autor = [os.environ["EMAIL"].strip()]
     emails = {*de_autor, *_lista(raiz, "trilha.email")} if de_autor else None
     return _ler_commits(saida or "", emails)
 
@@ -570,9 +569,9 @@ def _pagina(nome: str, dias: list[dict]) -> str:
     return modelo.replace('<script id="dados" type="application/json">__DADOS__</script>', bloco, 1)
 
 
-def _outros_resumos(pasta: Path, raiz: Path) -> list[tuple[Path, str, dict[str, list]]]:
-    """Os resumos de outro caminho com o mesmo nome de repositório: o arquivo, a raiz gravada e
-    as conversas. O resumo ilegível é ignorado: aqui ele não é a única cópia de nada."""
+def _outros_resumos(pasta: Path, raiz: Path) -> list[tuple[Path, str]]:
+    """Os resumos de outro caminho com o mesmo nome de repositório, com a raiz gravada; o que
+    nem a raiz deixa ler é ignorado."""
     if not pasta.is_dir():
         return []
     nome = re.compile(re.escape(raiz.name) + r"-[0-9a-f]{8}\.json")
@@ -582,33 +581,26 @@ def _outros_resumos(pasta: Path, raiz: Path) -> list[tuple[Path, str, dict[str, 
             continue
         try:
             antiga = json.loads(outro.read_text(encoding="utf-8")).get("raiz")
-            conversas, _, _ = _ler_resumo(outro)
-        except (OSError, ValueError, AttributeError, ResumoIlegivel):
+        except (OSError, ValueError, AttributeError):
             continue
         if isinstance(antiga, str) and antiga != str(raiz) and Path(antiga).name == raiz.name:
-            achados.append((outro, antiga, conversas))
+            achados.append((outro, antiga))
     return achados
 
 
 def _ainda_repositorio(caminho: str) -> bool:
-    """O caminho ainda é a raiz de um repositório git; a pasta que sobrou lá sem ele não conta."""
-    pasta = Path(caminho)
-    if not pasta.is_dir():
-        return False
-    topo = (_git_texto(pasta, "rev-parse", "--show-toplevel") or "").strip()
-    return bool(topo) and Path(topo).resolve() == pasta.resolve()
+    """O caminho ainda tem o .git de um repositório: a pasta que sobrou lá sem ele não conta, e
+    a que o git recusa (de outro dono, sem permissão) conta, para não juntar uma cópia viva."""
+    return (Path(caminho) / ".git").exists()
 
 
 def _renomear_juntado(arquivo: Path) -> Path:
     """Renomeia com o sufixo .juntado, sem sobrescrever um anterior (o repositório que foi e
-    voltou): o novo ganha a data e a hora no nome."""
-    destino = arquivo.with_name(f"{arquivo.name}.juntado")
-    if destino.exists():
-        marca = datetime.now().strftime("%Y%m%d-%H%M%S")
-        destino, numero = arquivo.with_name(f"{arquivo.name}.juntado-{marca}"), 2
-        while destino.exists():
-            destino = arquivo.with_name(f"{arquivo.name}.juntado-{marca}-{numero}")
-            numero += 1
+    voltou): o novo ganha um número."""
+    destino, numero = arquivo.with_name(f"{arquivo.name}.juntado"), 2
+    while destino.exists():
+        destino = arquivo.with_name(f"{arquivo.name}.juntado-{numero}")
+        numero += 1
     arquivo.rename(destino)
     return destino
 
@@ -652,13 +644,21 @@ def main() -> int:
     # O resumo de outro caminho de mesmo nome: se a raiz dele não é mais um repositório, o
     # repositório mudou de pasta, e as horas guardadas lá vêm para cá; se ainda é, é outra cópia.
     juntados, avisos_de_pasta = [], []
-    for outro, antiga, guardadas in _outros_resumos(pasta, raiz):
+    for outro, antiga in _outros_resumos(pasta, raiz):
         if _ainda_repositorio(antiga):
             if not existia:
                 avisos_de_pasta.append(
                     f"aviso: não há resumo deste caminho, mas há o de {antiga} ({outro}); se o "
                     "repositório mudou de pasta, as horas guardadas antes estão nele"
                 )
+            continue
+        try:
+            guardadas, _, _ = _ler_resumo(outro)
+        except ResumoIlegivel as erro:
+            avisos_de_pasta.append(
+                f"aviso: {antiga} não é mais um repositório, mas o resumo de lá ({outro}) não se "
+                f"lê ({erro}), e as horas guardadas nele não vieram para este"
+            )
             continue
         for sessao, intervalos in guardadas.items():
             conversas[sessao] = _juntar(conversas.get(sessao, []), intervalos)

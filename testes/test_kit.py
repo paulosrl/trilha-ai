@@ -2899,8 +2899,9 @@ class HorasDeTrabalho(unittest.TestCase):
         return arquivo
 
     def _rodar(self, cwd: Path | None = None, **env_extra: str) -> subprocess.CompletedProcess:
-        # O GIT_AUTHOR_EMAIL da máquina contaria como do usuário; só vale o que o teste passa.
-        herdado = {k: v for k, v in os.environ.items() if k != "GIT_AUTHOR_EMAIL"}
+        # O GIT_AUTHOR_EMAIL e o EMAIL da máquina contariam como do usuário; só vale o que o
+        # teste passa.
+        herdado = {k: v for k, v in os.environ.items() if k not in ("GIT_AUTHOR_EMAIL", "EMAIL")}
         env = {**herdado, "TZ": "UTC", "HOME": str(self.casa), **self.SEM_GIT_DA_MAQUINA,
                "CLAUDE_CONFIG_DIR": str(self.config), "XDG_DATA_HOME": str(self.dados), **env_extra}
         return subprocess.run([sys.executable, "-I", str(TEMPO)], cwd=cwd or self.raiz, env=env,
@@ -3527,7 +3528,7 @@ class HorasDeTrabalho(unittest.TestCase):
         self.assertNotIn("trilha.email", saida.stderr)
         self.assertNotIn("2026-10-01", self._dias())
 
-    def _resumo_antigo(self, raiz: Path, minutos: int = 20) -> Path:
+    def _resumo_antigo(self, raiz: Path, minutos: int = 20, pagina: bool = True) -> Path:
         """O resumo e a página de outro caminho de mesmo nome, com uma conversa já apagada."""
         nome = f"proj-{hashlib.sha1(str(raiz).encode('utf-8')).hexdigest()[:8]}"
         resumo = self._pasta_tempo() / f"{nome}.json"
@@ -3535,7 +3536,8 @@ class HorasDeTrabalho(unittest.TestCase):
         conversa = [["2026-10-02T10:00:00+00:00", f"2026-10-02T10:{minutos:02d}:00+00:00", "ia"]]
         resumo.write_text(json.dumps({"versao": 2, "raiz": str(raiz), "conversas": {"s9": conversa},
                                       "ignorados": {}}), encoding="utf-8")
-        resumo.with_suffix(".html").write_text("<html></html>", encoding="utf-8")
+        if pagina:
+            resumo.with_suffix(".html").write_text("<html></html>", encoding="utf-8")
         return resumo
 
     def _juntado(self, resumo: Path) -> None:
@@ -3577,6 +3579,41 @@ class HorasDeTrabalho(unittest.TestCase):
         self.assertEqual(self._dias()["2026-10-02"]["total"], 40)
         self.assertEqual(len(list(self._pasta_tempo().glob(f"{antigo.name}.juntado*"))), 2)
         self.assertEqual(len(list(self._pasta_tempo().glob(f"{antigo.stem}.html.juntado*"))), 2)
+
+    # As respostas ao verify e ao code review da change 12
+
+    def test_tempo_email_da_configuracao_global(self) -> None:
+        global_ = Path(self._tmp.name) / "gitconfig"
+        global_.write_text("[user]\n\temail = velho@exemplo.br\n", encoding="utf-8")
+        self._config("user.email", "eu@exemplo.br")
+        self._commit_de("velho@exemplo.br", "2026-10-01T10:00:00Z")
+        self._ok(GIT_CONFIG_GLOBAL=str(global_))
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 30)
+
+    def test_tempo_email_da_variavel_email(self) -> None:
+        self._commit_de("var@exemplo.br", "2026-10-01T10:00:00Z")
+        self._commit_de("outro@exemplo.br", "2026-10-03T10:00:00Z")
+        self._ok(EMAIL="var@exemplo.br")
+        self.assertIn("2026-10-01", self._dias())
+        self.assertNotIn("2026-10-03", self._dias())
+
+    def test_tempo_resumo_antigo_que_nao_se_le(self) -> None:
+        antigo = self._resumo_antigo(Path(self._tmp.name) / "a" / "proj", pagina=False)
+        dados = json.loads(antigo.read_text(encoding="utf-8"))
+        antigo.write_text(json.dumps({**dados, "versao": 99}), encoding="utf-8")
+        saida = self._ok()
+        self.assertTrue(antigo.exists())
+        self.assertIn(antigo.name, saida.stderr)
+        self.assertNotIn("2026-10-02", self._dias())
+
+    def test_tempo_pasta_antiga_com_git_que_falha(self) -> None:
+        antiga = Path(self._tmp.name) / "a" / "proj"
+        antiga.mkdir(parents=True)
+        (antiga / ".git").write_text("isto não é um gitdir\n", encoding="utf-8")
+        antigo = self._resumo_antigo(antiga, pagina=False)
+        self._ok()
+        self.assertTrue(antigo.exists())
+        self.assertNotIn("2026-10-02", self._dias())
 
 
 if __name__ == "__main__":
