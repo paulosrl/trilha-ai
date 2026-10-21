@@ -14,6 +14,7 @@ import sys
 import tempfile
 import time
 import unittest
+from datetime import datetime
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -3254,6 +3255,126 @@ class HorasDeTrabalho(unittest.TestCase):
         self._commit("2026-10-01T10:00:00Z")
         saida = self._ok()
         self.assertIn(": 1 dia,", saida.stdout)
+
+    # A revisão do tempo.py (change 11)
+
+    SEM_GIT_DA_MAQUINA = {"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_NOSYSTEM": "1"}
+
+    def _repositorio(self, caminho: Path, quando: str = "2026-10-01T10:00:00Z") -> Path:
+        """Outro repositório git, com um commit."""
+        caminho.mkdir(parents=True, exist_ok=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", str(caminho)], check=True)
+        env = {**os.environ, **GIT_TESTE, "GIT_AUTHOR_DATE": quando, "GIT_COMMITTER_DATE": quando}
+        subprocess.run(["git", "-C", str(caminho), "commit", "-q", "--allow-empty", "-m", "a"],
+                       check=True, env=env)
+        return caminho
+
+    def test_tempo_clone_dentro_da_raiz(self) -> None:
+        aninhado = self.raiz / "vendor" / "lib"
+        subprocess.run(["git", "init", "-q", str(aninhado)], check=True)
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", aninhado),
+                        self._ia("2026-10-01T09:20:00Z", aninhado)])
+        self._ok()
+        self.assertNotIn("2026-10-01", self._dias())
+
+    def test_tempo_worktree_da_raiz(self) -> None:
+        self._commit("2026-09-01T10:00:00Z")
+        worktree = self.raiz / ".claude" / "worktrees" / "w1"
+        subprocess.run(["git", "-C", str(self.raiz), "worktree", "add", "-q", "-b", "w1", str(worktree)],
+                       check=True, capture_output=True)
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", worktree),
+                        self._ia("2026-10-01T09:20:00Z", worktree)])
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 20)
+
+    def test_tempo_saida_e_volta_no_meio_da_conversa(self) -> None:
+        fora = Path(self._tmp.name) / "outra"
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:05:00Z", fora),
+                        self._ia("2026-10-01T09:20:00Z", fora),
+                        self._ia("2026-10-01T09:28:00Z", self.raiz)])
+        self._ok()
+        self.assertNotIn("2026-10-01", self._dias())
+
+    def test_tempo_subagente_noutra_pasta(self) -> None:
+        fora = Path(self._tmp.name) / "outra"
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:10:00Z", self.raiz),
+                        self._ia("2026-10-01T09:20:00Z", self.raiz)])
+        passos = []
+        for minuto in ("05", "15"):
+            passo = self._ia(f"2026-10-01T09:{minuto}:00Z", fora)
+            passo["isSidechain"] = True
+            passos.append(passo)
+        self._conversa(passos, subagente=True)
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 20)
+
+    def test_tempo_commit_de_outro_autor(self) -> None:
+        subprocess.run(["git", "-C", str(self.raiz), "config", "user.email", "eu@exemplo.br"], check=True)
+        self._commit("2026-10-01T10:00:00Z")  # o autor dos commits de teste é t@t, como um robô
+        self._ok(**self.SEM_GIT_DA_MAQUINA)
+        self.assertNotIn("2026-10-01", self._dias())
+
+    def test_tempo_sem_email_configurado(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok(**self.SEM_GIT_DA_MAQUINA)
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 30)
+
+    def test_tempo_commit_a_meia_noite(self) -> None:
+        self._commit("2026-10-01T23:30:00Z", nome="a")
+        self._commit("2026-10-02T00:00:00Z", nome="b")
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-02"]["total"], 1)
+
+    def test_tempo_commit_assinado(self) -> None:
+        chave = Path(self._tmp.name) / "chave"
+        subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(chave)], check=True)
+        for nome, valor in (("gpg.format", "ssh"), ("user.signingkey", f"{chave}.pub"),
+                            ("log.showSignature", "true")):
+            subprocess.run(["git", "-C", str(self.raiz), "config", nome, valor], check=True)
+        quando = "2026-10-01T10:00:00Z"
+        env = {**os.environ, **GIT_TESTE, "GIT_AUTHOR_DATE": quando, "GIT_COMMITTER_DATE": quando}
+        subprocess.run(["git", "-C", str(self.raiz), "commit", "-q", "-S", "--allow-empty", "-m", "a"],
+                       check=True, env=env)
+        self._ok()
+        self.assertIn("2026-10-01", self._dias())
+
+    def test_tempo_data_em_utc_com_z(self) -> None:
+        spec = importlib.util.spec_from_file_location("tempo", TEMPO)
+        tempo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tempo)
+        instantes = tempo._ler_commits("abc123 t@t 2026-10-01T10:00:00Z\nlixo\n", None)
+        self.assertEqual(instantes, [datetime.fromisoformat("2026-10-01T10:00:00+00:00").timestamp()])
+
+    def test_tempo_dados_uma_vez(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok()
+        self.assertEqual(self._pagina().count('"dias": ['), 1)
+
+    def test_tempo_nome_com_caracteres_especiais(self) -> None:
+        estranho = self._repositorio(Path(self._tmp.name) / "a<b__DADOS__")
+        saida = self._rodar(cwd=estranho)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        pagina = self._pagina()
+        self.assertIn("<title>Horas de a&lt;b__DADOS__</title>", pagina)
+        self.assertEqual(pagina.count('"dias": ['), 1)
+
+    def test_tempo_pasta_trocada(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok()
+        antigo = next(self._pasta_tempo().glob("*.json"))
+        nova = self._repositorio(Path(self._tmp.name) / "b" / "proj")
+        saida = self._rodar(cwd=nova)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn(antigo.name, saida.stderr)
+
+    def test_tempo_vizinho_de_nome_parecido(self) -> None:
+        vizinho = self._repositorio(Path(self._tmp.name) / "proj-antigo")
+        self.assertEqual(self._rodar(cwd=vizinho).returncode, 0)
+        self._commit("2026-10-01T10:00:00Z")
+        saida = self._ok()
+        self.assertNotIn("proj-antigo", saida.stderr)
 
 
 if __name__ == "__main__":

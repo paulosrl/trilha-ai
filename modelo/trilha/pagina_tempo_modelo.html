@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>__TITULO__</title>
-<!-- O modelo da página do trilha/tempo.py, que troca __TITULO__ e __DADOS__. Nada vem da rede. -->
+<!-- O modelo da página do trilha/tempo.py, que preenche o título e o bloco de dados. Nada vem da rede. -->
 <style>
 /* Uma folha de registro: o calendário semana a semana abre, a fita hora a hora detalha, o método fecha. */
 :root {
@@ -138,7 +138,7 @@ const ddmm = x => `${String(x.getDate()).padStart(2, "0")}/${String(x.getMonth()
 const ddmmaa = x => `${ddmm(x)}/${x.getFullYear()}`;
 const hm = m => { m = Math.round(m); if (m < 60) return `${m} min`; const h = Math.floor(m / 60), r = m % 60; return r ? `${h}h${String(r).padStart(2, "0")}` : `${h}h`; };
 const dec = m => (m / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
-const clock = m => `${String(Math.floor(m / 60)).padStart(2, "0")}h${String(Math.round(m % 60)).padStart(2, "0")}`;
+const pl = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const page = document.getElementById("page");
@@ -196,13 +196,13 @@ if (!dias.length) {
   head.innerHTML = `<div class="eyebrow">Horas de trabalho</div><h1>${repo}</h1>
     <div class="span"><span><b>Início</b> ${WD[first.getDay()]} ${ddmmaa(first)}</span><span class="rule" aria-hidden="true"></span><span><b>Fim</b> ${WD[last.getDay()]} ${ddmmaa(last)}</span></div>`;
   const stats = el("div", "stats");
-  [[dias.length, `dias com trabalho, em ${span} dias corridos`], [`${Math.round(total / 60)} h`, "no total"],
+  [[dias.length, `${dias.length === 1 ? "dia" : "dias"} com trabalho, em ${pl(span, "dia corrido", "dias corridos")}`], [`${Math.round(total / 60)} h`, "no total"],
    [hm(total / dias.length), "por dia trabalhado, em média"],
-   [conv.length ? `${Math.round((voce / convTotal) * 100)}%` : "—", conv.length ? `seu, nos ${conv.length} dias com conversa` : "sem conversa guardada"]]
+   [conv.length ? `${Math.round((voce / convTotal) * 100)}%` : "—", conv.length ? `seu, nos ${pl(conv.length, "dia", "dias")} com conversa` : "sem conversa guardada"]]
     .forEach(([v, l]) => stats.append(el("div", "stat", `<b>${v}</b><span>${l}</span>`)));
   head.append(stats);
   head.append(el("p", null, `O dia mais longo foi ${WDL[dt(peak.d).getDay()]}, ${ddmmaa(dt(peak.d))}, com ${hm(peak.total)}. ` +
-    `${conv.length} dias vêm das conversas do Claude Code, com a hora exata de cada interação; ${dias.length - conv.length} são estimados pelos commits.`));
+    `${pl(conv.length, "dia vem", "dias vêm")} das conversas do Claude Code, com a hora exata de cada interação; ${pl(dias.length - conv.length, "é estimado", "são estimados")} pelos commits.`));
   page.append(head);
 
   // 1 · calendário (semanas começando na segunda)
@@ -211,7 +211,7 @@ if (!dias.length) {
     <p>Cada coluna é uma semana, de segunda a domingo; cada quadrado, um dia. A cor sobe conforme as horas do dia, numa escala de 0 a ${Math.round(SCALE / 60)} horas. Os quadrados contornados são o primeiro e o último dia.</p>${LEGENDA}`;
   const sheet = el("div", "sheet scroll"); const cal = el("div", "cal");
   const mon0 = new Date(first); mon0.setDate(first.getDate() - ((first.getDay() + 6) % 7));
-  const weeks = Math.ceil(((last - mon0) / 864e5 + 1) / 7);
+  const weeks = Math.ceil((Math.round((last - mon0) / 864e5) + 1) / 7);  // a hora a mais da mudança de horário não abre outra semana
   cal.style.gridTemplateColumns = `2.4rem repeat(${weeks}, minmax(14px, 1fr))`;
   cal.style.minWidth = `${2.4 * 16 + weeks * 16}px`;
   cal.append(el("div", "mon"));
@@ -267,8 +267,8 @@ if (!dias.length) {
       if (v > 0) { const i = el("i", cls); i.style.width = `calc(${(v / maxAgg) * 100}% - 2px)`; st.append(i); }
     });
     row.append(st);
-    row.append(el("div", "bar-val", `<b>${dec(a.t)} h</b> · ${a.n} dias · ${hm(a.n ? a.t / a.n : 0)} por dia`));
-    tipOn(row, `<b>${WDL[a.wd]}</b><br>${dec(a.t)} h em ${a.n} dias<br>você: ${hm(a.voce)} · IA sozinha: ${hm(a.ia)}<br>estimado pelos commits: ${hm(a.est)}`);
+    row.append(el("div", "bar-val", `<b>${dec(a.t)} h</b> · ${pl(a.n, "dia", "dias")} · ${hm(a.n ? a.t / a.n : 0)} por dia`));
+    tipOn(row, `<b>${WDL[a.wd]}</b><br>${dec(a.t)} h em ${pl(a.n, "dia", "dias")}<br>você: ${hm(a.voce)} · IA sozinha: ${hm(a.ia)}<br>estimado pelos commits: ${hm(a.est)}`);
     wk.append(row);
   });
   s2.append(wk); page.append(s2);

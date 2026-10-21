@@ -18,10 +18,13 @@ Uso (Python 3 puro, sem dependências), dentro do repositório:
 
 from __future__ import annotations
 
+import bisect
 import contextlib
 import hashlib
+import html
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -38,6 +41,7 @@ MODELO = Path(__file__).resolve().parent / "pagina_tempo_modelo.html"
 VERSAO_DO_RESUMO = 1
 UTC = timezone(timedelta(0))  # o datetime.UTC e o "Z" no fromisoformat pedem o Python 3.11
 TIPOS = ("usuario", "ia")
+FORA = "fora"  # o evento da conversa com cwd fora da raiz, ou noutro repositório dentro dela
 
 
 class ResumoIlegivel(Exception):
@@ -92,12 +96,59 @@ def _pedido(linha: dict) -> bool:
     return isinstance(conteudo, str)
 
 
+def _diretorio_comum(raiz: Path) -> Path | None:
+    """A pasta .git que a raiz e os worktrees dela dividem."""
+    saida = subprocess.run(
+        ["git", "-C", str(raiz), "rev-parse", "--path-format=absolute", "--git-common-dir"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    caminho = saida.stdout.strip()
+    return Path(caminho).resolve() if saida.returncode == 0 and caminho else None
+
+
+def _de_outro_repositorio(git: Path, comum: Path | None) -> bool:
+    """A pasta com este .git é outro repositório: um .git em pasta, ou um em arquivo que não
+    aponta para um worktree da raiz (o de um submódulo aponta para .git/modules/)."""
+    if git.is_dir():
+        return True
+    try:
+        primeira = git.read_text(encoding="utf-8").splitlines()[0]
+    except (OSError, IndexError):
+        return True
+    if not primeira.startswith("gitdir:") or comum is None:
+        return True
+    destino = (git.parent / primeira.removeprefix("gitdir:").strip()).resolve()
+    return not destino.is_relative_to(comum / "worktrees")
+
+
+def _eh_da_raiz(cwd: str, raiz: Path, comum: Path | None, vistos: dict[str, bool]) -> bool:
+    """O cwd é a raiz, ou uma pasta dentro dela que não é de outro repositório git aninhado; um
+    worktree da própria raiz conta como dela. A pasta que já não existe conta para a raiz."""
+    texto_da_raiz = str(raiz)
+    if cwd == texto_da_raiz:
+        return True
+    if not cwd.startswith(texto_da_raiz + "/"):
+        return False
+    if cwd not in vistos:
+        pasta, da_raiz = Path(cwd), True
+        while pasta != raiz and pasta != pasta.parent:
+            git = pasta / ".git"
+            if git.exists() and _de_outro_repositorio(git, comum):
+                da_raiz = False
+                break
+            pasta = pasta.parent
+        vistos[cwd] = da_raiz
+    return vistos[cwd]
+
+
 def _eventos(
     configuracao: Path, raiz: Path, ignorados: dict[str, list]
-) -> tuple[dict[str, set[tuple[float, bool]]], dict[str, list]]:
-    """Os eventos de cada conversa feita dentro da raiz, (instante, é pedido do usuário), e os
-    arquivos lidos sem nada dela, com a data e o tamanho: enquanto eles não mudam, não se leem de
-    novo."""
+) -> tuple[dict[str, set[tuple[float, str, int]]], dict[str, list]]:
+    """Os eventos de cada conversa que passou pela raiz, (instante, tipo, arquivo), com o tipo
+    "pedido", "ia" ou "fora", e os arquivos lidos sem nada dela, com a data e o tamanho: enquanto
+    eles não mudam, não se leem de novo."""
     projetos = configuracao / "projects"
     if not projetos.is_dir():
         return {}, {}
@@ -105,9 +156,10 @@ def _eventos(
     # O caminho como ele aparece dentro do JSON: com os acentos como são, como o Claude Code grava,
     # e com o escape \u, por garantia.
     marcas = {json.dumps(texto_da_raiz, ensure_ascii=False)[1:-1], json.dumps(texto_da_raiz)[1:-1]}
-    conversas: dict[str, set[tuple[float, bool]]] = {}
+    comum, vistos = _diretorio_comum(raiz), {}
+    conversas: dict[str, set[tuple[float, str, int]]] = {}
     sem_a_raiz: dict[str, list] = {}
-    for arquivo in projetos.rglob("*.jsonl"):
+    for numero, arquivo in enumerate(projetos.rglob("*.jsonl")):
         try:
             estado = arquivo.stat()
         except OSError:
@@ -122,44 +174,76 @@ def _eventos(
             continue
         achou = False
         with entrada:
-            for texto in entrada:
-                if not any(marca in texto for marca in marcas):  # decodificar só o que pode servir
-                    continue
-                try:
-                    linha = json.loads(texto)
-                except ValueError:
-                    continue
-                if not isinstance(linha, dict) or linha.get("type") not in ("user", "assistant"):
-                    continue
-                cwd, sessao, hora = linha.get("cwd"), linha.get("sessionId"), linha.get("timestamp")
-                if not all(isinstance(v, str) for v in (cwd, sessao, hora)):
-                    continue
-                if cwd != texto_da_raiz and not cwd.startswith(texto_da_raiz + "/"):
-                    continue
-                try:
-                    instante = _instante(hora)
-                except ValueError:
-                    continue
-                conversas.setdefault(sessao, set()).add((instante, _pedido(linha)))
-                achou = True
+            # Primeiro, se o arquivo cita a raiz; só então, cada linha com cwd, de dentro ou de
+            # fora dela, porque a saída para outra pasta corta o tempo da conversa.
+            if any(marca in texto for texto in entrada for marca in marcas):
+                entrada.seek(0)
+                for texto in entrada:
+                    evento = _evento(texto, raiz, comum, vistos) if '"cwd"' in texto else None
+                    if evento is None:
+                        continue
+                    sessao, instante, tipo = evento
+                    conversas.setdefault(sessao, set()).add((instante, tipo, numero))
+                    achou = achou or tipo != FORA
         if not achou:
             sem_a_raiz[chave] = assinatura
+    # A conversa que só passou por fora da raiz não é dela.
+    conversas = {s: e for s, e in conversas.items() if any(t != FORA for _, t, _ in e)}
     return conversas, sem_a_raiz
 
 
-def _intervalos(eventos: set[tuple[float, bool]]) -> list[list]:
-    """Os intervalos ativos de uma conversa: [início, fim, "usuario" ou "ia"], em ISO UTC; os
-    seguidos do mesmo tipo se juntam num só, o que encolhe o resumo sem mudar nenhuma soma."""
+def _evento(
+    texto: str, raiz: Path, comum: Path | None, vistos: dict[str, bool]
+) -> tuple[str, float, str] | None:
+    """A conversa, o instante e o tipo do evento da linha; None quando ela não é um evento."""
+    try:
+        linha = json.loads(texto)
+    except ValueError:
+        return None
+    if not isinstance(linha, dict) or linha.get("type") not in ("user", "assistant"):
+        return None
+    cwd, sessao, hora = linha.get("cwd"), linha.get("sessionId"), linha.get("timestamp")
+    if not all(isinstance(v, str) for v in (cwd, sessao, hora)):
+        return None
+    try:
+        instante = _instante(hora)
+    except ValueError:
+        return None
+    if not _eh_da_raiz(cwd, raiz, comum, vistos):
+        return sessao, instante, FORA
+    return sessao, instante, "pedido" if _pedido(linha) else "ia"
+
+
+def _intervalos(eventos: set[tuple[float, str, int]]) -> list[list]:
+    """Os intervalos ativos de uma conversa: [início, fim, "usuario" ou "ia"], em ISO UTC. Conta
+    o par seguido de eventos da raiz, de qualquer arquivo dela, com até 30 minutos, salvo quando
+    os dois vêm do mesmo arquivo e ele saiu da raiz entre eles: um subagente noutra pasta não
+    corta a conversa principal. Os seguidos do mesmo tipo se juntam num só."""
+    saidas: dict[int, list[float]] = {}
+    for instante, tipo, arquivo in eventos:
+        if tipo == FORA:
+            saidas.setdefault(arquivo, []).append(instante)
+    for lista in saidas.values():
+        lista.sort()
+    da_raiz = sorted(e for e in eventos if e[1] != FORA)
     juntos: list[list] = []
-    for (a, _), (b, pedido) in pairwise(sorted(eventos)):
+    for (a, _, arquivo_a), (b, tipo_b, arquivo_b) in pairwise(da_raiz):
         if not 0 < b - a <= PAUSA:
             continue
-        tipo = "usuario" if pedido else "ia"
+        if arquivo_a == arquivo_b and _saiu(saidas.get(arquivo_a, []), a, b):
+            continue
+        tipo = "usuario" if tipo_b == "pedido" else "ia"
         if juntos and juntos[-1][1] == a and juntos[-1][2] == tipo:
             juntos[-1][1] = b
         else:
             juntos.append([a, b, tipo])
     return [[_iso(a), _iso(b), tipo] for a, b, tipo in juntos]
+
+
+def _saiu(saidas: list[float], a: float, b: float) -> bool:
+    """Há uma saída da raiz entre os instantes a e b, sem eles."""
+    i = bisect.bisect_right(saidas, a)
+    return i < len(saidas) and saidas[i] < b
 
 
 def _juntar(*listas: list[list]) -> list[list]:
@@ -233,21 +317,44 @@ def _gravar(arquivo: Path, texto: str) -> None:
 # Os commits
 
 
-def _commits(raiz: Path) -> list[float]:
-    """O instante de cada commit das branches, das remotas e das tags, uma vez, pelo autor."""
+def _git_texto(raiz: Path, *args: str) -> str | None:
     saida = subprocess.run(
-        ["git", "-C", str(raiz), "log", "--branches", "--remotes", "--tags", "--format=%H %aI"],
-        capture_output=True,
-        text=True,
-        check=False,
+        ["git", "-C", str(raiz), *args], capture_output=True, text=True, check=False
     )
-    if saida.returncode != 0:
-        return []
-    commits = {}
-    for linha in saida.stdout.splitlines():
-        hash_, _, quando = linha.partition(" ")
-        if quando:
-            commits[hash_] = datetime.fromisoformat(quando).timestamp()
+    return saida.stdout if saida.returncode == 0 else None
+
+
+def _commits(raiz: Path) -> list[float]:
+    """O instante de cada commit do usuário nas branches, nas remotas e nas tags, uma vez, pela
+    data de autor; sem o user.email do git, os de todos. A assinatura fica fora da saída."""
+    saida = _git_texto(
+        raiz,
+        "log",
+        "--branches",
+        "--remotes",
+        "--tags",
+        "--no-show-signature",
+        "--format=%H %ae %aI",
+    )
+    email = (_git_texto(raiz, "config", "user.email") or "").strip()
+    return _ler_commits(saida or "", email or None)
+
+
+def _ler_commits(saida: str, email: str | None) -> list[float]:
+    """Os instantes da saída do git log ("hash e-mail data"); a linha que não se entende é
+    ignorada. O e-mail é o do autor sem o .mailmap (%ae), como o user.email."""
+    commits: dict[str, float] = {}
+    for linha in saida.splitlines():
+        partes = linha.split(" ")
+        if len(partes) != 3:
+            continue
+        hash_, autor, quando = partes
+        if email and autor.lower() != email.lower():
+            continue
+        try:
+            commits[hash_] = _instante(quando)
+        except ValueError:
+            continue
     return sorted(commits.values())
 
 
@@ -323,10 +430,16 @@ def _apurar(conversas: dict[str, list], commits: list[float]) -> list[dict]:
                 do_usuario.append(par)
     dias_todos, dias_usuario = _por_dia(todos), _por_dia(do_usuario)
     contagem: dict[str, int] = {}
+    primeiro: dict[str, float] = {}
     for instante in commits:
         dia = datetime.fromtimestamp(instante).date().isoformat()
         contagem[dia] = contagem.get(dia, 0) + 1
+        primeiro.setdefault(dia, instante)
     dias_commits = _por_dia(_sessoes_de_commits(commits))
+    # O dia com commit tem pelo menos 1 minuto: o commit das 00:00:00 não some.
+    for dia, instante in primeiro.items():
+        if sum(b - a for a, b in _uniao(dias_commits.get(dia, []))) < 60:
+            dias_commits.setdefault(dia, []).append((instante, instante + 60))
     saida = []
     for dia in sorted(set(dias_todos) | set(dias_commits)):
         data = date.fromisoformat(dia)
@@ -393,10 +506,34 @@ def _pagina(nome: str, dias: list[dict]) -> str:
         "antes_do_commit": ANTES_DO_COMMIT // 60,
         "dias": dias,
     }
+    # Só os dois marcadores inteiros, uma vez cada: o título protegido não forma o dos dados, e o
+    # JSON seguro não forma o do título.
+    titulo = f"<title>{html.escape(f'Horas de {nome}')}</title>"
+    bloco = f'<script id="dados" type="application/json">{_json_seguro(dados)}</script>'
     modelo = MODELO.read_text(encoding="utf-8")
-    return modelo.replace("__TITULO__", f"Horas de {nome}").replace(
-        "__DADOS__", _json_seguro(dados)
-    )
+    modelo = modelo.replace("<title>__TITULO__</title>", titulo, 1)
+    return modelo.replace('<script id="dados" type="application/json">__DADOS__</script>', bloco, 1)
+
+
+def _aviso_de_outra_pasta(pasta: Path, raiz: Path, resumo: Path) -> str | None:
+    """Sem resumo para este caminho, o de outro caminho com o mesmo nome de repositório: as horas
+    guardadas de antes de ele mudar de pasta estão lá. O resumo ilegível aqui só não avisa."""
+    if resumo.exists() or not pasta.is_dir():
+        return None
+    nome = re.compile(re.escape(raiz.name) + r"-[0-9a-f]{8}\.json")
+    for outro in sorted(pasta.glob("*.json")):
+        if not nome.fullmatch(outro.name):
+            continue
+        try:
+            antiga = json.loads(outro.read_text(encoding="utf-8")).get("raiz")
+        except (OSError, ValueError, AttributeError):
+            continue
+        if isinstance(antiga, str) and antiga != str(raiz) and Path(antiga).name == raiz.name:
+            return (
+                f"aviso: não há resumo deste caminho, mas há o de {antiga} ({outro}); se o "
+                "repositório mudou de pasta, as horas guardadas antes estão nele"
+            )
+    return None
 
 
 def _data(dia: str) -> str:
@@ -414,6 +551,7 @@ def main() -> int:
     resumo = pasta / f"{raiz.name}-{caminho}.json"
     pagina = resumo.with_suffix(".html")
 
+    outra_pasta = _aviso_de_outra_pasta(pasta, raiz, resumo)
     try:
         conversas, ignorados = _ler_resumo(resumo)
     except ResumoIlegivel as erro:
@@ -445,9 +583,9 @@ def main() -> int:
     else:
         print("nenhuma hora apurada: o repositório não tem conversas guardadas nem commits")
     print(f"página: {pagina}")
-    aviso = _aviso_da_guarda(configuracao)
-    if aviso:
-        print(aviso, file=sys.stderr)
+    for aviso in (outra_pasta, _aviso_da_guarda(configuracao)):
+        if aviso:
+            print(aviso, file=sys.stderr)
     return 0
 
 
