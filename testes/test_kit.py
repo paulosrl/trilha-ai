@@ -2899,7 +2899,9 @@ class HorasDeTrabalho(unittest.TestCase):
         return arquivo
 
     def _rodar(self, cwd: Path | None = None, **env_extra: str) -> subprocess.CompletedProcess:
-        env = {**os.environ, "TZ": "UTC", "HOME": str(self.casa), **self.SEM_GIT_DA_MAQUINA,
+        # O GIT_AUTHOR_EMAIL da máquina contaria como do usuário; só vale o que o teste passa.
+        herdado = {k: v for k, v in os.environ.items() if k != "GIT_AUTHOR_EMAIL"}
+        env = {**herdado, "TZ": "UTC", "HOME": str(self.casa), **self.SEM_GIT_DA_MAQUINA,
                "CLAUDE_CONFIG_DIR": str(self.config), "XDG_DATA_HOME": str(self.dados), **env_extra}
         return subprocess.run([sys.executable, "-I", str(TEMPO)], cwd=cwd or self.raiz, env=env,
                               capture_output=True, text=True, check=False)
@@ -3333,6 +3335,7 @@ class HorasDeTrabalho(unittest.TestCase):
         saida = self._ok(**self.SEM_GIT_DA_MAQUINA)
         self.assertIn("t@t", saida.stderr)
         self.assertIn("git config --add trilha.email", saida.stderr)
+        self.assertIn("git config --add trilha.outro", saida.stderr)
 
     def test_tempo_sem_email_configurado(self) -> None:
         self._commit("2026-10-01T10:00:00Z")
@@ -3362,7 +3365,7 @@ class HorasDeTrabalho(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("tempo", TEMPO)
         tempo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(tempo)
-        instantes = tempo._ler_commits("abc123\x00t@t\x002026-10-01T10:00:00Z\nlixo\n", None)
+        instantes, _ = tempo._ler_commits("abc123\x00t@t\x002026-10-01T10:00:00Z\nlixo\n", None)
         self.assertEqual(instantes, [datetime.fromisoformat("2026-10-01T10:00:00+00:00").timestamp()])
 
     def test_tempo_dados_uma_vez(self) -> None:
@@ -3464,10 +3467,8 @@ class HorasDeTrabalho(unittest.TestCase):
         spec.loader.exec_module(tempo)
         saida = ("h1\x00joao silva@x\x002026-10-01T10:00:00+00:00\n"
                  "h2\x00\x002026-10-01T11:00:00+00:00\n")
-        fora: dict = {}
-        self.assertEqual(tempo._ler_commits(saida, {"eu@x"}, fora), [])
-        self.assertEqual(fora, {"joao silva@x": 1})
-        self.assertEqual(len(tempo._ler_commits(saida, None)), 2)
+        self.assertEqual(tempo._ler_commits(saida, {"eu@x"}), ([], {"joao silva@x": 1}))
+        self.assertEqual(len(tempo._ler_commits(saida, None)[0]), 2)
 
     # A segunda revisão do tempo.py (change 12)
 
@@ -3501,6 +3502,30 @@ class HorasDeTrabalho(unittest.TestCase):
         self.assertEqual(len(chamadas), 1)
         self.assertEqual(len(ignorados), 1)
         self.assertEqual(tempo._intervalos(conversas.get("s1", {})), [])
+
+    def _config(self, nome: str, valor: str) -> None:
+        subprocess.run(["git", "-C", str(self.raiz), "config", "--add", nome, valor], check=True)
+
+    def test_tempo_email_de_autor_do_git(self) -> None:
+        self._config("user.email", "eu@exemplo.br")
+        self._config("author.email", "autor@exemplo.br")
+        self._commit_de("autor@exemplo.br", "2026-10-01T10:00:00Z")
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 30)
+
+    def test_tempo_email_de_autor_no_ambiente(self) -> None:
+        self._config("user.email", "eu@exemplo.br")
+        self._commit_de("amb@exemplo.br", "2026-10-01T10:00:00Z")
+        self._ok(GIT_AUTHOR_EMAIL="amb@exemplo.br")
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 30)
+
+    def test_tempo_colega_fora_do_aviso(self) -> None:
+        self._config("user.email", "eu@exemplo.br")
+        self._config("trilha.outro", "colega silva@x")
+        self._commit_de("colega silva@x", "2026-10-01T10:00:00Z")
+        saida = self._ok()
+        self.assertNotIn("trilha.email", saida.stderr)
+        self.assertNotIn("2026-10-01", self._dias())
 
 
 if __name__ == "__main__":

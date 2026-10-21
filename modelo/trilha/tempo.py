@@ -28,6 +28,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from datetime import date, datetime, time, timedelta, timezone
 from itertools import pairwise
 from pathlib import Path
@@ -334,11 +335,19 @@ def _git_texto(raiz: Path, *args: str) -> str | None:
     return saida.stdout if saida.returncode == 0 else None
 
 
-def _commits(raiz: Path) -> tuple[list[float], dict[str, int]]:
+def _lista(raiz: Path, chave: str) -> list[str]:
+    """Os valores de uma chave do git que pode se repetir, um por linha: o e-mail com espaço é
+    um só."""
+    texto = _git_texto(raiz, "config", "--get-all", chave) or ""
+    return [linha.strip() for linha in texto.splitlines() if linha.strip()]
+
+
+def _commits(raiz: Path) -> tuple[list[float], Counter[str]]:
     """O instante de cada commit do usuário nas branches, nas remotas e nas tags, uma vez, pela
     data de autor, e quantos commits de cada outro e-mail ficaram fora. Os e-mails do usuário são
-    o user.email e os do trilha.email; sem o user.email, contam os de todos. A assinatura fica fora
-    da saída."""
+    os de autor do git (o GIT_AUTHOR_EMAIL, o author.email e o user.email, na ordem em que o git
+    os escolhe no commit) e os do trilha.email; sem nenhum de autor, contam os de todos. A
+    assinatura fica fora da saída."""
     saida = _git_texto(
         raiz,
         "log",
@@ -348,55 +357,58 @@ def _commits(raiz: Path) -> tuple[list[float], dict[str, int]]:
         "--no-show-signature",
         "--format=%H%x00%ae%x00%aI",
     )
-    email = (_git_texto(raiz, "config", "user.email") or "").strip()
-    outros = (_git_texto(raiz, "config", "--get-all", "trilha.email") or "").split()
-    emails = {email, *outros} if email else None
-    fora: dict[str, int] = {}
-    return _ler_commits(saida or "", emails, fora), fora
+    de_autor = [
+        os.environ.get("GIT_AUTHOR_EMAIL", "").strip(),
+        (_git_texto(raiz, "config", "author.email") or "").strip(),
+        (_git_texto(raiz, "config", "user.email") or "").strip(),
+    ]
+    de_autor = [email for email in de_autor if email]
+    emails = {*de_autor, *_lista(raiz, "trilha.email")} if de_autor else None
+    return _ler_commits(saida or "", emails)
 
 
-def _ler_commits(
-    saida: str, emails: set[str] | None, fora: dict[str, int] | None = None
-) -> list[float]:
+def _ler_commits(saida: str, emails: set[str] | None) -> tuple[list[float], Counter[str]]:
     """Os instantes da saída do git log (hash, e-mail e data, separados pelo caractere nulo, que
-    não aparece num e-mail), só dos e-mails dados (todos, sem eles); a linha que não se entende é
-    ignorada. O e-mail é o do autor sem o .mailmap (%ae), como o user.email. Os commits de outros
-    e-mails, não vazios, são contados em fora, uma vez cada."""
+    não aparece num e-mail), só dos e-mails dados (todos, sem eles), e quantos commits de cada
+    outro e-mail, não vazio, ficaram fora; a linha que não se entende é ignorada. O e-mail é o do
+    autor sem o .mailmap (%ae), como o user.email. O git log já lista cada commit uma vez."""
     do_usuario = {e.lower() for e in emails} if emails else None
-    commits: dict[str, float] = {}
-    de_fora: dict[str, str] = {}
+    instantes: list[float] = []
+    fora: Counter[str] = Counter()
     for linha in saida.splitlines():
         partes = linha.split("\x00")
         if len(partes) != 3:
             continue
-        hash_, autor, quando = partes
+        _, autor, quando = partes
         if do_usuario is not None and autor.lower() not in do_usuario:
             if autor:
-                de_fora[hash_] = autor
+                fora[autor] += 1
             continue
         try:
-            commits[hash_] = _instante(quando)
+            instantes.append(_instante(quando))
         except ValueError:
             continue
-    if fora is not None:
-        for autor in de_fora.values():
-            fora[autor] = fora.get(autor, 0) + 1
-    return sorted(commits.values())
+    return sorted(instantes), fora
 
 
-def _aviso_dos_emails(fora: dict[str, int]) -> str | None:
-    """Os e-mails cujos commits ficaram fora da estimativa, com o comando que inclui um deles."""
-    pessoas = sorted(
-        ((autor, n) for autor, n in fora.items() if "[bot]" not in autor), key=lambda x: -x[1]
-    )
+def _aviso_dos_emails(fora: Counter[str], outros: list[str]) -> str | None:
+    """Os e-mails cujos commits ficaram fora da estimativa, sem os de robôs e os do trilha.outro
+    (os de outras pessoas), com o comando que inclui um deles e o que o tira do aviso."""
+    de_outros = {e.lower() for e in outros}
+    pessoas = [
+        (autor, n)
+        for autor, n in fora.most_common()
+        if "[bot]" not in autor and autor.lower() not in de_outros
+    ]
     if not pessoas:
         return None
     lista = ", ".join(f"{autor} ({n})" for autor, n in pessoas[:MAXIMO_NO_AVISO])
     if len(pessoas) > MAXIMO_NO_AVISO:
         lista += f" e mais {len(pessoas) - MAXIMO_NO_AVISO}"
     return (
-        f"aviso: os commits destes e-mails ficaram fora da estimativa: {lista}; se um deles é "
-        "seu, rode git config --add trilha.email <e-mail> no repositório"
+        f"aviso: os commits destes e-mails ficaram fora da estimativa: {lista}; no repositório, "
+        "rode git config --add trilha.email <e-mail> se ele é seu, ou git config --add "
+        "trilha.outro <e-mail> se é de outra pessoa"
     )
 
 
@@ -635,7 +647,12 @@ def main() -> int:
     else:
         print("nenhuma hora apurada: o repositório não tem conversas guardadas nem commits")
     print(f"página: {pagina}")
-    for aviso in (outra_pasta, _aviso_dos_emails(de_outros_emails), _aviso_da_guarda(configuracao)):
+    avisos = (
+        outra_pasta,
+        _aviso_dos_emails(de_outros_emails, _lista(raiz, "trilha.outro")),
+        _aviso_da_guarda(configuracao),
+    )
+    for aviso in avisos:
         if aviso:
             print(aviso, file=sys.stderr)
     return 0
