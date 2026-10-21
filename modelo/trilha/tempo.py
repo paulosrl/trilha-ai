@@ -28,6 +28,7 @@ import re
 import subprocess
 import sys
 import tempfile
+from collections import Counter
 from datetime import date, datetime, time, timedelta, timezone
 from itertools import pairwise
 from pathlib import Path
@@ -145,10 +146,11 @@ Eventos = dict[tuple[float, str], set[int]]
 def _eventos(
     configuracao: Path, raiz: Path, ignorados: dict[str, list]
 ) -> tuple[dict[str, Eventos], dict[str, list]]:
-    """Os eventos de cada conversa que passou pela raiz, (instante, tipo), com o tipo "pedido",
-    "ia" ou "fora", e os arquivos de onde cada um veio: a linha repetida em dois arquivos (a
-    conversa retomada) é um evento só, dos dois. E os arquivos lidos sem nada da raiz, com a data
-    e o tamanho: enquanto eles não mudam, não se leem de novo."""
+    """Os eventos de cada conversa que citou a raiz, (instante, tipo), com o tipo "pedido", "ia"
+    ou "fora" (a conversa só com eventos "fora" vem também, para o resumo da 2.8), e os arquivos
+    de onde cada um veio: a linha repetida em dois arquivos (a conversa retomada) é um evento só,
+    dos dois. E os arquivos lidos sem nada da raiz, com a data e o tamanho: enquanto eles não
+    mudam, não se leem de novo."""
     projetos = configuracao / "projects"
     if not projetos.is_dir():
         return {}, {}
@@ -174,21 +176,27 @@ def _eventos(
             continue
         achou = False
         with entrada:
-            # Primeiro, se o arquivo cita a raiz; só então, cada linha com cwd, de dentro ou de
-            # fora dela, porque a saída para outra pasta corta o tempo da conversa.
-            if any(marca in texto for texto in entrada for marca in marcas):
+            # Primeiro, só as linhas que citam a raiz, até uma delas ser um evento da raiz: a
+            # conversa de outro repositório que só cita o caminho não passa disso. Achado o
+            # evento, cada linha com cwd, do começo, de dentro ou de fora da raiz, porque a saída
+            # para outra pasta corta o tempo da conversa.
+            achados = []
+            for texto in entrada:
+                citada = any(marca in texto for marca in marcas)
+                evento = _evento(texto, raiz, comum, vistos) if citada else None
+                if evento is not None and evento[2] != FORA:
+                    achou = True
+                    break
+                if evento is not None:
+                    achados.append(evento)
+            if achou:
                 entrada.seek(0)
-                for texto in entrada:
-                    evento = _evento(texto, raiz, comum, vistos) if '"cwd"' in texto else None
-                    if evento is None:
-                        continue
-                    sessao, instante, tipo = evento
-                    conversas.setdefault(sessao, {}).setdefault((instante, tipo), set()).add(numero)
-                    achou = achou or tipo != FORA
+                com_cwd = (texto for texto in entrada if '"cwd"' in texto)
+                achados = filter(None, (_evento(t, raiz, comum, vistos) for t in com_cwd))
+            for sessao, instante, tipo in achados:
+                conversas.setdefault(sessao, {}).setdefault((instante, tipo), set()).add(numero)
         if not achou:
             sem_a_raiz[chave] = assinatura
-    # A conversa que só passou por fora da raiz não é dela.
-    conversas = {s: e for s, e in conversas.items() if any(t != FORA for _, t in e)}
     return conversas, sem_a_raiz
 
 
@@ -327,11 +335,19 @@ def _git_texto(raiz: Path, *args: str) -> str | None:
     return saida.stdout if saida.returncode == 0 else None
 
 
-def _commits(raiz: Path) -> tuple[list[float], dict[str, int]]:
+def _lista(raiz: Path, chave: str) -> list[str]:
+    """Os valores de uma chave do git que pode se repetir, um por linha: o e-mail com espaço é
+    um só."""
+    texto = _git_texto(raiz, "config", "--get-all", chave) or ""
+    return [linha.strip() for linha in texto.splitlines() if linha.strip()]
+
+
+def _commits(raiz: Path) -> tuple[list[float], Counter[str]]:
     """O instante de cada commit do usuário nas branches, nas remotas e nas tags, uma vez, pela
     data de autor, e quantos commits de cada outro e-mail ficaram fora. Os e-mails do usuário são
-    o user.email e os do trilha.email; sem o user.email, contam os de todos. A assinatura fica fora
-    da saída."""
+    os de autor do git (o GIT_AUTHOR_EMAIL, o author.email e o user.email de todas as
+    configurações, ou, sem eles, o EMAIL, como o git os escolhe no commit) e os do trilha.email;
+    sem nenhum de autor, contam os de todos. A assinatura fica fora da saída."""
     saida = _git_texto(
         raiz,
         "log",
@@ -341,55 +357,57 @@ def _commits(raiz: Path) -> tuple[list[float], dict[str, int]]:
         "--no-show-signature",
         "--format=%H%x00%ae%x00%aI",
     )
-    email = (_git_texto(raiz, "config", "user.email") or "").strip()
-    outros = (_git_texto(raiz, "config", "--get-all", "trilha.email") or "").split()
-    emails = {email, *outros} if email else None
-    fora: dict[str, int] = {}
-    return _ler_commits(saida or "", emails, fora), fora
+    ambiente = os.environ.get("GIT_AUTHOR_EMAIL", "").strip()
+    de_autor = [ambiente] if ambiente else []
+    de_autor += _lista(raiz, "author.email") + _lista(raiz, "user.email")
+    if not de_autor and os.environ.get("EMAIL", "").strip():
+        de_autor = [os.environ["EMAIL"].strip()]
+    emails = {*de_autor, *_lista(raiz, "trilha.email")} if de_autor else None
+    return _ler_commits(saida or "", emails)
 
 
-def _ler_commits(
-    saida: str, emails: set[str] | None, fora: dict[str, int] | None = None
-) -> list[float]:
+def _ler_commits(saida: str, emails: set[str] | None) -> tuple[list[float], Counter[str]]:
     """Os instantes da saída do git log (hash, e-mail e data, separados pelo caractere nulo, que
-    não aparece num e-mail), só dos e-mails dados (todos, sem eles); a linha que não se entende é
-    ignorada. O e-mail é o do autor sem o .mailmap (%ae), como o user.email. Os commits de outros
-    e-mails, não vazios, são contados em fora, uma vez cada."""
+    não aparece num e-mail), só dos e-mails dados (todos, sem eles), e quantos commits de cada
+    outro e-mail, não vazio, ficaram fora; a linha que não se entende é ignorada. O e-mail é o do
+    autor sem o .mailmap (%ae), como o user.email. O git log já lista cada commit uma vez."""
     do_usuario = {e.lower() for e in emails} if emails else None
-    commits: dict[str, float] = {}
-    de_fora: dict[str, str] = {}
+    instantes: list[float] = []
+    fora: Counter[str] = Counter()
     for linha in saida.splitlines():
         partes = linha.split("\x00")
         if len(partes) != 3:
             continue
-        hash_, autor, quando = partes
+        _, autor, quando = partes
         if do_usuario is not None and autor.lower() not in do_usuario:
             if autor:
-                de_fora[hash_] = autor
+                fora[autor] += 1
             continue
         try:
-            commits[hash_] = _instante(quando)
+            instantes.append(_instante(quando))
         except ValueError:
             continue
-    if fora is not None:
-        for autor in de_fora.values():
-            fora[autor] = fora.get(autor, 0) + 1
-    return sorted(commits.values())
+    return sorted(instantes), fora
 
 
-def _aviso_dos_emails(fora: dict[str, int]) -> str | None:
-    """Os e-mails cujos commits ficaram fora da estimativa, com o comando que inclui um deles."""
-    pessoas = sorted(
-        ((autor, n) for autor, n in fora.items() if "[bot]" not in autor), key=lambda x: -x[1]
-    )
+def _aviso_dos_emails(fora: Counter[str], outros: list[str]) -> str | None:
+    """Os e-mails cujos commits ficaram fora da estimativa, sem os de robôs e os do trilha.outro
+    (os de outras pessoas), com o comando que inclui um deles e o que o tira do aviso."""
+    de_outros = {e.lower() for e in outros}
+    pessoas = [
+        (autor, n)
+        for autor, n in fora.most_common()
+        if "[bot]" not in autor and autor.lower() not in de_outros
+    ]
     if not pessoas:
         return None
     lista = ", ".join(f"{autor} ({n})" for autor, n in pessoas[:MAXIMO_NO_AVISO])
     if len(pessoas) > MAXIMO_NO_AVISO:
         lista += f" e mais {len(pessoas) - MAXIMO_NO_AVISO}"
     return (
-        f"aviso: os commits destes e-mails ficaram fora da estimativa: {lista}; se um deles é "
-        "seu, rode git config --add trilha.email <e-mail> no repositório"
+        f"aviso: os commits destes e-mails ficaram fora da estimativa: {lista}; no repositório, "
+        "rode git config --add trilha.email <e-mail> se ele é seu, ou git config --add "
+        "trilha.outro <e-mail> se é de outra pessoa"
     )
 
 
@@ -551,12 +569,13 @@ def _pagina(nome: str, dias: list[dict]) -> str:
     return modelo.replace('<script id="dados" type="application/json">__DADOS__</script>', bloco, 1)
 
 
-def _aviso_de_outra_pasta(pasta: Path, raiz: Path, resumo: Path) -> str | None:
-    """Sem resumo para este caminho, o de outro caminho com o mesmo nome de repositório: as horas
-    guardadas de antes de ele mudar de pasta estão lá. O resumo ilegível aqui só não avisa."""
-    if resumo.exists() or not pasta.is_dir():
-        return None
+def _outros_resumos(pasta: Path, raiz: Path) -> list[tuple[Path, str]]:
+    """Os resumos de outro caminho com o mesmo nome de repositório, com a raiz gravada; o que
+    nem a raiz deixa ler é ignorado."""
+    if not pasta.is_dir():
+        return []
     nome = re.compile(re.escape(raiz.name) + r"-[0-9a-f]{8}\.json")
+    achados = []
     for outro in sorted(pasta.glob("*.json")):
         if not nome.fullmatch(outro.name):
             continue
@@ -565,11 +584,25 @@ def _aviso_de_outra_pasta(pasta: Path, raiz: Path, resumo: Path) -> str | None:
         except (OSError, ValueError, AttributeError):
             continue
         if isinstance(antiga, str) and antiga != str(raiz) and Path(antiga).name == raiz.name:
-            return (
-                f"aviso: não há resumo deste caminho, mas há o de {antiga} ({outro}); se o "
-                "repositório mudou de pasta, as horas guardadas antes estão nele"
-            )
-    return None
+            achados.append((outro, antiga))
+    return achados
+
+
+def _ainda_repositorio(caminho: str) -> bool:
+    """O caminho ainda tem o .git de um repositório: a pasta que sobrou lá sem ele não conta, e
+    a que o git recusa (de outro dono, sem permissão) conta, para não juntar uma cópia viva."""
+    return (Path(caminho) / ".git").exists()
+
+
+def _renomear_juntado(arquivo: Path) -> Path:
+    """Renomeia com o sufixo .juntado, sem sobrescrever um anterior (o repositório que foi e
+    voltou): o novo ganha um número."""
+    destino, numero = arquivo.with_name(f"{arquivo.name}.juntado"), 2
+    while destino.exists():
+        destino = arquivo.with_name(f"{arquivo.name}.juntado-{numero}")
+        numero += 1
+    arquivo.rename(destino)
+    return destino
 
 
 def _data(dia: str) -> str:
@@ -587,7 +620,7 @@ def main() -> int:
     resumo = pasta / f"{raiz.name}-{caminho}.json"
     pagina = resumo.with_suffix(".html")
 
-    outra_pasta = _aviso_de_outra_pasta(pasta, raiz, resumo)
+    existia = resumo.exists()
     try:
         conversas, ignorados, versao = _ler_resumo(resumo)
     except ResumoIlegivel as erro:
@@ -602,7 +635,34 @@ def main() -> int:
         # O resumo da 2.8 guarda as horas que ela contava a mais (o tempo fora da raiz, o de um
         # repositório aninhado): a conversa que ainda existe é recalculada, sem juntar com elas.
         guardadas = conversas.get(sessao, []) if versao == VERSAO_DO_RESUMO else []
-        conversas[sessao] = _juntar(guardadas, _intervalos(da_conversa))
+        juntos = _juntar(guardadas, _intervalos(da_conversa))
+        # A conversa sem hora da raiz (só passou por fora dela) não fica no resumo.
+        if juntos:
+            conversas[sessao] = juntos
+        else:
+            conversas.pop(sessao, None)
+    # O resumo de outro caminho de mesmo nome: se a raiz dele não é mais um repositório, o
+    # repositório mudou de pasta, e as horas guardadas lá vêm para cá; se ainda é, é outra cópia.
+    juntados, avisos_de_pasta = [], []
+    for outro, antiga in _outros_resumos(pasta, raiz):
+        if _ainda_repositorio(antiga):
+            if not existia:
+                avisos_de_pasta.append(
+                    f"aviso: não há resumo deste caminho, mas há o de {antiga} ({outro}); se o "
+                    "repositório mudou de pasta, as horas guardadas antes estão nele"
+                )
+            continue
+        try:
+            guardadas, _, _ = _ler_resumo(outro)
+        except ResumoIlegivel as erro:
+            avisos_de_pasta.append(
+                f"aviso: {antiga} não é mais um repositório, mas o resumo de lá ({outro}) não se "
+                f"lê ({erro}), e as horas guardadas nele não vieram para este"
+            )
+            continue
+        for sessao, intervalos in guardadas.items():
+            conversas[sessao] = _juntar(conversas.get(sessao, []), intervalos)
+        juntados.append((outro, antiga))
     commits, de_outros_emails = _commits(raiz)
     dias = _apurar(conversas, commits)
 
@@ -615,6 +675,19 @@ def main() -> int:
     }
     _gravar(resumo, json.dumps(conteudo, ensure_ascii=False, separators=(",", ":")) + "\n")
     _gravar(pagina, _pagina(raiz.name, dias))
+    # Só depois de gravado o resumo com as horas dele: se a gravação falha, a próxima execução
+    # junta de novo, e o repetido conta uma vez.
+    for outro, antiga in juntados:
+        with contextlib.suppress(OSError):
+            _renomear_juntado(outro.with_suffix(".html"))
+        try:
+            destino = _renomear_juntado(outro)
+        except OSError:
+            destino = outro
+        avisos_de_pasta.append(
+            f"aviso: as horas guardadas de {antiga}, que não é mais um repositório, vieram para "
+            f"este resumo; o resumo de lá ficou em {destino}"
+        )
 
     if dias:
         horas = round(sum(d["total"] for d in dias) / 60)
@@ -623,7 +696,12 @@ def main() -> int:
     else:
         print("nenhuma hora apurada: o repositório não tem conversas guardadas nem commits")
     print(f"página: {pagina}")
-    for aviso in (outra_pasta, _aviso_dos_emails(de_outros_emails), _aviso_da_guarda(configuracao)):
+    avisos = (
+        *avisos_de_pasta,
+        _aviso_dos_emails(de_outros_emails, _lista(raiz, "trilha.outro")),
+        _aviso_da_guarda(configuracao),
+    )
+    for aviso in avisos:
         if aviso:
             print(aviso, file=sys.stderr)
     return 0

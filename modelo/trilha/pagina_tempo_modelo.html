@@ -138,7 +138,8 @@ const ddmm = x => `${String(x.getDate()).padStart(2, "0")}/${String(x.getMonth()
 const ddmmaa = x => `${ddmm(x)}/${x.getFullYear()}`;
 const hm = m => { m = Math.round(m); if (m < 60) return `${m} min`; const h = Math.floor(m / 60), r = m % 60; return r ? `${h}h${String(r).padStart(2, "0")}` : `${h}h`; };
 const dec = m => (m / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
-const pl = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+const palavra = (n, um, varios) => (n === 1 ? um : varios);
+const pl = (n, um, varios) => `${n} ${palavra(n, um, varios)}`;
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
 const page = document.getElementById("page");
@@ -174,7 +175,7 @@ const dayTip = x => {
   const linhas = [`<b>${WDL[d.getDay()]}, ${ddmmaa(d)}</b>`, `${hm(x.total)} no total`];
   if (x.fonte === "conversas") linhas.push(`você: ${hm(x.usuario)} · IA sozinha: ${hm(x.ia)}`);
   else linhas.push("estimado pelos commits");
-  linhas.push(`${x.commits} commit${x.commits === 1 ? "" : "s"}`);
+  linhas.push(pl(x.commits, "commit", "commits"));
   return linhas.join("<br>");
 };
 
@@ -196,7 +197,7 @@ if (!dias.length) {
   head.innerHTML = `<div class="eyebrow">Horas de trabalho</div><h1>${repo}</h1>
     <div class="span"><span><b>Início</b> ${WD[first.getDay()]} ${ddmmaa(first)}</span><span class="rule" aria-hidden="true"></span><span><b>Fim</b> ${WD[last.getDay()]} ${ddmmaa(last)}</span></div>`;
   const stats = el("div", "stats");
-  [[dias.length, `${dias.length === 1 ? "dia" : "dias"} com trabalho, em ${pl(span, "dia corrido", "dias corridos")}`], [`${Math.round(total / 60)} h`, "no total"],
+  [[dias.length, `${palavra(dias.length, "dia", "dias")} com trabalho, em ${pl(span, "dia corrido", "dias corridos")}`], [`${Math.round(total / 60)} h`, "no total"],
    [hm(total / dias.length), "por dia trabalhado, em média"],
    [conv.length ? `${Math.round((voce / convTotal) * 100)}%` : "—", conv.length ? `seu, nos ${pl(conv.length, "dia", "dias")} com conversa` : "sem conversa guardada"]]
     .forEach(([v, l]) => stats.append(el("div", "stat", `<b>${v}</b><span>${l}</span>`)));
