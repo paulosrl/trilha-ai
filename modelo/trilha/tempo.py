@@ -570,25 +570,47 @@ def _pagina(nome: str, dias: list[dict]) -> str:
     return modelo.replace('<script id="dados" type="application/json">__DADOS__</script>', bloco, 1)
 
 
-def _aviso_de_outra_pasta(pasta: Path, raiz: Path, resumo: Path) -> str | None:
-    """Sem resumo para este caminho, o de outro caminho com o mesmo nome de repositório: as horas
-    guardadas de antes de ele mudar de pasta estão lá. O resumo ilegível aqui só não avisa."""
-    if resumo.exists() or not pasta.is_dir():
-        return None
+def _outros_resumos(pasta: Path, raiz: Path) -> list[tuple[Path, str, dict[str, list]]]:
+    """Os resumos de outro caminho com o mesmo nome de repositório: o arquivo, a raiz gravada e
+    as conversas. O resumo ilegível é ignorado: aqui ele não é a única cópia de nada."""
+    if not pasta.is_dir():
+        return []
     nome = re.compile(re.escape(raiz.name) + r"-[0-9a-f]{8}\.json")
+    achados = []
     for outro in sorted(pasta.glob("*.json")):
         if not nome.fullmatch(outro.name):
             continue
         try:
             antiga = json.loads(outro.read_text(encoding="utf-8")).get("raiz")
-        except (OSError, ValueError, AttributeError):
+            conversas, _, _ = _ler_resumo(outro)
+        except (OSError, ValueError, AttributeError, ResumoIlegivel):
             continue
         if isinstance(antiga, str) and antiga != str(raiz) and Path(antiga).name == raiz.name:
-            return (
-                f"aviso: não há resumo deste caminho, mas há o de {antiga} ({outro}); se o "
-                "repositório mudou de pasta, as horas guardadas antes estão nele"
-            )
-    return None
+            achados.append((outro, antiga, conversas))
+    return achados
+
+
+def _ainda_repositorio(caminho: str) -> bool:
+    """O caminho ainda é a raiz de um repositório git; a pasta que sobrou lá sem ele não conta."""
+    pasta = Path(caminho)
+    if not pasta.is_dir():
+        return False
+    topo = (_git_texto(pasta, "rev-parse", "--show-toplevel") or "").strip()
+    return bool(topo) and Path(topo).resolve() == pasta.resolve()
+
+
+def _renomear_juntado(arquivo: Path) -> Path:
+    """Renomeia com o sufixo .juntado, sem sobrescrever um anterior (o repositório que foi e
+    voltou): o novo ganha a data e a hora no nome."""
+    destino = arquivo.with_name(f"{arquivo.name}.juntado")
+    if destino.exists():
+        marca = datetime.now().strftime("%Y%m%d-%H%M%S")
+        destino, numero = arquivo.with_name(f"{arquivo.name}.juntado-{marca}"), 2
+        while destino.exists():
+            destino = arquivo.with_name(f"{arquivo.name}.juntado-{marca}-{numero}")
+            numero += 1
+    arquivo.rename(destino)
+    return destino
 
 
 def _data(dia: str) -> str:
@@ -606,7 +628,7 @@ def main() -> int:
     resumo = pasta / f"{raiz.name}-{caminho}.json"
     pagina = resumo.with_suffix(".html")
 
-    outra_pasta = _aviso_de_outra_pasta(pasta, raiz, resumo)
+    existia = resumo.exists()
     try:
         conversas, ignorados, versao = _ler_resumo(resumo)
     except ResumoIlegivel as erro:
@@ -627,6 +649,20 @@ def main() -> int:
             conversas[sessao] = juntos
         else:
             conversas.pop(sessao, None)
+    # O resumo de outro caminho de mesmo nome: se a raiz dele não é mais um repositório, o
+    # repositório mudou de pasta, e as horas guardadas lá vêm para cá; se ainda é, é outra cópia.
+    juntados, avisos_de_pasta = [], []
+    for outro, antiga, guardadas in _outros_resumos(pasta, raiz):
+        if _ainda_repositorio(antiga):
+            if not existia:
+                avisos_de_pasta.append(
+                    f"aviso: não há resumo deste caminho, mas há o de {antiga} ({outro}); se o "
+                    "repositório mudou de pasta, as horas guardadas antes estão nele"
+                )
+            continue
+        for sessao, intervalos in guardadas.items():
+            conversas[sessao] = _juntar(conversas.get(sessao, []), intervalos)
+        juntados.append((outro, antiga))
     commits, de_outros_emails = _commits(raiz)
     dias = _apurar(conversas, commits)
 
@@ -639,6 +675,19 @@ def main() -> int:
     }
     _gravar(resumo, json.dumps(conteudo, ensure_ascii=False, separators=(",", ":")) + "\n")
     _gravar(pagina, _pagina(raiz.name, dias))
+    # Só depois de gravado o resumo com as horas dele: se a gravação falha, a próxima execução
+    # junta de novo, e o repetido conta uma vez.
+    for outro, antiga in juntados:
+        with contextlib.suppress(OSError):
+            _renomear_juntado(outro.with_suffix(".html"))
+        try:
+            destino = _renomear_juntado(outro)
+        except OSError:
+            destino = outro
+        avisos_de_pasta.append(
+            f"aviso: as horas guardadas de {antiga}, que não é mais um repositório, vieram para "
+            f"este resumo; o resumo de lá ficou em {destino}"
+        )
 
     if dias:
         horas = round(sum(d["total"] for d in dias) / 60)
@@ -648,7 +697,7 @@ def main() -> int:
         print("nenhuma hora apurada: o repositório não tem conversas guardadas nem commits")
     print(f"página: {pagina}")
     avisos = (
-        outra_pasta,
+        *avisos_de_pasta,
         _aviso_dos_emails(de_outros_emails, _lista(raiz, "trilha.outro")),
         _aviso_da_guarda(configuracao),
     )

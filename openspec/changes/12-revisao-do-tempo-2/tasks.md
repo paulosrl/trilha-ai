@@ -26,8 +26,8 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 5. O resumo de outra pasta
 
-- [ ] 5.1 Os testes `test_tempo_pasta_antiga_que_ja_nao_existe`, `test_tempo_pasta_antiga_juntada_depois`, `test_tempo_pasta_antiga_que_sobrou_sem_repositorio` e `test_tempo_segundo_juntado_com_o_mesmo_nome` comprovam os cenários "Pasta antiga que já não existe", "Pasta antiga juntada depois da primeira execução", "Pasta antiga que sobrou sem o repositório" e "Segundo resumo juntado com o mesmo nome"; falham antes do código. O `test_tempo_pasta_trocada` e o `test_tempo_vizinho_de_nome_parecido` seguem como guarda (`-k test_tempo_pasta`, `-k test_tempo_segundo_juntado`, `-k test_tempo_vizinho_de_nome_parecido`)
-- [ ] 5.2 O `tempo.py` faz o D5; os testes do grupo e os de antes passam (`-k test_tempo`)
+- [x] 5.1 Os testes `test_tempo_pasta_antiga_que_ja_nao_existe`, `test_tempo_pasta_antiga_juntada_depois`, `test_tempo_pasta_antiga_que_sobrou_sem_repositorio` e `test_tempo_segundo_juntado_com_o_mesmo_nome` comprovam os cenários "Pasta antiga que já não existe", "Pasta antiga juntada depois da primeira execução", "Pasta antiga que sobrou sem o repositório" e "Segundo resumo juntado com o mesmo nome"; falham antes do código. O `test_tempo_pasta_trocada` e o `test_tempo_vizinho_de_nome_parecido` seguem como guarda (`-k test_tempo_pasta`, `-k test_tempo_segundo_juntado`, `-k test_tempo_vizinho_de_nome_parecido`)
+- [x] 5.2 O `tempo.py` faz o D5; os testes do grupo e os de antes passam (`-k test_tempo`)
 
 ## 6. A página
 

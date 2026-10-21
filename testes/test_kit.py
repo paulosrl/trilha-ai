@@ -3527,6 +3527,57 @@ class HorasDeTrabalho(unittest.TestCase):
         self.assertNotIn("trilha.email", saida.stderr)
         self.assertNotIn("2026-10-01", self._dias())
 
+    def _resumo_antigo(self, raiz: Path, minutos: int = 20) -> Path:
+        """O resumo e a página de outro caminho de mesmo nome, com uma conversa já apagada."""
+        nome = f"proj-{hashlib.sha1(str(raiz).encode('utf-8')).hexdigest()[:8]}"
+        resumo = self._pasta_tempo() / f"{nome}.json"
+        resumo.parent.mkdir(parents=True, exist_ok=True)
+        conversa = [["2026-10-02T10:00:00+00:00", f"2026-10-02T10:{minutos:02d}:00+00:00", "ia"]]
+        resumo.write_text(json.dumps({"versao": 2, "raiz": str(raiz), "conversas": {"s9": conversa},
+                                      "ignorados": {}}), encoding="utf-8")
+        resumo.with_suffix(".html").write_text("<html></html>", encoding="utf-8")
+        return resumo
+
+    def _juntado(self, resumo: Path) -> None:
+        self.assertFalse(resumo.exists())
+        self.assertTrue(Path(f"{resumo}.juntado").exists())
+        self.assertTrue(Path(f"{resumo.with_suffix('.html')}.juntado").exists())
+
+    def test_tempo_pasta_antiga_que_ja_nao_existe(self) -> None:
+        antigo = self._resumo_antigo(Path(self._tmp.name) / "a" / "proj")
+        saida = self._ok()
+        self.assertEqual(self._dias()["2026-10-02"]["total"], 20)
+        self._juntado(antigo)
+        self.assertIn(antigo.name, saida.stderr)
+
+    def test_tempo_pasta_antiga_juntada_depois(self) -> None:
+        antiga = self._repositorio(Path(self._tmp.name) / "a" / "proj")
+        antigo = self._resumo_antigo(antiga)
+        self._ok()
+        self.assertTrue(antigo.exists())
+        shutil.rmtree(antiga)
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-02"]["total"], 20)
+        self._juntado(antigo)
+
+    def test_tempo_pasta_antiga_que_sobrou_sem_repositorio(self) -> None:
+        antiga = Path(self._tmp.name) / "a" / "proj"
+        antiga.mkdir(parents=True)
+        antigo = self._resumo_antigo(antiga)
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-02"]["total"], 20)
+        self._juntado(antigo)
+
+    def test_tempo_segundo_juntado_com_o_mesmo_nome(self) -> None:
+        antiga = Path(self._tmp.name) / "a" / "proj"
+        self._resumo_antigo(antiga)
+        self._ok()
+        antigo = self._resumo_antigo(antiga, minutos=40)
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-02"]["total"], 40)
+        self.assertEqual(len(list(self._pasta_tempo().glob(f"{antigo.name}.juntado*"))), 2)
+        self.assertEqual(len(list(self._pasta_tempo().glob(f"{antigo.stem}.html.juntado*"))), 2)
+
 
 if __name__ == "__main__":
     unittest.main()
