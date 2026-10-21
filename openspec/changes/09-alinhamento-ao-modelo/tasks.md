@@ -12,7 +12,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 2. A versão
 
-- [ ] 2.1 A linha "Versão 2.7, de <data>." no `modelo/trilha/CLAUDE-comum.md` e a `2.7.0` no `plugins/sdd/.claude-plugin/plugin.json`, só com o "sim" do usuário para a versão e antes de qualquer outro arquivo de `modelo/` mudar (design, decisão 6); o `test_kit_sem_mudanca_depois_da_tag`, o `test_versao_no_comum` e o teste da versão do plugin passam
+- [x] 2.1 A linha "Versão 2.7, de <data>." no `modelo/trilha/CLAUDE-comum.md` e a `2.7.0` no `plugins/sdd/.claude-plugin/plugin.json`, só com o "sim" do usuário para a versão e antes de qualquer outro arquivo de `modelo/` mudar (design, decisão 6); o `test_kit_sem_mudanca_depois_da_tag`, o `test_versao_no_comum` e o teste da versão do plugin passam
 
 ## 3. As regras do config.yaml na conferência das regras
 
