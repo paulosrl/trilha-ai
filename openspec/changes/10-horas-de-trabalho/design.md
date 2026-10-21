@@ -69,3 +69,9 @@ Três linhas, no máximo: o período e o total (`26/05/2026 a 20/10/2026: 57 dia
 ## Migration Plan
 
 Nada a migrar. Os projetos recebem o comando com a cópia da 2.8, sob ordem do usuário. A primeira execução cria a pasta de dados e o resumo. Para desfazer, basta apagar `~/.local/share/trilha-ai/tempo/`; nada no repositório depende dela.
+
+## Notas do apply
+
+- Os 25 testes dos grupos 2 a 4 foram escritos juntos, antes de qualquer linha do `tempo.py` e da página. Rodados antes do código, 24 falharam; o `test_tempo_sem_gancho_no_modelo` passou, como a tarefa 2.1 previa. A ordem das tarefas por grupo ficou para o código, não para os testes: escrever o código de um grupo sem o do outro seria artificial, porque a apuração por dia e o resumo saem do mesmo caminho.
+- O ruff pediu três trocas no `tempo.py`: `datetime.UTC`, `itertools.pairwise` e o `fromisoformat` sem trocar o `Z`. Só o `pairwise` foi aceito como veio. As outras duas pedem o Python 3.11, e o Ubuntu 22.04, comum no WSL, traz o 3.10. Por isso o `UTC` é uma constante própria (`timezone(timedelta(0))`) e o `Z` é trocado por fatia. O ruff passa sem nenhum `noqa`.
+- O conjunto do kit só passou depois do `git add` dos dois arquivos novos de `modelo/trilha/`, porque o `kit.py` lista a pasta pelo índice do git (`git ls-files`). Sem isso, o projeto de teste nasce sem eles, e a conferência da pasta `trilha/` reprova.
