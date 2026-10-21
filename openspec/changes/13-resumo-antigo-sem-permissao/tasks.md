@@ -1,0 +1,22 @@
+# Tasks
+
+Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`, e o conjunto com `python3 -m unittest discover -s testes`. O ruff roda com `uvx ruff@0.17.0 check --isolated --line-length 100 modelo/trilha/ ferramentas/` e com o mesmo `format --check`. Cada teste novo é escrito antes do código e falha antes dele.
+
+## 1. A versão
+
+- [ ] 1.1 "Versão 2.11, de 2026-10-21." no `modelo/trilha/CLAUDE-comum.md` e `2.11.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar (D3). Os testes `test_kit_sem_mudanca_depois_da_tag`, `test_versao_no_comum` e o da versão do plugin passam
+
+## 2. A raiz antiga sem permissão
+
+- [ ] 2.1 O teste `test_tempo_pasta_antiga_sem_permissao` comprova o cenário "Pasta antiga sem permissão": tira a permissão da pasta acima da raiz antiga (e a devolve no fim), e se pula como root; falha antes do código (`-k test_tempo_pasta_antiga_sem_permissao`)
+- [ ] 2.2 O `_ainda_repositorio` faz o D1; os testes do `tempo.py` passam (`-k test_tempo`)
+
+## 3. O aviso do resumo antigo que não se lê
+
+- [ ] 3.1 O `test_tempo_resumo_antigo_que_nao_se_le` passa a conferir o "corrija-o ou mova-o" do cenário "Resumo antigo que não se lê"; falha antes do código (`-k test_tempo_resumo_antigo_que_nao_se_le`)
+- [ ] 3.2 O aviso faz o D2; os testes do `tempo.py` passam (`-k test_tempo`)
+
+## 4. Integração
+
+- [ ] 4.1 O conjunto dos testes e o ruff passam
+- [ ] 4.2 A execução manual, por último: numa pasta de dados à parte, com o resumo de uma raiz antiga sob uma pasta sem permissão, o comando roda num repositório de teste, termina com 0 e deixa o resumo antigo com o nome de antes; o resultado vai a "Verificação", no `design.md`
