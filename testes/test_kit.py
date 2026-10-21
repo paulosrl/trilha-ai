@@ -2064,7 +2064,7 @@ class Kit(unittest.TestCase):
             self._commit_tudo(pasta, "vizinhos e a stack")
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
-            self.assertNotIn("a parte fixa de scripts/check.sh mudou", saida.stdout)
+            self.assertNotIn("a parte fixa de scripts/check.sh difere", saida.stdout)
             migrado = check.read_text(encoding="utf-8")
         self.assertIn("bash trilha/verifica.sh --vizinho trilha-ai \\\n  --vizinho outro\n", migrado)
         self.assertNotIn("FONTE=", migrado)
@@ -2314,6 +2314,36 @@ class Kit(unittest.TestCase):
             self.assertIn("regras próprias", saida.stdout)
             self.assertIn("Uma regra própria.", config.read_text(encoding="utf-8"))
 
+    def _atualizar_com_gitignore(self, tmp: str, troca: tuple[str, str]) -> str:
+        """O atualizar de um projeto na versão atual, com o .gitignore do modelo trocado como pedido."""
+        pasta = self._projeto_novo(tmp)
+        gitignore = pasta / ".gitignore"
+        texto = gitignore.read_text(encoding="utf-8")
+        self.assertIn(troca[0], texto)
+        gitignore.write_text(texto.replace(troca[0], troca[1]), encoding="utf-8")
+        self._commit_tudo(pasta, ".gitignore preenchido")
+        saida = self._ferramenta("atualizar", str(pasta))
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        return saida.stdout
+
+    def test_parte_fixa_avisa_a_linha_que_o_projeto_nunca_copiou(self) -> None:
+        """Change 09: a linha que já estava no modelo da versão do projeto e ele nunca copiou."""
+        with tempfile.TemporaryDirectory() as tmp:
+            saida = self._atualizar_com_gitignore(tmp, ("*.log\n", ""))
+        self.assertIn("a parte fixa de .gitignore difere do modelo do kit", saida)
+        self.assertIn("  + *.log", saida)
+
+    def test_parte_fixa_sem_o_bloco_da_stack(self) -> None:
+        """Change 09: o bloco da stack que o projeto apaga de propósito não vira aviso."""
+        modelo = (MODELO / "gitignore").read_text(encoding="utf-8")
+        self.assertIn("\n# Python\n", modelo)
+        self.assertIn("\n# Node\n", modelo)
+        bloco = modelo[modelo.index("# Python\n") : modelo.index("\n\n", modelo.index("# Python\n")) + 1]
+        with tempfile.TemporaryDirectory() as tmp:
+            saida = self._atualizar_com_gitignore(tmp, (bloco, ""))
+        self.assertNotIn(".venv/", saida)
+        self.assertNotIn("a parte fixa de .gitignore", saida)
+
     def test_atualizar_avisa_a_parte_fixa_que_mudou_no_kit(self) -> None:
         """O CI preenchido não é sobrescrito, mas o que o kit mudou nele desde a versão do projeto é dito."""
         env = {**os.environ, **GIT_TESTE}
@@ -2330,11 +2360,11 @@ class Kit(unittest.TestCase):
             subprocess.run(["git", "commit", "-qam", "CI da 1.29"], cwd=pasta, env=env, check=True)
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
-            self.assertIn("a parte fixa de .github/workflows/verificacao.yml mudou no kit desde a 1.29",
+            self.assertIn("a parte fixa de .github/workflows/verificacao.yml difere do modelo do kit",
                           saida.stdout)
             self.assertIn("+ branches: [main, master]", saida.stdout)
             self.assertIn("- run: openspec validate --all --strict --no-interactive", saida.stdout)
-            self.assertNotIn("dependabot.yml mudou", saida.stdout)
+            self.assertNotIn("dependabot.yml difere", saida.stdout)
             self.assertEqual(ci.read_text(encoding="utf-8"), antigo + stack)  # só o aviso
             # Com as linhas novas trazidas à mão, o aviso some, mesmo com a stack do projeto.
             atual = (MODELO / ".github/workflows/verificacao.yml").read_text(encoding="utf-8")

@@ -4,11 +4,11 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 1. A parte fixa no kit.py (fora de `modelo/`)
 
-- [ ] 1.1 O teste `test_parte_fixa_avisa_a_linha_que_o_projeto_nunca_copiou` comprova o cenário "Linha que o projeto nunca copiou": um projeto na versão atual, com o `.gitignore` do modelo sem `*.log`; o `atualizar` avisa que falta `*.log`. Falha antes do código (`-k test_parte_fixa_avisa_a_linha_que_o_projeto_nunca_copiou`)
-- [ ] 1.2 O teste `test_parte_fixa_sem_o_bloco_da_stack` comprova o cenário "Bloco da stack apagado": o mesmo projeto, sem o bloco `# Python`; o `atualizar` não avisa `.venv/`. Também confere que o `modelo/gitignore` ainda tem as linhas `# Python` e `# Node` (design, decisão 1). Falha antes do código (`-k test_parte_fixa_sem_o_bloco_da_stack`)
-- [ ] 1.3 O `test_migracao_troca_a_parte_fixa_com_vizinhos` e o `test_aviso_da_parte_fixa_preciso` continuam comprovando os cenários "Chamada com os vizinhos" e "Linha curta que falta"; já passam e guardam o que não pode mudar (`-k test_migracao_troca_a_parte_fixa_com_vizinhos` e `-k test_aviso_da_parte_fixa_preciso`)
-- [ ] 1.4 O `test_atualizar_avisa_a_parte_fixa_que_mudou_no_kit` passa a esperar o texto "difere do modelo do kit" (design, "Testes que mudam")
-- [ ] 1.5 O `_avisar_parte_fixa` do `ferramentas/kit.py` compara o modelo atual inteiro, sem os blocos da stack do `.gitignore`, com o projeto, e mantém as linhas que sobram pela diferença entre as versões (design, decisão 1); os testes do grupo 1 passam
+- [x] 1.1 O teste `test_parte_fixa_avisa_a_linha_que_o_projeto_nunca_copiou` comprova o cenário "Linha que o projeto nunca copiou": um projeto na versão atual, com o `.gitignore` do modelo sem `*.log`; o `atualizar` avisa que falta `*.log`. Falha antes do código (`-k test_parte_fixa_avisa_a_linha_que_o_projeto_nunca_copiou`)
+- [x] 1.2 O teste `test_parte_fixa_sem_o_bloco_da_stack` comprova o cenário "Bloco da stack apagado": o mesmo projeto, sem o bloco `# Python`; o `atualizar` não avisa `.venv/`. Também confere que o `modelo/gitignore` ainda tem as linhas `# Python` e `# Node` (design, decisão 1). Já passa, porque o aviso de hoje só olha o que mudou entre as versões, e guarda o que a comparação inteira não pode quebrar (`-k test_parte_fixa_sem_o_bloco_da_stack`)
+- [x] 1.3 O `test_migracao_troca_a_parte_fixa_com_vizinhos` e o `test_aviso_da_parte_fixa_preciso` continuam comprovando os cenários "Chamada com os vizinhos" e "Linha curta que falta"; já passam e guardam o que não pode mudar (`-k test_migracao_troca_a_parte_fixa_com_vizinhos` e `-k test_aviso_da_parte_fixa_preciso`)
+- [x] 1.4 O `test_atualizar_avisa_a_parte_fixa_que_mudou_no_kit` passa a esperar o texto "difere do modelo do kit" (design, "Testes que mudam")
+- [x] 1.5 O `_avisar_parte_fixa` do `ferramentas/kit.py` compara o modelo atual inteiro, sem os blocos da stack do `.gitignore`, com o projeto, e mantém as linhas que sobram pela diferença entre as versões (design, decisão 1); os testes do grupo 1 passam
 
 ## 2. A versão
 

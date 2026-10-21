@@ -93,6 +93,9 @@ COM_PARTE_FIXA = (
     ".github/workflows/verificacao.yml",
     ".github/dependabot.yml",
 )
+# Os títulos dos blocos da stack no modelo do .gitignore: o projeto apaga o que não é o seu, e a
+# falta deles não vira aviso.
+BLOCOS_DA_STACK = {"# Python", "# Node"}
 # A língua dos artefatos, no context do openspec/config.yaml, como o `openspec init --language`
 # a escreve (core/init.js do OpenSpec), mais os acentos: assim o init a reconhece.
 LINGUA = (
@@ -538,30 +541,40 @@ def _linhas_fixas(texto: str) -> set[str]:
     return {linha for linha in linhas if linha}
 
 
+def _sem_blocos_da_stack(nome: str, texto: str) -> str:
+    """O modelo sem os blocos da stack que o projeto apaga de propósito (só no .gitignore)."""
+    if nome != ".gitignore":
+        return texto
+    blocos = re.split(r"\n\s*\n", texto)
+    return "\n\n".join(
+        bloco
+        for bloco in blocos
+        if not BLOCOS_DA_STACK & {linha.strip() for linha in bloco.splitlines()}
+    )
+
+
 def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
-    """Diz o que o kit mudou na parte fixa desde a versão do projeto; a cópia fica com o usuário."""
-    if antes == "?":
-        return
-    # O commit que trouxe a versão do comum do projeto; o que o kit mudou depois dele vale avisar.
+    """Diz o que falta da parte fixa do modelo atual no projeto e o que o kit tirou dela desde a
+    versão do projeto; a cópia fica com o usuário."""
+    # O commit que trouxe a versão do comum do projeto; só por ele se sabe o que o kit tirou.
     comum = _caminhos("trilha/CLAUDE-comum.md")
     desde = _git(KIT, "log", "--format=%h", "-S", f"Versão {antes},", "--", *comum)
-    if not desde:
-        return
+    desde = "" if antes == "?" else desde
     for nome in COM_PARTE_FIXA:
         origem = A_PREENCHER[nome]
         if not (pasta / nome).is_file():
             continue
-        velho = _na_versao(desde.split()[-1], origem)
+        velho = _na_versao(desde.split()[-1], origem) if desde else ""
         novo = (MODELO / origem).read_text(encoding="utf-8")
         projeto = _linhas_fixas((pasta / nome).read_text(encoding="utf-8"))
         faltam = sorted(
             linha
-            for linha in _linhas_fixas(novo) - _linhas_fixas(velho)
+            for linha in _linhas_fixas(_sem_blocos_da_stack(nome, novo))
             if not _presente(linha, projeto)
         )
         sobram = sorted((_linhas_fixas(velho) - _linhas_fixas(novo)) & projeto)
         if faltam or sobram:
-            print(f"aviso: a parte fixa de {nome} mudou no kit desde a {antes}; traga à mão:")
+            print(f"aviso: a parte fixa de {nome} difere do modelo do kit; traga à mão:")
             for linha in faltam:
                 print(f"  + {linha}")
             for linha in sobram:

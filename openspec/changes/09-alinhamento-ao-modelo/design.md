@@ -50,6 +50,7 @@ Alternativa descartada: um mapa próprio entre os fluxos do perfil e as pastas d
 
 **Testes que mudam:**
 - `test_atualizar_avisa_a_parte_fixa_que_mudou_no_kit`: o texto do aviso passa a "difere do modelo do kit", e a linha antiga que falta passa a aparecer.
+- `test_migracao_troca_a_parte_fixa_com_vizinhos` e a asserção do Dependabot no teste acima: o `assertNotIn` procurava o texto antigo ("mudou") e passaria sem conferir nada; passa a procurar "difere".
 - Nenhum outro teste muda. Os novos simulam o `openspec` por um script falso no PATH, como os do Claude Code fazem com o `claude`.
 
 ## Risks / Trade-offs
