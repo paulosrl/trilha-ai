@@ -31,7 +31,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 6. A página
 
-- [ ] 6.1 O `pagina_tempo_modelo.html` faz o plural do D6; o `test_tempo_um_dia_no_singular` passa (`-k test_tempo_um_dia_no_singular`), e a página de um dia com um commit, aberta no navegador, diz "1 dia com trabalho" e "1 commit"
+- [x] 6.1 O `pagina_tempo_modelo.html` faz o plural do D6; o `test_tempo_um_dia_no_singular` passa (`-k test_tempo_um_dia_no_singular`), e a página de um dia com um commit, aberta no navegador, diz "1 dia com trabalho" e "1 commit"
 
 ## 7. Integração
 
