@@ -45,5 +45,5 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 6. O fechamento
 
-- [ ] 6.1 A suíte inteira (`python3 -m unittest discover -s testes`) e o ruff (`check` e `format --check`) verdes, cada um sozinho, com o código de saída conferido
+- [x] 6.1 A suíte inteira (`python3 -m unittest discover -s testes`) e o ruff (`check` e `format --check`) verdes, cada um sozinho, com o código de saída conferido
 - [ ] 6.2 A execução manual, com o usuário olhando: o `kit.py atualizar` numa cópia descartável do Xavier anterior ao alinhamento (o commit `e2115a8`) avisa as oito linhas do `.gitignore`; a conferência das regras dessa cópia, com `--fonte`, reprova as regras próprias; a conferência do método, com o perfil antigo por `XDG_CONFIG_HOME`, avisa as skills que o `update` apagaria. O resultado de cada uma vai à seção "Verificação" do `design.md`

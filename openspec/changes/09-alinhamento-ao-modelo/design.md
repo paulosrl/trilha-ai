@@ -62,7 +62,9 @@ Alternativa descartada: um mapa próprio entre os fluxos do perfil e as pastas d
 
 ## Verificação
 
-(o apply preenche: o comando e o resultado de cada cenário)
+- Grupos 1, 3 e 4: cada teste novo rodado antes do código, com a falha esperada (1.1; 3.2, 3.3 e 3.5; 4.1 a 4.3, 4.5, 4.6, 4.8, 4.9 e 4.11) ou passando por guardar o que já valia (1.2; 3.1, 3.4 e 3.6; 4.4, 4.7 e 4.10), e verde depois dele (`python3 -m unittest discover -s testes -k <nome>`).
+- 6.1: `python3 -m unittest discover -s testes` → 229 testes, OK, código 0; `uvx ruff@0.17.0 check --isolated --line-length 100 modelo/trilha/ ferramentas/` → código 0; o mesmo com `format --check` → código 0; `openspec validate --all --no-interactive` → 6 itens válidos.
+- 6.2, primeira rodada (2026-10-20), o `kit.py atualizar` numa cópia descartável do Xavier no commit `e2115a8`: o `.gitignore` avisado com as seis linhas fora dos blocos da stack (`*.db`, `*.db-shm`, `*.db-wal`, `*.log`, `*.sqlite`, `.DS_Store`; o `*.py[cod]` e o `.next/` estão nos blocos `# Python` e `# Node`, como a decisão 1 manda); a conferência das regras reprovou o bloco `rules:` e a linha do `operations.archive` que faltava; a conferência do método avisou que o `openspec update` apagaria o `ff` e o `onboard`, que o perfil da máquina não tem. Dois falsos positivos no `scripts/check.sh`: o `bash trilha/verifica.sh`, que o Xavier chama dentro de uma função própria (`etapa "…" bash trilha/verifica.sh --vizinho …`), e o `echo` do bloco "Parte da stack", que o modelo manda trocar. A correção muda o requisito e volta ao usuário antes de seguir.
 
 ## Respostas à revisão
 
