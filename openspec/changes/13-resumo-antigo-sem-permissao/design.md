@@ -29,3 +29,9 @@ O texto passa a terminar com "corrija-o ou mova-o, e rode de novo", como o do re
 
 - [O teste de permissão não vale como root, que abre qualquer pasta] → Ele se pula quando o `os.geteuid()` é 0; o GitHub roda os testes como um usuário comum.
 - [Um disco que falha por outro motivo segura o resumo antigo para sempre] → O aviso da outra cópia o cita na primeira execução, e o arquivo continua lá para ser juntado quando o disco voltar.
+
+## Verificação
+
+**Execução manual (tarefa 4.2), em 2026-10-21,** no Python 3.12.3, num repositório de teste vazio, com uma pasta de dados à parte que tinha o resumo de uma raiz antiga dentro de uma pasta sem permissão (modo 000):
+- a 2.10, da `main`, terminou com o rastro de `PermissionError: [Errno 13] Permission denied: '.../fechada/proj/.git'`, sem gravar o resumo nem a página;
+- a 2.11 terminou com o código 0, com o aviso da outra cópia (era a primeira execução neste caminho), gravou o resumo e a página deste caminho, e o resumo antigo ficou com o nome de antes.

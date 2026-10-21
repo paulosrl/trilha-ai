@@ -590,8 +590,16 @@ def _outros_resumos(pasta: Path, raiz: Path) -> list[tuple[Path, str]]:
 
 def _ainda_repositorio(caminho: str) -> bool:
     """O caminho ainda tem o .git de um repositório: a pasta que sobrou lá sem ele não conta, e
-    a que o git recusa (de outro dono, sem permissão) conta, para não juntar uma cópia viva."""
-    return (Path(caminho) / ".git").exists()
+    a que o git recusa (de outro dono, sem permissão) conta, para não juntar uma cópia viva. O
+    .git que não se confere também conta; o stat direto, e não o exists(), porque o exists() muda
+    com o Python: até o 3.13 levanta o erro de permissão, e no 3.14 devolve False."""
+    try:
+        (Path(caminho) / ".git").stat()
+    except (FileNotFoundError, NotADirectoryError):
+        return False
+    except OSError:
+        return True
+    return True
 
 
 def _renomear_juntado(arquivo: Path) -> Path:
@@ -657,7 +665,8 @@ def main() -> int:
         except ResumoIlegivel as erro:
             avisos_de_pasta.append(
                 f"aviso: {antiga} não é mais um repositório, mas o resumo de lá ({outro}) não se "
-                f"lê ({erro}), e as horas guardadas nele não vieram para este"
+                f"lê ({erro}), e as horas guardadas nele não vieram para este: corrija-o ou "
+                "mova-o, e rode de novo"
             )
             continue
         for sessao, intervalos in guardadas.items():

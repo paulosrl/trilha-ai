@@ -3604,6 +3604,7 @@ class HorasDeTrabalho(unittest.TestCase):
         saida = self._ok()
         self.assertTrue(antigo.exists())
         self.assertIn(antigo.name, saida.stderr)
+        self.assertIn("corrija-o ou mova-o", saida.stderr)
         self.assertNotIn("2026-10-02", self._dias())
 
     def test_tempo_pasta_antiga_com_git_que_falha(self) -> None:
@@ -3612,6 +3613,22 @@ class HorasDeTrabalho(unittest.TestCase):
         (antiga / ".git").write_text("isto não é um gitdir\n", encoding="utf-8")
         antigo = self._resumo_antigo(antiga, pagina=False)
         self._ok()
+        self.assertTrue(antigo.exists())
+        self.assertNotIn("2026-10-02", self._dias())
+
+    # O resumo antigo sem permissão (change 13)
+
+    @unittest.skipIf(os.geteuid() == 0, "o root abre qualquer pasta")
+    def test_tempo_pasta_antiga_sem_permissao(self) -> None:
+        fechada = Path(self._tmp.name) / "fechada"
+        antigo = self._resumo_antigo(fechada / "proj", pagina=False)
+        fechada.mkdir()
+        fechada.chmod(0)
+        try:
+            saida = self._rodar()
+        finally:
+            fechada.chmod(0o755)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
         self.assertTrue(antigo.exists())
         self.assertNotIn("2026-10-02", self._dias())
 
