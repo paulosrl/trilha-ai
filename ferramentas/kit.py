@@ -570,18 +570,30 @@ def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
         velho = _na_versao(desde.split()[-1], origem) if desde else ""
         novo = (MODELO / origem).read_text(encoding="utf-8")
         projeto = _linhas_fixas((pasta / nome).read_text(encoding="utf-8"))
+        acoes = {_sem_versao_da_acao(linha) for linha in projeto}
         faltam = sorted(
             linha
             for linha in _linhas_fixas(_sem_blocos_da_stack(nome, novo))
-            if not _presente(linha, projeto)
+            if not _presente(_sem_versao_da_acao(linha), acoes)
         )
-        sobram = sorted((_linhas_fixas(velho) - _linhas_fixas(novo)) & projeto)
+        do_kit = {_sem_versao_da_acao(linha) for linha in _linhas_fixas(novo)}
+        sobram = sorted(
+            linha
+            for linha in (_linhas_fixas(velho) - _linhas_fixas(novo)) & projeto
+            if _sem_versao_da_acao(linha) not in do_kit
+        )
         if faltam or sobram:
             print(f"aviso: a parte fixa de {nome} difere do modelo do kit; traga à mão:")
             for linha in faltam:
                 print(f"  + {linha}")
             for linha in sobram:
                 print(f"  - {linha}")
+
+
+def _sem_versao_da_acao(linha: str) -> str:
+    """A linha com a ação do CI (`uses: dono/acao@versão`) sem a versão: o Dependabot a atualiza
+    no projeto, e a ação noutra versão não é linha que falta nem que sobra."""
+    return re.sub(r"(uses:\s*[^@\s]+)@\S+", r"\1@", linha)
 
 
 def _presente(linha: str, projeto: set[str]) -> bool:

@@ -6,7 +6,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Aviso da parte fixa que falta no projeto
-O `kit.py atualizar` SHALL avisar cada linha da parte fixa do modelo atual que o projeto não tem, em qualquer versão dele, aceitando como presente a linha igual, a mesma seguida de espaço e argumentos ou ela como comando dentro de uma linha do projeto, depois de um espaço. MUST NOT avisar os blocos da parte da stack (os que abrem com o comentário "# Parte da stack" e, no `.gitignore`, `# Python` e `# Node`). O que o kit tirou SHALL seguir pela diferença entre as versões.
+O `kit.py atualizar` SHALL avisar cada linha da parte fixa do modelo atual que falta no projeto, em qualquer versão dele; vale como presente a linha igual, com argumentos ou chamada dentro de uma linha dele, após um espaço, e a ação (`uses:`) noutra versão. MUST NOT avisar os blocos da parte da stack (os que abrem com "# Parte da stack" e, no `.gitignore`, `# Python` e `# Node`). O que o kit tirou SHALL seguir pela diferença entre as versões.
 
 #### Scenario: Chamada com os vizinhos
 - **WHEN** o `scripts/check.sh` migrado tem `bash trilha/verifica.sh --vizinho trilha-ai \`
@@ -31,6 +31,10 @@ O `kit.py atualizar` SHALL avisar cada linha da parte fixa do modelo atual que o
 #### Scenario: Bloco da parte da stack trocado
 - **WHEN** o `scripts/check.sh` do projeto trocou o bloco "Parte da stack" do modelo pelos comandos da stack dele
 - **THEN** a ferramenta não avisa a linha `echo` daquele bloco
+
+#### Scenario: Ação atualizada pelo Dependabot
+- **WHEN** o CI do projeto tem `actions/checkout` fixada noutro commit que o do modelo
+- **THEN** a ferramenta não avisa a linha do `actions/checkout`
 
 #### Scenario: Passo fixo do CI ao lado do comentário da stack
 - **WHEN** o CI do projeto não tem o passo `actions/setup-node` do modelo, que fica no mesmo bloco do comentário "Parte da stack"

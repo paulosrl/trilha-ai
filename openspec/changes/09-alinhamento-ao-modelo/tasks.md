@@ -53,3 +53,13 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 - [x] 6.1 A suíte inteira (`python3 -m unittest discover -s testes`) e o ruff (`check` e `format --check`) verdes, cada um sozinho, com o código de saída conferido
 - [x] 6.2 A execução manual, com o usuário olhando: o `kit.py atualizar` numa cópia descartável do Xavier anterior ao alinhamento (o commit `e2115a8`) avisa as seis linhas do `.gitignore` fora dos blocos da stack e nenhuma do `scripts/check.sh`; a conferência das regras dessa cópia, com `--fonte`, reprova as regras próprias; a conferência do método, com o perfil antigo por `XDG_CONFIG_HOME`, avisa as skills que o `update` apagaria. O resultado de cada uma vai à seção "Verificação" do `design.md`
+
+## 7. As respostas à revisão do código
+
+- [x] 7.1 O teste `test_openspec_ensaio_nao_muda_a_configuracao_da_maquina` comprova o cenário "Configuração da máquina intacta": o `update` falso regrava a configuração global que o `config path` dele aponta (pelo `XDG_CONFIG_HOME`, como o OpenSpec); a da máquina fica igual, e o aviso ainda sai. Falha antes do código (`-k test_openspec_ensaio_nao_muda_a_configuracao_da_maquina`)
+- [x] 7.2 O teste `test_openspec_avisa_o_que_criaria_e_trocaria` comprova o cenário "Arquivos que ele criaria ou trocaria" (`-k test_openspec_avisa_o_que_criaria_e_trocaria`)
+- [x] 7.3 O teste `test_parte_fixa_aceita_a_acao_atualizada_pelo_dependabot` comprova o cenário "Ação atualizada pelo Dependabot". Falha antes do código (`-k test_parte_fixa_aceita_a_acao_atualizada_pelo_dependabot`)
+- [x] 7.4 O `test_parte_fixa_sem_o_bloco_da_stack` passa a apagar o bloco `# Node`, que só sai pela regra dos títulos; com a regra desligada no teste, o aviso de `node_modules/` aparece (`-k test_parte_fixa_sem_o_bloco_da_stack`)
+- [x] 7.5 O `test_openspec_sem_versao_no_ci_nao_avisa` ganha o caso do `@fission-ai/openspec@latest`. Falha antes do código (`-k test_openspec_sem_versao_no_ci_nao_avisa`)
+- [x] 7.6 O teste `test_openspec_nome_fora_do_utf8_nao_derruba` guarda o "só aviso, nunca falha": um arquivo versionado com nome em Latin-1 não faz a conferência sair com erro. Falha antes do código (`-k test_openspec_nome_fora_do_utf8_nao_derruba`)
+- [x] 7.7 O `ferramentas/kit.py` e o `modelo/trilha/confere_metodo.py` seguem as respostas à revisão no `design.md`; a suíte inteira e o ruff verdes, cada um sozinho

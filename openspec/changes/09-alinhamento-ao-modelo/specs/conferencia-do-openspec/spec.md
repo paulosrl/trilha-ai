@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Aviso dos arquivos gerados que o update mudaria
-A conferência do método SHALL ensaiar o `openspec update` numa pasta temporária, com a cópia dos arquivos gerados do OpenSpec que o projeto versiona e do `openspec/config.yaml`, sem consultar a rede, e MUST avisar, sem falhar, nomeando cada arquivo que ele apagaria, criaria ou trocaria, com o comando `openspec config list`. O ensaio MUST NOT mudar nenhum arquivo do projeto.
+A conferência do método SHALL ensaiar o `openspec update` numa pasta temporária, com a cópia dos arquivos gerados do OpenSpec que o projeto versiona e do `openspec/config.yaml`, sem consultar a rede, e MUST avisar, sem falhar, nomeando cada arquivo que ele apagaria, criaria ou trocaria, com o comando `openspec config list`. O ensaio MUST NOT mudar nenhum arquivo do projeto nem a configuração do OpenSpec da máquina.
 
 #### Scenario: Perfil só com comandos e skills no projeto
 - **WHEN** o perfil do OpenSpec da máquina entrega só comandos e o projeto versiona `.claude/skills/openspec-propose/SKILL.md`
@@ -15,6 +15,14 @@ A conferência do método SHALL ensaiar o `openspec update` numa pasta temporár
 #### Scenario: Projeto intacto depois do aviso
 - **WHEN** a conferência avisa que o `openspec update` apagaria arquivos gerados
 - **THEN** os arquivos do projeto continuam como estavam antes da conferência
+
+#### Scenario: Configuração da máquina intacta
+- **WHEN** o `openspec update` do ensaio regrava a configuração global (a migração que o OpenSpec faz quando ela não tem o perfil)
+- **THEN** a configuração global da máquina continua como estava antes da conferência
+
+#### Scenario: Arquivos que ele criaria ou trocaria
+- **WHEN** o `openspec update` do ensaio cria um arquivo gerado que o projeto não tem e reescreve outro que o projeto tem
+- **THEN** o aviso cita o primeiro em "criaria" e o segundo em "trocaria"
 
 ### Requirement: Silêncio do ensaio sem o OpenSpec da máquina
 A conferência do método SHALL seguir sem aviso nem falha sobre os arquivos gerados quando o `openspec` não estiver no PATH, quando a máquina não tiver o arquivo de configuração global dele (como no CI), quando o ensaio falhar ou não terminar no prazo, ou quando o projeto não versionar nenhum arquivo gerado.
@@ -38,7 +46,7 @@ A conferência do método SHALL seguir sem aviso nem falha sobre os arquivos ger
 - **THEN** a conferência não ensaia o `openspec update`
 
 ### Requirement: Aviso da versão do OpenSpec diferente da do CI
-Quando a versão do `openspec` instalado diferir da fixada no `.github/workflows/verificacao.yml` do projeto (`@fission-ai/openspec@X`), a conferência do método SHALL avisar, nomeando as duas versões e o comando `npm install -g @fission-ai/openspec@X`, sem falhar; sem a versão fixada ou sem o `openspec`, MUST seguir sem aviso.
+Quando a versão do `openspec` instalado diferir da fixada no `.github/workflows/verificacao.yml` do projeto (`@fission-ai/openspec@X`, com X um número de versão), a conferência do método SHALL avisar, nomeando as duas versões e o comando `npm install -g @fission-ai/openspec@X`, sem falhar; sem a versão fixada ou sem o `openspec`, MUST seguir sem aviso.
 
 #### Scenario: Versões diferentes
 - **WHEN** o `openspec --version` responde `1.14.3` e o CI do projeto instala `@fission-ai/openspec@1.14.1`
@@ -50,7 +58,7 @@ Quando a versão do `openspec` instalado diferir da fixada no `.github/workflows
 - **THEN** a conferência não imprime aviso sobre a versão do OpenSpec
 
 #### Scenario: CI sem a versão fixada
-- **WHEN** o `.github/workflows/verificacao.yml` do projeto não existe ou não traz `@fission-ai/openspec@`
+- **WHEN** o `.github/workflows/verificacao.yml` do projeto não existe, não traz `@fission-ai/openspec@` ou o traz com `latest`
 - **THEN** a conferência não imprime aviso sobre a versão do OpenSpec
 
 ### Requirement: Conferência do OpenSpec fora da trava do commit

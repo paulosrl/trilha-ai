@@ -1096,21 +1096,22 @@ class Kit(unittest.TestCase):
         dado, com a pasta em $2). Devolve o registro."""
         registro = falsos / "registro"
         registro.touch()
-        configuracao = falsos / ("config.json" if config else "nao-existe.json")
-        if config:
-            configuracao.write_text("{}", encoding="utf-8")
+        if config:  # a configuração global da máquina, em <falsos>/xdg, salvo outro XDG_CONFIG_HOME
+            (falsos / "xdg/openspec").mkdir(parents=True)
+            (falsos / "xdg/openspec/config.json").write_text('{"profile": "custom"}', encoding="utf-8")
         falso = falsos / "openspec"
         falso.write_text(
             "#!/bin/sh\n"
             f'echo "$*" >> "{registro}"\n'
-            f'if [ "$1 $2" = "config path" ]; then echo "{configuracao}"; exit 0; fi\n'
+            f'configuracao="${{XDG_CONFIG_HOME:-{falsos}/xdg}}/openspec/config.json"\n'
+            'if [ "$1 $2" = "config path" ]; then echo "$configuracao"; exit 0; fi\n'
             f'if [ "$1" = "--version" ]; then echo "{versao}"; exit 0; fi\n'
             f'if [ "$1" = "update" ]; then {update}; fi\n',
             encoding="utf-8",
         )
         falso.chmod(0o755)
         _claude_falso(falsos, "exit 1")
-        for ferramenta in ("git", "rm", "sleep"):
+        for ferramenta in ("git", "rm", "sleep", "cat", "cp", "mkdir"):
             (falsos / ferramenta).symlink_to(shutil.which(ferramenta))
         return registro
 
@@ -1156,6 +1157,39 @@ class Kit(unittest.TestCase):
         aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
         self.assertIn("openspec-s4/SKILL.md e mais 2", aviso, saida.stderr)
         self.assertNotIn("openspec-s5", aviso)
+
+    def test_openspec_ensaio_nao_muda_a_configuracao_da_maquina(self) -> None:
+        """Revisão da change 09, achado 1: a migração do OpenSpec regrava a configuração global."""
+        regrava = 'echo migrado > "$configuracao"; ' + self.APAGA_A_SKILL
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as falsos:
+            destino = self._projeto_com_gerados(tmp)
+            self._openspec_falso(Path(falsos), update=regrava)
+            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_metodo.py")],
+                                   capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos})
+            maquina = (Path(falsos) / "xdg/openspec/config.json").read_text(encoding="utf-8")
+        self.assertEqual(maquina, '{"profile": "custom"}')
+        self.assertIn("openspec update mudaria", saida.stderr)
+
+    def test_openspec_avisa_o_que_criaria_e_trocaria(self) -> None:
+        """Revisão da change 09, achado 5: os grupos "criaria" e "trocaria" do aviso."""
+        muda = ('mkdir -p "$2/.claude/skills/openspec-nova" && echo nova > "$2/.claude/skills/openspec-nova/SKILL.md"; '
+                'echo reescrito > "$2/.claude/commands/opsx/propose.md"')
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, _ = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=muda)
+        aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
+        self.assertIn("criaria: .claude/skills/openspec-nova/SKILL.md", aviso, saida.stderr)
+        self.assertIn("trocaria: .claude/commands/opsx/propose.md", aviso)
+        self.assertNotIn("apagaria", aviso)
+
+    def test_openspec_nome_fora_do_utf8_nao_derruba(self) -> None:
+        """Revisão da change 09, achado 3: o aviso nunca vira falha, nem com um nome em Latin-1."""
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = self._projeto_com_gerados(tmp)
+            (destino / os.fsdecode(b"caf\xe9.txt")).write_text("x\n", encoding="utf-8")
+            subprocess.run(["git", "add", "-A"], cwd=destino, check=True)
+            saida, _ = self._metodo_com_openspec(destino, update=self.APAGA_A_SKILL)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("openspec update mudaria", saida.stderr)
 
     def test_openspec_em_dia_nao_avisa(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1250,9 +1284,12 @@ class Kit(unittest.TestCase):
             ci.write_text(ci.read_text(encoding="utf-8").replace("@fission-ai/openspec@1.14.1", "@fission-ai/openspec"),
                           encoding="utf-8")
             sem_pin, _ = self._metodo_com_openspec(destino, versao="1.14.3")
+            ci.write_text(ci.read_text(encoding="utf-8").replace("@fission-ai/openspec", "@fission-ai/openspec@latest"),
+                          encoding="utf-8")
+            com_latest, _ = self._metodo_com_openspec(destino, versao="1.14.3")
             ci.unlink()
             sem_ci, _ = self._metodo_com_openspec(destino, versao="1.14.3")
-        for saida in (sem_pin, sem_ci):
+        for saida in (sem_pin, com_latest, sem_ci):
             self.assertEqual(saida.returncode, 0, saida.stderr)
             self.assertNotIn("npm install -g", saida.stderr)
 
@@ -2641,6 +2678,18 @@ class Kit(unittest.TestCase):
         self.assertNotIn("a parte da stack ainda não foi preenchida", saida)
         self.assertNotIn("a parte fixa de scripts/check.sh", saida)
 
+    def test_parte_fixa_aceita_a_acao_atualizada_pelo_dependabot(self) -> None:
+        """Revisão da change 09, achado 2: a ação noutro commit não manda rebaixá-la."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            ci = pasta / ".github/workflows/verificacao.yml"
+            texto = ci.read_text(encoding="utf-8")
+            ci.write_text(re.sub(r"actions/checkout@[0-9a-f]+", "actions/checkout@" + "f" * 40, texto), encoding="utf-8")
+            self._commit_tudo(pasta, "checkout atualizado pelo Dependabot")
+            saida = self._ferramenta("atualizar", str(pasta))
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        self.assertNotIn("actions/checkout", saida.stdout)
+
     def test_parte_fixa_avisa_o_passo_do_ci_ao_lado_da_stack(self) -> None:
         """Change 09: no CI, o comentário da stack fica no mesmo bloco dos passos fixos; a falta de
         um deles continua sendo avisada (a segunda rodada da execução manual)."""
@@ -2662,11 +2711,21 @@ class Kit(unittest.TestCase):
         modelo = (MODELO / "gitignore").read_text(encoding="utf-8")
         self.assertIn("\n# Python\n", modelo)
         self.assertIn("\n# Node\n", modelo)
-        bloco = modelo[modelo.index("# Python\n") : modelo.index("\n\n", modelo.index("# Python\n")) + 1]
+        # O bloco # Node, que não abre com "Parte da stack": só a regra dos títulos o tira.
+        inicio = modelo.index("\n# Node\n") + 1
+        bloco = modelo[inicio : modelo.index("\n\n", inicio) + 1]
+        self.assertNotIn("Parte da stack", bloco)
         with tempfile.TemporaryDirectory() as tmp:
             saida = self._atualizar_com_gitignore(tmp, (bloco, ""))
-        self.assertNotIn(".venv/", saida)
+        self.assertNotIn("node_modules/", saida)
         self.assertNotIn("a parte fixa de .gitignore", saida)
+        # Sem a regra dos títulos, o mesmo bloco viraria aviso: o teste prova a regra.
+        sem_titulos = FERRAMENTA.BLOCOS_DA_STACK
+        try:
+            FERRAMENTA.BLOCOS_DA_STACK = set()
+            self.assertIn("node_modules/", FERRAMENTA._sem_blocos_da_stack(".gitignore", modelo))
+        finally:
+            FERRAMENTA.BLOCOS_DA_STACK = sem_titulos
 
     def test_atualizar_avisa_a_parte_fixa_que_mudou_no_kit(self) -> None:
         """O CI preenchido não é sobrescrito, mas o que o kit mudou nele desde a versão do projeto é dito."""

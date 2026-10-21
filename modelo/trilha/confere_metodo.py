@@ -59,7 +59,8 @@ PRAZO_DO_OPENSPEC = 60
 SEM_REDE = {"OPENSPEC_NO_UPDATE_CHECK": "1", "OPENSPEC_TELEMETRY": "0", "DO_NOT_TRACK": "1"}
 # Os arquivos que o OpenSpec gera para as ferramentas: as skills, os comandos e a marca do Codex.
 GERADO = re.compile(r"(^|/)(openspec-[^/]+/SKILL\.md|opsx[^/]*(/.*)?|\.openspec-target)$")
-PIN_DO_OPENSPEC = re.compile(r"@fission-ai/openspec@([^\s\"']+)")
+# A versão fixada no CI, só quando é um número (o "latest" não se compara).
+PIN_DO_OPENSPEC = re.compile(r"@fission-ai/openspec@(\d+\.\d+\.\d+[^\s\"']*)")
 # Quantos nomes de cada grupo o aviso do ensaio mostra; o resto vira contagem.
 MOSTRADOS = 5
 NUMERO = re.compile(r"\d{2,3}")
@@ -259,18 +260,19 @@ def avisar_plugin() -> list[str]:
     return avisos
 
 
-def _saida(comando: list[str]) -> str | None:
+def _saida(comando: list[str], ambiente: dict[str, str] | None = None) -> str | None:
     """A saída de um comando na raiz do projeto, sem a rede; None se ele faltar, falhar ou não
-    responder no prazo."""
+    responder no prazo. O nome de arquivo fora do UTF-8 chega como o sistema o guarda."""
     try:
         saida = subprocess.run(
             comando,
             capture_output=True,
             text=True,
+            errors="surrogateescape",
             timeout=PRAZO_DO_OPENSPEC,
             check=False,
             cwd=RAIZ,
-            env={**os.environ, **SEM_REDE},
+            env={**os.environ, **SEM_REDE, **(ambiente or {})},
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -280,7 +282,8 @@ def _saida(comando: list[str]) -> str | None:
 def _aviso_da_versao() -> list[str]:
     """A versão do openspec da máquina diante da que o CI do projeto instala."""
     ci = RAIZ / ".github" / "workflows" / "verificacao.yml"
-    pin = PIN_DO_OPENSPEC.search(ci.read_text(encoding="utf-8")) if ci.is_file() else None
+    texto = ci.read_text(encoding="utf-8", errors="replace") if ci.is_file() else ""
+    pin = PIN_DO_OPENSPEC.search(texto)
     resposta = _saida(["openspec", "--version"]) if pin else None
     instalada = re.search(r"\d+\.\d+\.\d+\S*", resposta or "")
     if pin is None or instalada is None or instalada.group(0) == pin.group(1):
@@ -299,7 +302,8 @@ def _nomes(nomes: list[str]) -> str:
 
 def _aviso_do_update() -> list[str]:
     """O que o `openspec update` mudaria nos arquivos gerados que o projeto versiona, pelo ensaio
-    dele numa pasta temporária, com a cópia desses arquivos e do config.yaml; o projeto não muda."""
+    dele numa pasta temporária, com a cópia desses arquivos e do config.yaml, e com a cópia da
+    configuração global (a migração do OpenSpec a regrava); nem o projeto nem a máquina mudam."""
     configuracao = _saida(["openspec", "config", "path"])
     if configuracao is None or not Path(configuracao.strip()).is_file():
         return []
@@ -313,11 +317,13 @@ def _aviso_do_update() -> list[str]:
     if not gerados or not (RAIZ / config).is_file():
         return []
     with tempfile.TemporaryDirectory() as tmp:
-        ensaio = Path(tmp)
+        ensaio, xdg = Path(tmp) / "projeto", Path(tmp) / "xdg"
         for nome in (*gerados, config):
             (ensaio / nome).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(RAIZ / nome, ensaio / nome)
-        if _saida(["openspec", "update", str(ensaio)]) is None:
+        (xdg / "openspec").mkdir(parents=True)
+        shutil.copyfile(configuracao.strip(), xdg / "openspec" / "config.json")
+        if _saida(["openspec", "update", str(ensaio)], {"XDG_CONFIG_HOME": str(xdg)}) is None:
             return []
         apagaria = [nome for nome in gerados if not (ensaio / nome).is_file()]
         trocaria = [
