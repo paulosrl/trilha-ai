@@ -14,6 +14,8 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 - [x] 1.7 O teste `test_parte_fixa_sem_o_bloco_da_parte_da_stack` comprova o cenário "Bloco da parte da stack trocado": o bloco "Parte da stack" do `scripts/check.sh` trocado por um comando da stack; o `atualizar` não avisa o `echo` dele. Confere também que o `modelo/scripts/check.sh` ainda tem o comentário `# Parte da stack`. Falha antes do código (`-k test_parte_fixa_sem_o_bloco_da_parte_da_stack`)
 - [x] 1.8 O `_presente` e a separação dos blocos do `ferramentas/kit.py` seguem a decisão 1 do design, com os dois casos novos; os testes do grupo 1 passam
 
+- [x] 1.9 O teste `test_parte_fixa_avisa_o_passo_do_ci_ao_lado_da_stack` comprova o cenário "Passo fixo do CI ao lado do comentário da stack": o CI do modelo sem o passo do `actions/setup-node`; o `atualizar` avisa a linha dele. Falha antes da correção (`-k test_parte_fixa_avisa_o_passo_do_ci_ao_lado_da_stack`); depois dela, os testes do grupo 1 passam
+
 ## 2. A versão
 
 - [x] 2.1 A linha "Versão 2.7, de <data>." no `modelo/trilha/CLAUDE-comum.md` e a `2.7.0` no `plugins/sdd/.claude-plugin/plugin.json`, só com o "sim" do usuário para a versão e antes de qualquer outro arquivo de `modelo/` mudar (design, decisão 6); o `test_kit_sem_mudanca_depois_da_tag`, o `test_versao_no_comum` e o teste da versão do plugin passam

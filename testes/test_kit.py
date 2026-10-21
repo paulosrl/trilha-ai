@@ -2619,6 +2619,22 @@ class Kit(unittest.TestCase):
         self.assertNotIn("a parte da stack ainda não foi preenchida", saida)
         self.assertNotIn("a parte fixa de scripts/check.sh", saida)
 
+    def test_parte_fixa_avisa_o_passo_do_ci_ao_lado_da_stack(self) -> None:
+        """Change 09: no CI, o comentário da stack fica no mesmo bloco dos passos fixos; a falta de
+        um deles continua sendo avisada (a segunda rodada da execução manual)."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            ci = pasta / ".github/workflows/verificacao.yml"
+            linhas = ci.read_text(encoding="utf-8").splitlines(keepends=True)
+            inicio = next(i for i, l in enumerate(linhas) if "actions/setup-node@" in l)
+            ci.write_text("".join(linhas[:inicio] + linhas[inicio + 3 :]), encoding="utf-8")
+            self.assertNotIn("setup-node", ci.read_text(encoding="utf-8"))
+            self._commit_tudo(pasta, "CI sem o setup-node")
+            saida = self._ferramenta("atualizar", str(pasta))
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        self.assertIn("a parte fixa de .github/workflows/verificacao.yml difere do modelo do kit", saida.stdout)
+        self.assertIn("+ - uses: actions/setup-node@", saida.stdout)
+
     def test_parte_fixa_sem_o_bloco_da_stack(self) -> None:
         """Change 09: o bloco da stack que o projeto apaga de propósito não vira aviso."""
         modelo = (MODELO / "gitignore").read_text(encoding="utf-8")

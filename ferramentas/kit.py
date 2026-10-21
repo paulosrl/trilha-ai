@@ -94,8 +94,9 @@ COM_PARTE_FIXA = (
     ".github/dependabot.yml",
 )
 # Os blocos da parte da stack nos modelos: o projeto troca ou apaga o que não é o seu, e a falta
-# deles não vira aviso. Em todo arquivo, os do comentário "Parte da stack"; no .gitignore, também
-# os de título Python e Node.
+# deles não vira aviso. Em todo arquivo, os que abrem com o comentário "Parte da stack" (no CI, ele
+# fica no meio do bloco dos passos fixos, e o bloco fica); no .gitignore, também os de título
+# Python e Node.
 PARTE_DA_STACK = "# Parte da stack"
 BLOCOS_DA_STACK = {"# Python", "# Node"}
 # A língua dos artefatos, no context do openspec/config.yaml, como o `openspec init --language`
@@ -548,8 +549,9 @@ def _sem_blocos_da_stack(nome: str, texto: str) -> str:
     titulos = BLOCOS_DA_STACK if nome == ".gitignore" else set()
 
     def da_stack(bloco: str) -> bool:
-        linhas = {linha.strip() for linha in bloco.splitlines()}
-        return bool(titulos & linhas) or any(linha.startswith(PARTE_DA_STACK) for linha in linhas)
+        linhas = [linha.strip() for linha in bloco.splitlines()]
+        abre = bool(linhas) and linhas[0].startswith(PARTE_DA_STACK)
+        return abre or bool(titulos & set(linhas))
 
     return "\n\n".join(bloco for bloco in re.split(r"\n\s*\n", texto) if not da_stack(bloco))
 
