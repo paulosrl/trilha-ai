@@ -122,13 +122,18 @@ def _eventos(configuracao: Path, raiz: Path) -> dict[str, set[tuple[float, bool]
 
 
 def _intervalos(eventos: set[tuple[float, bool]]) -> list[list]:
-    """Os intervalos ativos de uma conversa: [início, fim, "usuario" ou "ia"], em ISO UTC."""
-    ordem = sorted(eventos)
-    return [
-        [_iso(a), _iso(b), "usuario" if pedido else "ia"]
-        for (a, _), (b, pedido) in pairwise(ordem)
-        if 0 < b - a <= PAUSA
-    ]
+    """Os intervalos ativos de uma conversa: [início, fim, "usuario" ou "ia"], em ISO UTC; os
+    seguidos do mesmo tipo se juntam num só, o que encolhe o resumo sem mudar nenhuma soma."""
+    juntos: list[list] = []
+    for (a, _), (b, pedido) in pairwise(sorted(eventos)):
+        if not 0 < b - a <= PAUSA:
+            continue
+        tipo = "usuario" if pedido else "ia"
+        if juntos and juntos[-1][1] == a and juntos[-1][2] == tipo:
+            juntos[-1][1] = b
+        else:
+            juntos.append([a, b, tipo])
+    return [[_iso(a), _iso(b), tipo] for a, b, tipo in juntos]
 
 
 # O resumo
@@ -321,7 +326,7 @@ def main() -> int:
 
     pasta.mkdir(parents=True, exist_ok=True)
     conteudo = {"versao": VERSAO_DO_RESUMO, "raiz": str(raiz), "conversas": conversas}
-    _gravar(resumo, json.dumps(conteudo, ensure_ascii=False, indent=1) + "\n")
+    _gravar(resumo, json.dumps(conteudo, ensure_ascii=False, separators=(",", ":")) + "\n")
     _gravar(pagina, _pagina(raiz.name, dias))
 
     if dias:

@@ -48,19 +48,19 @@ Os testes do `tempo.py` rodam o script por subprocesso, com estas condições:
 
 - [x] 4.1 O teste `test_tempo_imprime_o_caminho_da_pagina` comprova o cenário "Caminho impresso" (`-k test_tempo_imprime_o_caminho_da_pagina`)
 - [x] 4.2 O teste `test_tempo_pagina_sem_rede` comprova o cenário "Nada da rede": nenhum `src=` nem `href=` de folha de estilo, fonte, script ou imagem com `http://` ou `https://`, e nenhum `@import` ou `url(http` no estilo (`-k test_tempo_pagina_sem_rede`)
-- [ ] 4.3 O `modelo/trilha/pagina_tempo_modelo.html` desenha, a partir do JSON, as seções da decisão D8 do design, com fontes do sistema, nos temas claro e escuro, sem rolagem lateral na largura de celular. O `tempo.py` grava a página e a saída de três linhas (D10). Os testes do grupo 4 passam
+- [x] 4.3 O `modelo/trilha/pagina_tempo_modelo.html` desenha, a partir do JSON, as seções da decisão D8 do design, com fontes do sistema, nos temas claro e escuro, sem rolagem lateral na largura de celular. O `tempo.py` grava a página e a saída de três linhas (D10). Os testes do grupo 4 passam
 - [x] 4.4 O teste `test_tempo_avisa_guarda_padrao` comprova o cenário "Guarda padrão": o aviso cita `"cleanupPeriodDays": 3650`, e a saída é 0 (`-k test_tempo_avisa_guarda_padrao`)
 - [x] 4.5 O teste `test_tempo_guarda_longa_sem_aviso` comprova o cenário "Guarda longa" (`-k test_tempo_guarda_longa_sem_aviso`)
 - [x] 4.6 O aviso da guarda no `tempo.py`, como na decisão D9. Os testes 4.4 e 4.5 passam
 
 ## 5. O texto do kit
 
-- [ ] 5.1 O passo 1 do `README.md` do kit ganha a guarda das conversas do Claude Code (`"cleanupPeriodDays": 3650` no `~/.claude/settings.json`) e o motivo. A tabela do passo 3 cita o `tempo.py` na linha da pasta `trilha/`. Conferido pela leitura dos dois trechos e por um `grep` de `tempo.py` no repositório inteiro
+- [x] 5.1 O passo 1 do `README.md` do kit ganha a guarda das conversas do Claude Code (`"cleanupPeriodDays": 3650` no `~/.claude/settings.json`) e o motivo. A tabela do passo 3 cita o `tempo.py` na linha da pasta `trilha/`. Conferido pela leitura dos dois trechos e por um `grep` de `tempo.py` no repositório inteiro
 
 ## 6. Integração
 
-- [ ] 6.1 O conjunto dos testes e o ruff passam (os três comandos do início, cada um sozinho, com o código de saída conferido)
-- [ ] 6.2 A execução manual, a última tarefa: rodar o `tempo.py` do kit dentro do Xavier, só lendo, e abrir a página gerada. Conferir que o `git status` do Xavier não mudou, que a página mostra 26/05/2026 como primeiro dia e que os dias com conversa trazem a divisão entre o usuário e a IA. Tirar uma captura de tela, no tamanho de computador e no de celular, e registrar o resultado no `design.md`
+- [x] 6.1 O conjunto dos testes e o ruff passam (os três comandos do início, cada um sozinho, com o código de saída conferido)
+- [x] 6.2 A execução manual, a última tarefa: rodar o `tempo.py` do kit dentro do Xavier, só lendo, e abrir a página gerada. Conferir que o `git status` do Xavier não mudou, que a página mostra 26/05/2026 como primeiro dia e que os dias com conversa trazem a divisão entre o usuário e a IA. Tirar uma captura de tela, no tamanho de computador e no de celular, e registrar o resultado no `design.md`
 
 ## Workflow follow-up
 

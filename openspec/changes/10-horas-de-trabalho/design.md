@@ -75,3 +75,13 @@ Nada a migrar. Os projetos recebem o comando com a cópia da 2.8, sob ordem do u
 - Os 25 testes dos grupos 2 a 4 foram escritos juntos, antes de qualquer linha do `tempo.py` e da página. Rodados antes do código, 24 falharam; o `test_tempo_sem_gancho_no_modelo` passou, como a tarefa 2.1 previa. A ordem das tarefas por grupo ficou para o código, não para os testes: escrever o código de um grupo sem o do outro seria artificial, porque a apuração por dia e o resumo saem do mesmo caminho.
 - O ruff pediu três trocas no `tempo.py`: `datetime.UTC`, `itertools.pairwise` e o `fromisoformat` sem trocar o `Z`. Só o `pairwise` foi aceito como veio. As outras duas pedem o Python 3.11, e o Ubuntu 22.04, comum no WSL, traz o 3.10. Por isso o `UTC` é uma constante própria (`timezone(timedelta(0))`) e o `Z` é trocado por fatia. O ruff passa sem nenhum `noqa`.
 - O conjunto do kit só passou depois do `git add` dos dois arquivos novos de `modelo/trilha/`, porque o `kit.py` lista a pasta pelo índice do git (`git ls-files`). Sem isso, o projeto de teste nasce sem eles, e a conferência da pasta `trilha/` reprova.
+- O resumo do Xavier saiu com 2,7 MB na primeira execução: um intervalo por par de eventos, gravado com recuo. Ele passou a ser gravado compacto, e os intervalos seguidos do mesmo tipo da mesma conversa se juntam num só. Isso não muda nenhuma soma e levou o resumo a 104 KB, com as mesmas 178 h.
+
+## Execução manual (tarefa 6.2), em 2026-10-20
+
+- Comando: `python3 -I ../trilha-ai/modelo/trilha/tempo.py`, dentro do Xavier, com a guarda das conversas da máquina já em 3650 dias. Resultado: `26/05/2026 a 20/10/2026: 59 dias, 178 h` e o caminho da página, em 4 segundos, sobre 1,3 GB de conversas, sem o aviso da guarda e com o código de saída 0.
+- O `git status --porcelain` do Xavier foi o mesmo antes e depois.
+- Na página, 26/05/2026 é o primeiro dia. 18 dias vêm das conversas, com a divisão entre o usuário e a IA (33% do usuário), e 41 são estimados pelos commits.
+- Capturas de tela, sem arquivo versionado:
+  - 1200 px no tema claro e 400 px no tema escuro, sem rolagem lateral, sem erro no console e sem nenhuma requisição fora do arquivo local;
+  - as quatro seções da decisão D8 desenhadas, com a legenda das três fontes, e a tabela recolhida.
