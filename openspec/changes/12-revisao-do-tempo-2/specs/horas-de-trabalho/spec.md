@@ -62,16 +62,24 @@ Os e-mails gravados em `trilha.email` no git do repositório SHALL contar como d
 - **THEN** a saída não traz o aviso dos e-mails, e o commit continua fora da estimativa
 
 ### Requirement: Repositório que mudou de pasta
-Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz, e esse caminho já não existe no disco, o comando SHALL juntar as conversas dele às deste resumo, renomear o arquivo dele com o sufixo `.juntado`, sem apagá-lo, e avisar, sem falhar, citando-o. Quando esse caminho ainda existe e não há resumo para o caminho da raiz, o comando SHALL só avisar, citando o outro resumo. O comando MUST NOT tomar por ele o resumo de um repositório cujo nome só começa com o deste.
+Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz, e esse caminho já não é a raiz de um repositório git, o comando SHALL juntar as conversas dele às deste resumo, renomear o arquivo dele e a página dele com o sufixo `.juntado`, sem apagá-los nem sobrescrever um `.juntado` anterior, e avisar, sem falhar, citando-o. Quando esse caminho ainda é a raiz de um repositório e não há resumo para o caminho da raiz, o comando SHALL só avisar, citando o outro resumo. O comando MUST NOT tomar por ele o resumo de um repositório cujo nome só começa com o deste.
 
 #### Scenario: Pasta trocada
-- **WHEN** o comando já rodou com a raiz em `/a/proj`, `/a/proj` ainda existe, e ele roda agora com a raiz em `/b/proj`
+- **WHEN** o comando já rodou com a raiz em `/a/proj`, `/a/proj` ainda é um repositório, e ele roda agora com a raiz em `/b/proj`
 - **THEN** a saída traz um aviso que cita o resumo de `/a/proj`
 - **AND** o comando termina com o código de saída 0
 
 #### Scenario: Pasta antiga que já não existe
 - **WHEN** o comando já rodou com a raiz em `/a/proj`, com uma conversa já apagada guardada no resumo, e a pasta foi movida para `/b/proj`
-- **THEN** a execução em `/b/proj` conta as horas dessa conversa, o resumo de `/a/proj` ganha o sufixo `.juntado`, e a saída traz um aviso que o cita
+- **THEN** a execução em `/b/proj` conta as horas dessa conversa, o resumo e a página de `/a/proj` ganham o sufixo `.juntado`, e a saída traz um aviso que cita o resumo
+
+#### Scenario: Pasta antiga que sobrou sem o repositório
+- **WHEN** a pasta foi movida de `/a/proj` para `/b/proj`, mas sobrou em `/a/proj` uma pasta sem repositório git
+- **THEN** a execução em `/b/proj` junta o resumo de `/a/proj`, como no cenário anterior
+
+#### Scenario: Segundo resumo juntado com o mesmo nome
+- **WHEN** já existe o `.juntado` de um resumo, e outro resumo de mesmo nome é juntado
+- **THEN** os dois arquivos juntados continuam na pasta dos dados
 
 #### Scenario: Pasta antiga juntada depois da primeira execução
 - **WHEN** o comando já rodou em `/b/proj` antes de `/a/proj` deixar de existir, e roda de novo depois

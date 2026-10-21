@@ -38,16 +38,18 @@ O git escolhe o e-mail de autor do commit nesta ordem: `GIT_AUTHOR_EMAIL`, `auth
 *Alternativa:* o `git var GIT_AUTHOR_IDENT`. Recusada: sem e-mail configurado, ele inventa um a partir do nome da máquina (ou falha, com o `user.useConfigOnly`), e o caso "sem e-mail, contam todos" deixaria de valer.
 
 ### D4. O `trilha.outro`
-Os e-mails de `git config --get-all trilha.outro` saem do aviso, sem diferença de maiúscula, como os de robôs. Os commits deles continuam fora da estimativa. O aviso passa a terminar com os dois comandos: `git config --add trilha.email <e-mail>` se o e-mail é do usuário, e `git config --add trilha.outro <e-mail>` se é de outra pessoa.
+Os e-mails de `git config --get-all trilha.outro` saem do aviso, sem diferença de maiúscula, como os de robôs. Os commits deles continuam fora da estimativa. O aviso, ainda numa linha só, passa a terminar com os dois comandos: `git config --add trilha.email <e-mail>` se o e-mail é do usuário, e `git config --add trilha.outro <e-mail>` se é de outra pessoa.
+
+O `trilha.email` e o `trilha.outro` se leem um por linha, e não por palavra: o e-mail com espaço, que o aviso pode citar, é um só.
 
 *Alternativa:* guardar no resumo os e-mails já avisados e avisar só os novos. Recusada: o aviso perdido na primeira execução nunca mais sairia, e os commits do usuário ficariam fora sem que ele soubesse.
 
 ### D5. O resumo de outra pasta
-Os outros resumos se acham como na 2.9: o nome exato `<nome>-<8 hexadecimais>.json`, com a `raiz` gravada de mesmo nome e diferente da atual; o ilegível é ignorado. A busca agora roda em toda execução, depois de ler o resumo deste caminho:
-- **a raiz gravada não existe mais:** as conversas dele entram no resumo atual, cada uma pelo `_juntar` com a deste resumo, se houver. O resumo atual é gravado, e só depois o antigo é renomeado para `<nome>.json.juntado`, sem ser apagado. O aviso diz que as horas de `<raiz antiga>` vieram e cita o arquivo renomeado;
-- **a raiz gravada ainda existe** (outra cópia do repositório): só o aviso de hoje, e só quando não há resumo para este caminho.
+Os outros resumos se acham como na 2.9: o nome exato `<nome>-<8 hexadecimais>.json`, com a `raiz` gravada de mesmo nome e diferente da atual; o ilegível é ignorado. A busca agora roda em toda execução, depois de ler o resumo deste caminho. A raiz gravada "ainda é um repositório" quando `git -C <raiz antiga> rev-parse --show-toplevel` devolve ela mesma; uma pasta que sobrou lá sem o repositório não basta.
+- **a raiz gravada não é mais um repositório:** as conversas dele entram no resumo atual, cada uma pelo `_juntar` com a deste resumo, se houver. O resumo atual é gravado, e só depois o antigo e a página dele são renomeados com o sufixo `.juntado`, sem serem apagados. Se o `.juntado` já existe (o repositório foi e voltou), o novo ganha a data e a hora no nome, e nenhum se sobrescreve. O aviso diz que as horas de `<raiz antiga>` vieram e cita o resumo renomeado;
+- **a raiz gravada ainda é um repositório** (outra cópia dele): só o aviso de hoje, e só quando não há resumo para este caminho.
 
-As conversas do resumo antigo não se recalculam aqui: o `cwd` delas é a raiz antiga, que não é a atual. A versão do resumo antigo não importa: a 1 só guardava horas a mais das conversas que ainda existiam, e essas o resumo atual recalcula como em D2 se ele for da versão 1; as do antigo entram como estão. Os ignorados do resumo antigo não vêm: as datas e os tamanhos deles valiam para a raiz antiga.
+As conversas do resumo antigo não se recalculam aqui: o `cwd` delas é a raiz antiga, que não é a atual. Elas entram como estão, qualquer que seja a versão do resumo antigo; as horas a mais de um resumo antigo da versão 1 ficam (fora, no proposal). Os ignorados do resumo antigo não vêm: as datas e os tamanhos deles valiam para a raiz antiga.
 
 Se a gravação do resumo atual falha, o antigo fica com o nome de sempre, e a execução seguinte junta de novo; o `_juntar` conta o repetido uma vez.
 
@@ -70,3 +72,16 @@ Se a gravação do resumo atual falha, o antigo fica com o nome de sempre, e a e
 ## Migration Plan
 
 Nada a migrar: o resumo continua na versão 2. O resumo da versão 1 que a 2.9 já gravou como versão 2 fica como está (fora, no proposal).
+
+## Respostas à revisão
+
+### Revisão dos artefatos, antes do apply
+
+Feita por um agente sem o contexto da sessão, em 2026-10-21; nada grave. Os 6 pontos foram aplicados, com a escolha do usuário:
+
+1. Uma pasta que sobrou no caminho antigo (a remoção que falhou no meio) impedia a junção, e as horas ficavam presas. Aplicado: a raiz antiga só conta como existente quando ainda é a raiz de um repositório git (D5); cenário "Pasta antiga que sobrou sem o repositório".
+2. O D5 dizia que as conversas de um resumo antigo da versão 1 se recalculavam, e não se recalculam: o `cwd` delas é a raiz antiga. Aplicado: a frase corrigida, e o caso em "Fora", no proposal.
+3. A renomeação sobrescreveria um `.juntado` anterior (o repositório que vai e volta). Aplicado: o novo ganha a data e a hora no nome (D5); cenário "Segundo resumo juntado com o mesmo nome".
+4. A página antiga ficaria ao lado da nova, e os testes que leem a única página da pasta falhariam pela montagem. Aplicado: a página antiga também ganha o `.juntado` (D5).
+5. O `trilha.email` e o `trilha.outro` lidos por palavra partiriam o e-mail com espaço, e o aviso dele nunca se calaria. Aplicado: lidos um por linha (D4).
+6. O aviso com os dois comandos numa linha à parte quebraria o `test_tempo_aviso_com_tres_emails`. Aplicado: o aviso continua numa linha só (D4).
