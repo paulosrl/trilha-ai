@@ -96,6 +96,18 @@ A linha do `git log` que o comando não entende SHALL ser ignorada, sem falhar, 
 - **WHEN** o `git log` traz a data de um commit como `2026-10-01T10:00:00Z`
 - **THEN** o commit conta no dia 01/10/2026
 
+### Requirement: Outros e-mails do usuário
+Os e-mails gravados em `trilha.email` no git do repositório SHALL contar como do usuário na estimativa pelos commits, ao lado do `user.email`. Quando algum commit fica fora por causa do e-mail, o comando MUST avisar, sem falhar, quais e-mails ficaram fora, com o comando que inclui um deles.
+
+#### Scenario: E-mail a mais
+- **WHEN** o `user.email` é `eu@exemplo.br`, o `trilha.email` tem `t@t`, e um dia sem conversa só tem um commit de `t@t`
+- **THEN** o dia aparece, estimado pelos commits
+
+#### Scenario: Aviso dos e-mails de fora
+- **WHEN** o `user.email` é `eu@exemplo.br`, e um commit de `t@t` fica fora da estimativa
+- **THEN** a saída traz um aviso que cita `t@t` e o comando `git config --add trilha.email`
+- **AND** o comando termina com o código de saída 0
+
 ### Requirement: Página com os dados uma vez
 A página SHALL ter os dados da apuração só no bloco de dados, e o nome do repositório MUST entrar no título com os caracteres especiais de HTML protegidos.
 

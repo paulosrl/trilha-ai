@@ -41,6 +41,8 @@ O resultado fica guardado por `cwd`, na execução. Uma pasta que já não exist
 
 *Alternativa:* `--author`. Recusada porque ele casa por trecho, e um e-mail contido noutro passaria.
 
+Os e-mails gravados em `trilha.email` (`git config --get-all trilha.email`, uma vez por repositório) também contam como do usuário: quem faz commits com mais de um e-mail grava os outros ali. Quando algum commit fica fora por causa do e-mail, o comando avisa quais e-mails ficaram fora, com a contagem e o comando que inclui um deles. Assim, nada do usuário some sem aviso, e o Dependabot e as outras pessoas continuam fora. *Alternativa:* o `.mailmap` com o `%aE`. Recusada: ele é versionado no repositório, e o e-mail de uma pessoa não é regra do projeto. Achado na execução manual, com a escolha do usuário.
+
 ### D4. O dia com commit tem pelo menos 1 minuto
 Depois das sessões e do corte por dia, o dia com commit que ficou com menos de 1 minuto estimado ganha o minuto que começa no primeiro commit dele. Isso cobre o commit das 00:00:00, sozinho ou emendado numa sessão do dia anterior.
 
@@ -59,13 +61,27 @@ Sem resumo para o caminho atual, o comando procura os resumos de nome `<nome>-<8
 ## Risks / Trade-offs
 
 - [O segundo passo decodifica as linhas de `cwd` fora da raiz, no arquivo que tem a raiz] → São poucas, porque a conversa costuma ficar numa pasta. O arquivo de outro repositório continua sem ser decodificado.
-- [Quem faz commits com outro e-mail no mesmo repositório os perde da estimativa] → Aceito: o `user.email` do repositório é o do usuário que trabalha nele.
+- [Quem faz commits com outro e-mail no mesmo repositório os perderia da estimativa] → O `trilha.email` guarda os outros e-mails, e o aviso mostra os que ficaram fora.
 - [Um par de eventos de arquivos diferentes conta mesmo que os dois arquivos tenham saído da raiz entre eles] → Aceito: é raro, e o corte de 30 minutos limita o erro.
 - [Os testes não rodam o código da página] → O plural, a semana a mais e a função removida se conferem na execução manual.
 
 ## Migration Plan
 
 O resumo da 2.8 continua válido, mas guarda as horas que a 2.8 contou a mais: o tempo fora do repositório no meio de uma conversa e o de um repositório aninhado. Como as horas guardadas e as recalculadas se juntam, essas horas ficam nele. Para recomeçar do certo, mova o resumo (`~/.local/share/trilha-ai/tempo/<nome>-<hash>.json`) e rode de novo. As conversas que ainda existem são recontadas; as já apagadas, não.
+
+## Verificação
+
+**Execução manual (tarefas 4.2 e 5.3), em 2026-10-21,** no Xavier, só lendo, com pastas de dados vazias para a 2.8 (da `main`) e para a 2.9; o `git status --porcelain` igual antes e depois.
+
+- **Primeira rodada:** a 2.8 deu 58 dias e 179,4 h, e a 2.9, 58 dias e 170,0 h. Mudaram 12 dias.
+  - **Conversas, de 21/09 a 10/10, cerca de 4 h:** nesses dias, as mesmas conversas alternavam entre o Xavier e o Heimdall (05/10, por exemplo: 670 eventos no Heimdall e 346 no Xavier), e a 2.8 contava para o Xavier o tempo no Heimdall. É a correção do D1.
+  - **Commits de 26/05, 02/06 e 15/10:** saíram 11 commits do próprio usuário, feitos com o e-mail `paulolima@uepa.br`, porque o `user.email` do Xavier é `paulosrl@gmail.com`. Achado: daí o `trilha.email` e o aviso (D3, tarefas do grupo 5), com a escolha do usuário. O `trilha.email` do Xavier foi gravado com esse e-mail, na configuração local do git, fora dos arquivos versionados.
+- **Segunda rodada, com o `trilha.email`:** 58 dias e 175,4 h. 26/05 e 02/06 voltaram iguais aos da 2.8. Em 15/10, sai só o commit do Dependabot. O aviso cita só os 16 commits do Dependabot. A diferença para a 2.8, 4,0 h, é toda das conversas no Heimdall.
+- **A página, no Chromium do Playwright, com 1200 e 400 px:**
+  - sem erro no console, sem nenhuma requisição fora do arquivo e sem rolagem lateral;
+  - a chave `"dias": [` uma vez só no arquivo;
+  - nenhum "1 dias": a 2.8 escrevia "1 dias" duas vezes numa página de dois dias.
+- **A semana a mais da mudança de horário não se reproduziu** num exemplo de Nova York (26/10 a 01/11/2026). Lá o horário muda às 02:00 de domingo, e a meia-noite do domingo não ganha a hora: a 2.8 e a 2.9 desenham uma semana. O defeito só aparece em fuso que muda o horário à meia-noite. A troca do `Math.ceil` pelo arredondamento não muda os outros casos.
 
 ## Respostas à revisão
 

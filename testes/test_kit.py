@@ -3316,6 +3316,20 @@ class HorasDeTrabalho(unittest.TestCase):
         self._ok(**self.SEM_GIT_DA_MAQUINA)
         self.assertNotIn("2026-10-01", self._dias())
 
+    def test_tempo_email_a_mais(self) -> None:
+        for nome, valor in (("user.email", "eu@exemplo.br"), ("trilha.email", "t@t")):
+            subprocess.run(["git", "-C", str(self.raiz), "config", nome, valor], check=True)
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok(**self.SEM_GIT_DA_MAQUINA)
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 30)
+
+    def test_tempo_avisa_emails_de_fora(self) -> None:
+        subprocess.run(["git", "-C", str(self.raiz), "config", "user.email", "eu@exemplo.br"], check=True)
+        self._commit("2026-10-01T10:00:00Z")
+        saida = self._ok(**self.SEM_GIT_DA_MAQUINA)
+        self.assertIn("t@t", saida.stderr)
+        self.assertIn("git config --add trilha.email", saida.stderr)
+
     def test_tempo_sem_email_configurado(self) -> None:
         self._commit("2026-10-01T10:00:00Z")
         self._ok(**self.SEM_GIT_DA_MAQUINA)

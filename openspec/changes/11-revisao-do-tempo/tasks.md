@@ -25,10 +25,18 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 - [x] 3.1 O `tempo.py` faz o que as decisões D1 a D4 e D6 mandam; os testes do grupo 2 e os de antes passam, e o ruff passa
 - [x] 3.2 O `tempo.py` e o `pagina_tempo_modelo.html` fazem a decisão D5; os testes do item 2.10 passam
 
+## 5. Os outros e-mails do usuário
+
+Achado na execução manual (4.2): no Xavier, os commits do usuário com o e-mail `paulolima@uepa.br` ficaram fora, porque o `user.email` é outro.
+
+- [x] 5.1 Os testes `test_tempo_email_a_mais` e `test_tempo_avisa_emails_de_fora` comprovam os cenários "E-mail a mais" e "Aviso dos e-mails de fora"; falham antes do código (`-k test_tempo_email_a_mais` e `-k test_tempo_avisa_emails_de_fora`)
+- [x] 5.2 O `tempo.py` lê o `trilha.email` (`git config --get-all`) e avisa os e-mails de fora (D3); os testes do grupo 5 e os de antes passam, e o ruff passa
+- [x] 5.3 A execução manual de novo no Xavier, com o `trilha.email` dado pelo usuário: os dias de 26/05, 02/06 e 15/10 voltam com os commits dele; o resultado vai a "Verificação"
+
 ## 4. Integração
 
 - [x] 4.1 O conjunto dos testes e o ruff passam, cada comando sozinho, com o código de saída conferido
-- [ ] 4.2 A execução manual, a última tarefa: rodar o `tempo.py` dentro do Xavier, só lendo, com o `XDG_DATA_HOME` numa pasta vazia, e também a 2.8 do mesmo jeito; conferir o `git status` igual e explicar a diferença dos totais; abrir a página e conferir o singular, o calendário sem semana a mais e nenhum erro no console. O resultado vai a "Verificação", no `design.md`
+- [x] 4.2 A execução manual, a última tarefa: rodar o `tempo.py` dentro do Xavier, só lendo, com o `XDG_DATA_HOME` numa pasta vazia, e também a 2.8 do mesmo jeito; conferir o `git status` igual e explicar a diferença dos totais; abrir a página e conferir o singular, o calendário sem semana a mais e nenhum erro no console. O resultado vai a "Verificação", no `design.md`
 
 ## Workflow follow-up
 
