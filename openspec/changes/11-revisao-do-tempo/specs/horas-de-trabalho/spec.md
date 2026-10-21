@@ -30,7 +30,7 @@ O comando SHALL ler as conversas do Claude Code da pasta `projects` da configura
 - **THEN** as horas dessa conversa entram na apuração da raiz
 
 ### Requirement: Tempo do usuário e tempo da IA
-Em cada conversa, o intervalo entre dois eventos seguidos do repositório SHALL contar como tempo ativo quando for de até 30 minutos, e MUST NOT contar quando for maior, nem quando os dois vêm do mesmo arquivo de conversa e esse arquivo tem, entre eles, um evento fora do repositório. O intervalo ativo que termina num pedido do usuário MUST contar como tempo do usuário; o que termina numa ação da IA, como tempo da IA.
+Em cada conversa, o intervalo entre dois eventos seguidos do repositório SHALL contar como tempo ativo quando for de até 30 minutos, e MUST NOT contar quando for maior, nem quando os dois vêm do mesmo arquivo de conversa e esse arquivo tem, entre eles, um evento fora do repositório. A linha repetida em dois arquivos da conversa é um evento só, dos dois. O intervalo ativo que termina num pedido do usuário MUST contar como tempo do usuário; o que termina numa ação da IA, como tempo da IA.
 
 #### Scenario: Dois pedidos e duas respostas
 - **WHEN** uma conversa tem um pedido às 09:00, a última ação da IA às 09:05, um pedido às 09:12 e a última ação da IA às 09:31
@@ -49,8 +49,12 @@ Em cada conversa, o intervalo entre dois eventos seguidos do repositório SHALL 
 - **THEN** nenhum minuto dessa conversa entra no dia
 
 #### Scenario: Subagente noutra pasta
-- **WHEN** a conversa principal tem eventos no repositório às 09:00, 09:10 e 09:20, e um subagente dela tem eventos noutra pasta às 09:05 e 09:15
+- **WHEN** a conversa principal tem eventos no repositório às 09:00, 09:10 e 09:20, e um subagente dela, cujo arquivo também cita o repositório, tem eventos noutra pasta às 09:05 e 09:15
 - **THEN** o dia tem 20 minutos de total
+
+#### Scenario: Conversa retomada noutro arquivo
+- **WHEN** as linhas da "Saída e volta no meio da conversa" estão copiadas em dois arquivos da mesma conversa
+- **THEN** nenhum minuto dessa conversa entra no dia
 
 ### Requirement: Estimativa pelos commits nos dias sem conversa
 O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas pelos commits do usuário (todas as branches e tags, cada commit uma vez, pela data de autor; com o `user.email` do git, só os desse e-mail de autor): commits com até 2 horas de intervalo formam uma sessão, que começa 30 minutos antes do primeiro, sem passar da meia-noite do dia dele, e o dia com commit tem pelo menos 1 minuto. O dia com tempo das conversas MUST usar só as conversas.
@@ -83,6 +87,18 @@ O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas 
 - **WHEN** um dia sem conversa tem um commit às 23:30 do dia anterior e outro às 00:00:00
 - **THEN** o dia do segundo aparece, com 1 minuto estimado
 
+### Requirement: Resumo ilegível preservado
+Quando o resumo existe e não se lê (não é JSON, é de uma versão que o comando não conhece ou tem uma entrada fora do formato), o comando SHALL terminar com código diferente de 0, citando o arquivo, e MUST NOT sobrescrevê-lo nem gravar a página: ele é a única cópia das horas das conversas já apagadas.
+
+#### Scenario: Resumo corrompido
+- **WHEN** o resumo do repositório tem um texto que não é JSON
+- **THEN** o comando termina com código diferente de 0, com uma mensagem que cita o resumo
+- **AND** o resumo continua igual
+
+#### Scenario: Entrada fora do formato
+- **WHEN** uma conversa do resumo tem um intervalo com dois campos em vez de três
+- **THEN** o comando termina com código diferente de 0, sem rastro de exceção, e o resumo continua igual
+
 ## ADDED Requirements
 
 ### Requirement: Linha de commit que não se entende
@@ -97,7 +113,7 @@ A linha do `git log` que o comando não entende SHALL ser ignorada, sem falhar, 
 - **THEN** o commit conta no dia 01/10/2026
 
 ### Requirement: Outros e-mails do usuário
-Os e-mails gravados em `trilha.email` no git do repositório SHALL contar como do usuário na estimativa pelos commits, ao lado do `user.email`. Quando algum commit fica fora por causa do e-mail, o comando MUST avisar, sem falhar, quais e-mails ficaram fora, com o comando que inclui um deles.
+Os e-mails gravados em `trilha.email` no git do repositório SHALL contar como do usuário na estimativa pelos commits, ao lado do `user.email`. Quando algum commit fica fora por causa do e-mail, o comando MUST avisar, sem falhar, até três dos e-mails que ficaram fora, sem os de robôs (com `[bot]`), com o comando que inclui um deles.
 
 #### Scenario: E-mail a mais
 - **WHEN** o `user.email` é `eu@exemplo.br`, o `trilha.email` tem `t@t`, e um dia sem conversa só tem um commit de `t@t`
@@ -107,6 +123,10 @@ Os e-mails gravados em `trilha.email` no git do repositório SHALL contar como d
 - **WHEN** o `user.email` é `eu@exemplo.br`, e um commit de `t@t` fica fora da estimativa
 - **THEN** a saída traz um aviso que cita `t@t` e o comando `git config --add trilha.email`
 - **AND** o comando termina com o código de saída 0
+
+#### Scenario: Robô fora do aviso
+- **WHEN** o único commit que fica fora é do e-mail do Dependabot, com `[bot]`
+- **THEN** a saída não traz o aviso dos e-mails
 
 ### Requirement: Página com os dados uma vez
 A página SHALL ter os dados da apuração só no bloco de dados, e o nome do repositório MUST entrar no título com os caracteres especiais de HTML protegidos.
@@ -119,6 +139,10 @@ A página SHALL ter os dados da apuração só no bloco de dados, e o nome do re
 - **WHEN** a raiz se chama `a<b__DADOS__`
 - **THEN** o título da página traz `a&lt;b__DADOS__`, e a lista dos dias continua aparecendo uma vez só
 
+#### Scenario: Nome que abre um comentário
+- **WHEN** a raiz se chama `x<!--<script`
+- **THEN** o bloco de dados da página não traz o texto `<!--`
+
 ### Requirement: Repositório que mudou de pasta
 Quando não há resumo para o caminho da raiz, mas há outro resumo do mesmo nome de repositório com outro caminho, o comando SHALL avisar, sem falhar, citando esse resumo, e MUST NOT tomar por ele o resumo de um repositório cujo nome só começa com o deste.
 
@@ -130,3 +154,15 @@ Quando não há resumo para o caminho da raiz, mas há outro resumo do mesmo nom
 #### Scenario: Vizinho de nome parecido
 - **WHEN** a pasta dos dados tem só o resumo de um repositório `proj-antigo`, e o comando roda na raiz `proj`
 - **THEN** a saída não traz o aviso
+
+### Requirement: Resumo da versão anterior
+O resumo da versão 1, gravado pela 2.8, SHALL ser lido: as conversas que ainda existem MUST ser recalculadas por inteiro, sem juntar as horas que a 2.8 guardou delas, e as já apagadas ficam como estavam. O resumo passa a ser gravado na versão 2.
+
+#### Scenario: Horas a mais da 2.8
+- **WHEN** o resumo da versão 1 guarda, para uma conversa que ainda existe, 28 minutos que a 2.9 não conta
+- **THEN** o dia dela não traz esses minutos, e o resumo gravado é da versão 2
+
+#### Scenario: Conversa já apagada no resumo antigo
+- **WHEN** o resumo da versão 1 guarda uma conversa cujo arquivo já foi apagado
+- **THEN** as horas dela continuam no dia
+

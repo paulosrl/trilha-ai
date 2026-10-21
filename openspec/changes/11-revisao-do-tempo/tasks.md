@@ -33,6 +33,19 @@ Achado na execução manual (4.2): no Xavier, os commits do usuário com o e-mai
 - [x] 5.2 O `tempo.py` lê o `trilha.email` (`git config --get-all`) e avisa os e-mails de fora (D3); os testes do grupo 5 e os de antes passam, e o ruff passa
 - [x] 5.3 A execução manual de novo no Xavier, com o `trilha.email` dado pelo usuário: os dias de 26/05, 02/06 e 15/10 voltam com os commits dele; o resultado vai a "Verificação"
 
+## 6. As respostas ao verify e ao code review
+
+Do `/opsx:verify` e do `/code-review 11`, de 2026-10-21; a decisão de cada ponto fica em "Respostas à revisão", no `design.md`.
+
+- [x] 6.1 O teste `test_tempo_conversa_retomada_noutro_arquivo` comprova o cenário "Conversa retomada noutro arquivo"; falha antes do código (`-k test_tempo_conversa_retomada_noutro_arquivo`)
+- [x] 6.2 O `test_tempo_subagente_noutra_pasta` ganha, no arquivo do subagente, uma linha que cita o repositório, e continua comprovando o cenário "Subagente noutra pasta" (`-k test_tempo_subagente_noutra_pasta`)
+- [x] 6.3 Os testes `test_tempo_horas_a_mais_da_2_8` e `test_tempo_conversa_apagada_no_resumo_antigo` comprovam os cenários "Horas a mais da 2.8" e "Conversa já apagada no resumo antigo"; o primeiro falha antes do código, e o segundo é guarda (`-k test_tempo_horas_a_mais_da_2_8` e `-k test_tempo_conversa_apagada_no_resumo_antigo`)
+- [x] 6.4 O teste `test_tempo_robo_fora_do_aviso` comprova o cenário "Robô fora do aviso", e o `test_tempo_aviso_com_tres_emails` confere o limite de três; falham antes do código (`-k test_tempo_robo_fora_do_aviso` e `-k test_tempo_aviso_com_tres_emails`)
+- [x] 6.5 O teste `test_tempo_nome_que_abre_comentario` comprova o cenário "Nome que abre um comentário"; falha antes do código (`-k test_tempo_nome_que_abre_comentario`)
+- [x] 6.6 O teste `test_tempo_email_com_espaco_e_vazio` confere a leitura do e-mail com espaço e do vazio, sem cenário próprio; falha antes do código (`-k test_tempo_email_com_espaco_e_vazio`)
+- [x] 6.7 O `tempo.py` com as correções, como as respostas do `design.md` dizem; o `_rodar` dos testes isola o git da máquina em todos; os testes e o ruff passam
+- [x] 6.8 A execução manual de novo no Xavier, com uma pasta de dados vazia e também sobre o resumo da 2.8: o mesmo total nas duas; o resultado vai a "Verificação"
+
 ## 4. Integração
 
 - [x] 4.1 O conjunto dos testes e o ruff passam, cada comando sozinho, com o código de saída conferido

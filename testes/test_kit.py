@@ -1,6 +1,7 @@
 """O kit é coerente: a versão, o esqueleto, o verificador e o gerador da página (Python 3 puro)."""
 
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -2898,7 +2899,7 @@ class HorasDeTrabalho(unittest.TestCase):
         return arquivo
 
     def _rodar(self, cwd: Path | None = None, **env_extra: str) -> subprocess.CompletedProcess:
-        env = {**os.environ, "TZ": "UTC", "HOME": str(self.casa),
+        env = {**os.environ, "TZ": "UTC", "HOME": str(self.casa), **self.SEM_GIT_DA_MAQUINA,
                "CLAUDE_CONFIG_DIR": str(self.config), "XDG_DATA_HOME": str(self.dados), **env_extra}
         return subprocess.run([sys.executable, "-I", str(TEMPO)], cwd=cwd or self.raiz, env=env,
                               capture_output=True, text=True, check=False)
@@ -3301,7 +3302,10 @@ class HorasDeTrabalho(unittest.TestCase):
         self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
                         self._ia("2026-10-01T09:10:00Z", self.raiz),
                         self._ia("2026-10-01T09:20:00Z", self.raiz)])
-        passos = []
+        # Uma linha que cita o repositório, sem ser evento: o arquivo do subagente passa no primeiro
+        # filtro, e os eventos de fora dele são lidos.
+        passos = [{"type": "system", "timestamp": "2026-10-01T09:01:00Z", "sessionId": "s1",
+                   "cwd": str(self.raiz)}]
         for minuto in ("05", "15"):
             passo = self._ia(f"2026-10-01T09:{minuto}:00Z", fora)
             passo["isSidechain"] = True
@@ -3358,7 +3362,7 @@ class HorasDeTrabalho(unittest.TestCase):
         spec = importlib.util.spec_from_file_location("tempo", TEMPO)
         tempo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(tempo)
-        instantes = tempo._ler_commits("abc123 t@t 2026-10-01T10:00:00Z\nlixo\n", None)
+        instantes = tempo._ler_commits("abc123\x00t@t\x002026-10-01T10:00:00Z\nlixo\n", None)
         self.assertEqual(instantes, [datetime.fromisoformat("2026-10-01T10:00:00+00:00").timestamp()])
 
     def test_tempo_dados_uma_vez(self) -> None:
@@ -3389,6 +3393,81 @@ class HorasDeTrabalho(unittest.TestCase):
         self._commit("2026-10-01T10:00:00Z")
         saida = self._ok()
         self.assertNotIn("proj-antigo", saida.stderr)
+
+    # As respostas ao verify e ao code review da change 11
+
+    def _saida_e_volta(self, sessao: str = "s1") -> list[dict]:
+        fora = Path(self._tmp.name) / "outra"
+        return [self._pedido("2026-10-01T09:00:00Z", self.raiz, sessao),
+                self._ia("2026-10-01T09:10:00Z", fora, sessao),
+                self._ia("2026-10-01T09:25:00Z", self.raiz, sessao)]
+
+    def test_tempo_conversa_retomada_noutro_arquivo(self) -> None:
+        self._conversa(self._saida_e_volta())
+        self._conversa(self._saida_e_volta(), pasta="-proj-copia")
+        self._ok()
+        self.assertNotIn("2026-10-01", self._dias())
+
+    def _resumo_da_2_8(self, conversas: dict) -> Path:
+        """Um resumo da versão 1, a da 2.8, no lugar do resumo deste repositório."""
+        nome = f"proj-{hashlib.sha1(str(self.raiz).encode('utf-8')).hexdigest()[:8]}.json"
+        resumo = self._pasta_tempo() / nome
+        resumo.parent.mkdir(parents=True)
+        resumo.write_text(json.dumps({"versao": 1, "raiz": str(self.raiz), "conversas": conversas}),
+                          encoding="utf-8")
+        return resumo
+
+    def test_tempo_horas_a_mais_da_2_8(self) -> None:
+        self._conversa(self._saida_e_volta())
+        resumo = self._resumo_da_2_8(
+            {"s1": [["2026-10-01T09:00:00+00:00", "2026-10-01T09:25:00+00:00", "ia"]]})
+        self._ok()
+        self.assertNotIn("2026-10-01", self._dias())
+        self.assertEqual(json.loads(resumo.read_text(encoding="utf-8"))["versao"], 2)
+
+    def test_tempo_conversa_apagada_no_resumo_antigo(self) -> None:
+        self._resumo_da_2_8({"s2": [["2026-10-02T10:00:00+00:00", "2026-10-02T10:20:00+00:00", "ia"]]})
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-02"]["total"], 20)
+
+    def _commit_de(self, email: str, quando: str) -> None:
+        env = {**os.environ, **GIT_TESTE, "GIT_AUTHOR_EMAIL": email, "GIT_AUTHOR_DATE": quando,
+               "GIT_COMMITTER_DATE": quando}
+        subprocess.run(["git", "-C", str(self.raiz), "commit", "-q", "--allow-empty", "-m", email],
+                       check=True, env=env)
+
+    def test_tempo_robo_fora_do_aviso(self) -> None:
+        subprocess.run(["git", "-C", str(self.raiz), "config", "user.email", "eu@exemplo.br"], check=True)
+        self._commit_de("49699333+dependabot[bot]@users.noreply.github.com", "2026-10-01T10:00:00Z")
+        saida = self._ok()
+        self.assertNotIn("trilha.email", saida.stderr)
+
+    def test_tempo_aviso_com_tres_emails(self) -> None:
+        subprocess.run(["git", "-C", str(self.raiz), "config", "user.email", "eu@exemplo.br"], check=True)
+        for numero, email in enumerate(("a@x", "b@x", "c@x", "d@x")):
+            self._commit_de(email, f"2026-10-0{numero + 1}T10:00:00Z")
+        aviso = next(l for l in self._ok().stderr.splitlines() if "trilha.email" in l)
+        self.assertEqual(sum(email in aviso for email in ("a@x", "b@x", "c@x", "d@x")), 3)
+        self.assertIn("mais 1", aviso)
+
+    def test_tempo_nome_que_abre_comentario(self) -> None:
+        estranho = self._repositorio(Path(self._tmp.name) / "x<!--<script")
+        self.assertEqual(self._rodar(cwd=estranho).returncode, 0)
+        bloco = re.search(r'<script id="dados" type="application/json">(.*?)</script>',
+                          self._pagina(), re.S)
+        self.assertIsNotNone(bloco)
+        self.assertNotIn("<!--", bloco.group(1))
+
+    def test_tempo_email_com_espaco_e_vazio(self) -> None:
+        spec = importlib.util.spec_from_file_location("tempo", TEMPO)
+        tempo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(tempo)
+        saida = ("h1\x00joao silva@x\x002026-10-01T10:00:00+00:00\n"
+                 "h2\x00\x002026-10-01T11:00:00+00:00\n")
+        fora: dict = {}
+        self.assertEqual(tempo._ler_commits(saida, {"eu@x"}, fora), [])
+        self.assertEqual(fora, {"joao silva@x": 1})
+        self.assertEqual(len(tempo._ler_commits(saida, None)), 2)
 
 
 if __name__ == "__main__":

@@ -16,7 +16,7 @@ A descrição curta foi aprovada pelo usuário, com o envio da branch liberado a
 
 - Os commits:
   - a linha do `git log` que não se entende é ignorada, e a assinatura não entra na saída;
-  - só contam os commits com o e-mail de autor do `user.email` do git; sem ele, todos;
+  - só contam os commits com o e-mail de autor do `user.email` e dos `trilha.email` do git; sem o `user.email`, todos; o comando avisa os e-mails que ficaram fora;
   - a sessão de commits tem pelo menos 1 minuto.
 - As conversas:
   - o intervalo entre um evento no repositório e outro fora dele não conta;
@@ -27,6 +27,7 @@ A descrição curta foi aprovada pelo usuário, com o envio da branch liberado a
   - sem a semana vazia a mais quando há mudança de horário;
   - sem a função que nada usa.
 - O aviso do resumo deixado para trás quando o repositório muda de pasta.
+- O resumo da 2.8 é lido, com as conversas que ainda existem recalculadas, e passa à versão 2.
 - A versão passa a 2.9 e o plugin `sdd` a 2.9.0, com a data do dia.
 
 **Fora desta change:**
@@ -44,10 +45,10 @@ A descrição curta foi aprovada pelo usuário, com o envio da branch liberado a
 
 ### Modified Capabilities
 
-- `horas-de-trabalho`: os commits do usuário e a linha que não se entende, a sessão mínima, a conversa que passa por outra pasta, o repositório aninhado, a página com os dados uma vez e o aviso do repositório que mudou de pasta.
+- `horas-de-trabalho`: os commits do usuário, os outros e-mails dele e a linha que não se entende, a sessão mínima, a conversa que passa por outra pasta, o repositório aninhado, a página com os dados uma vez, o aviso do repositório que mudou de pasta e o resumo da versão anterior.
 
 ## Impact
 
-- `modelo/trilha/tempo.py` e `modelo/trilha/pagina_tempo_modelo.html`.
+- `modelo/trilha/tempo.py`, que passa a ler também o `git config --get-all trilha.email`, e `modelo/trilha/pagina_tempo_modelo.html`.
 - `testes/test_kit.py`: um teste por cenário novo.
 - `modelo/trilha/CLAUDE-comum.md` (só a linha de versão) e `plugins/sdd/.claude-plugin/plugin.json`.

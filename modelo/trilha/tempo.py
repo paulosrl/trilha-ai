@@ -38,9 +38,10 @@ ANTES_DO_COMMIT = 30 * 60  # o trabalho que antecede o primeiro commit de uma se
 GUARDA_MINIMA = 365  # dias de guarda das conversas abaixo dos quais o comando avisa
 GUARDA_SUGERIDA = '"cleanupPeriodDays": 3650'
 MODELO = Path(__file__).resolve().parent / "pagina_tempo_modelo.html"
-VERSAO_DO_RESUMO = 1
+VERSAO_DO_RESUMO = 2  # a 1, da 2.8, ainda se lê (ver _ler_resumo)
 UTC = timezone(timedelta(0))  # o datetime.UTC e o "Z" no fromisoformat pedem o Python 3.11
 TIPOS = ("usuario", "ia")
+MAXIMO_NO_AVISO = 3  # os e-mails de fora que o aviso cita
 FORA = "fora"  # o evento da conversa com cwd fora da raiz, ou noutro repositório dentro dela
 
 
@@ -97,15 +98,10 @@ def _pedido(linha: dict) -> bool:
 
 
 def _diretorio_comum(raiz: Path) -> Path | None:
-    """A pasta .git que a raiz e os worktrees dela dividem."""
-    saida = subprocess.run(
-        ["git", "-C", str(raiz), "rev-parse", "--path-format=absolute", "--git-common-dir"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    caminho = saida.stdout.strip()
-    return Path(caminho).resolve() if saida.returncode == 0 and caminho else None
+    """A pasta .git que a raiz e os worktrees dela dividem; o caminho relativo vale a partir da
+    raiz (o --path-format=absolute pede o git 2.31)."""
+    caminho = (_git_texto(raiz, "rev-parse", "--git-common-dir") or "").strip()
+    return (raiz / caminho).resolve() if caminho else None
 
 
 def _de_outro_repositorio(git: Path, comum: Path | None) -> bool:
@@ -143,12 +139,16 @@ def _eh_da_raiz(cwd: str, raiz: Path, comum: Path | None, vistos: dict[str, bool
     return vistos[cwd]
 
 
+Eventos = dict[tuple[float, str], set[int]]
+
+
 def _eventos(
     configuracao: Path, raiz: Path, ignorados: dict[str, list]
-) -> tuple[dict[str, set[tuple[float, str, int]]], dict[str, list]]:
-    """Os eventos de cada conversa que passou pela raiz, (instante, tipo, arquivo), com o tipo
-    "pedido", "ia" ou "fora", e os arquivos lidos sem nada dela, com a data e o tamanho: enquanto
-    eles não mudam, não se leem de novo."""
+) -> tuple[dict[str, Eventos], dict[str, list]]:
+    """Os eventos de cada conversa que passou pela raiz, (instante, tipo), com o tipo "pedido",
+    "ia" ou "fora", e os arquivos de onde cada um veio: a linha repetida em dois arquivos (a
+    conversa retomada) é um evento só, dos dois. E os arquivos lidos sem nada da raiz, com a data
+    e o tamanho: enquanto eles não mudam, não se leem de novo."""
     projetos = configuracao / "projects"
     if not projetos.is_dir():
         return {}, {}
@@ -157,7 +157,7 @@ def _eventos(
     # e com o escape \u, por garantia.
     marcas = {json.dumps(texto_da_raiz, ensure_ascii=False)[1:-1], json.dumps(texto_da_raiz)[1:-1]}
     comum, vistos = _diretorio_comum(raiz), {}
-    conversas: dict[str, set[tuple[float, str, int]]] = {}
+    conversas: dict[str, Eventos] = {}
     sem_a_raiz: dict[str, list] = {}
     for numero, arquivo in enumerate(projetos.rglob("*.jsonl")):
         try:
@@ -183,12 +183,12 @@ def _eventos(
                     if evento is None:
                         continue
                     sessao, instante, tipo = evento
-                    conversas.setdefault(sessao, set()).add((instante, tipo, numero))
+                    conversas.setdefault(sessao, {}).setdefault((instante, tipo), set()).add(numero)
                     achou = achou or tipo != FORA
         if not achou:
             sem_a_raiz[chave] = assinatura
     # A conversa que só passou por fora da raiz não é dela.
-    conversas = {s: e for s, e in conversas.items() if any(t != FORA for _, t, _ in e)}
+    conversas = {s: e for s, e in conversas.items() if any(t != FORA for _, t in e)}
     return conversas, sem_a_raiz
 
 
@@ -214,23 +214,24 @@ def _evento(
     return sessao, instante, "pedido" if _pedido(linha) else "ia"
 
 
-def _intervalos(eventos: set[tuple[float, str, int]]) -> list[list]:
+def _intervalos(eventos: Eventos) -> list[list]:
     """Os intervalos ativos de uma conversa: [início, fim, "usuario" ou "ia"], em ISO UTC. Conta
     o par seguido de eventos da raiz, de qualquer arquivo dela, com até 30 minutos, salvo quando
-    os dois vêm do mesmo arquivo e ele saiu da raiz entre eles: um subagente noutra pasta não
+    os dois vêm de um mesmo arquivo e ele saiu da raiz entre eles: um subagente noutra pasta não
     corta a conversa principal. Os seguidos do mesmo tipo se juntam num só."""
     saidas: dict[int, list[float]] = {}
-    for instante, tipo, arquivo in eventos:
+    for (instante, tipo), arquivos in eventos.items():
         if tipo == FORA:
-            saidas.setdefault(arquivo, []).append(instante)
+            for arquivo in arquivos:
+                saidas.setdefault(arquivo, []).append(instante)
     for lista in saidas.values():
         lista.sort()
-    da_raiz = sorted(e for e in eventos if e[1] != FORA)
+    da_raiz = sorted((i, t, frozenset(a)) for (i, t), a in eventos.items() if t != FORA)
     juntos: list[list] = []
-    for (a, _, arquivo_a), (b, tipo_b, arquivo_b) in pairwise(da_raiz):
+    for (a, _, arquivos_a), (b, tipo_b, arquivos_b) in pairwise(da_raiz):
         if not 0 < b - a <= PAUSA:
             continue
-        if arquivo_a == arquivo_b and _saiu(saidas.get(arquivo_a, []), a, b):
+        if any(_saiu(saidas.get(arquivo, []), a, b) for arquivo in arquivos_a & arquivos_b):
             continue
         tipo = "usuario" if tipo_b == "pedido" else "ia"
         if juntos and juntos[-1][1] == a and juntos[-1][2] == tipo:
@@ -271,17 +272,19 @@ def _intervalo_valido(item: object) -> bool:
         return False
 
 
-def _ler_resumo(arquivo: Path) -> tuple[dict[str, list], dict[str, list]]:
-    """As conversas e os arquivos lidos sem nada do repositório; ({}, {}) quando não há resumo. O
-    resumo que existe e não se lê é recusado: sobrescrevê-lo perderia as horas já apagadas."""
+def _ler_resumo(arquivo: Path) -> tuple[dict[str, list], dict[str, list], int]:
+    """As conversas, os arquivos lidos sem nada do repositório e a versão do resumo; ({}, {}, a
+    versão atual) quando não há resumo. A versão 1, da 2.8, ainda se lê. O resumo que existe e não
+    se lê é recusado: sobrescrevê-lo perderia as horas já apagadas."""
     if not arquivo.exists():
-        return {}, {}
+        return {}, {}, VERSAO_DO_RESUMO
     try:
         resumo = json.loads(arquivo.read_text(encoding="utf-8"))
     except (OSError, ValueError) as erro:
         raise ResumoIlegivel(f"não é JSON: {erro}") from erro
-    if not isinstance(resumo, dict) or resumo.get("versao") != VERSAO_DO_RESUMO:
-        raise ResumoIlegivel(f"não é um resumo da versão {VERSAO_DO_RESUMO}")
+    versao = resumo.get("versao") if isinstance(resumo, dict) else None
+    if versao not in (1, VERSAO_DO_RESUMO):
+        raise ResumoIlegivel(f"não é um resumo da versão 1 nem da {VERSAO_DO_RESUMO}")
     conversas, ignorados = resumo.get("conversas"), resumo.get("ignorados", {})
     if not isinstance(conversas, dict) or not all(
         isinstance(lista, list) and all(map(_intervalo_valido, lista))
@@ -293,7 +296,7 @@ def _ler_resumo(arquivo: Path) -> tuple[dict[str, list], dict[str, list]]:
         for par in ignorados.values()
     ):
         raise ResumoIlegivel("a lista dos arquivos já lidos está fora do formato")
-    return conversas, ignorados
+    return conversas, ignorados, versao
 
 
 def _gravar(arquivo: Path, texto: str) -> None:
@@ -336,7 +339,7 @@ def _commits(raiz: Path) -> tuple[list[float], dict[str, int]]:
         "--remotes",
         "--tags",
         "--no-show-signature",
-        "--format=%H %ae %aI",
+        "--format=%H%x00%ae%x00%aI",
     )
     email = (_git_texto(raiz, "config", "user.email") or "").strip()
     outros = (_git_texto(raiz, "config", "--get-all", "trilha.email") or "").split()
@@ -348,19 +351,21 @@ def _commits(raiz: Path) -> tuple[list[float], dict[str, int]]:
 def _ler_commits(
     saida: str, emails: set[str] | None, fora: dict[str, int] | None = None
 ) -> list[float]:
-    """Os instantes da saída do git log ("hash e-mail data"), só dos e-mails dados (todos, sem
-    eles); a linha que não se entende é ignorada. O e-mail é o do autor sem o .mailmap (%ae), como
-    o user.email. Os commits de outros e-mails são contados em fora, uma vez cada."""
+    """Os instantes da saída do git log (hash, e-mail e data, separados pelo caractere nulo, que
+    não aparece num e-mail), só dos e-mails dados (todos, sem eles); a linha que não se entende é
+    ignorada. O e-mail é o do autor sem o .mailmap (%ae), como o user.email. Os commits de outros
+    e-mails, não vazios, são contados em fora, uma vez cada."""
     do_usuario = {e.lower() for e in emails} if emails else None
     commits: dict[str, float] = {}
     de_fora: dict[str, str] = {}
     for linha in saida.splitlines():
-        partes = linha.split(" ")
+        partes = linha.split("\x00")
         if len(partes) != 3:
             continue
         hash_, autor, quando = partes
         if do_usuario is not None and autor.lower() not in do_usuario:
-            de_fora[hash_] = autor
+            if autor:
+                de_fora[hash_] = autor
             continue
         try:
             commits[hash_] = _instante(quando)
@@ -374,9 +379,14 @@ def _ler_commits(
 
 def _aviso_dos_emails(fora: dict[str, int]) -> str | None:
     """Os e-mails cujos commits ficaram fora da estimativa, com o comando que inclui um deles."""
-    if not fora:
+    pessoas = sorted(
+        ((autor, n) for autor, n in fora.items() if "[bot]" not in autor), key=lambda x: -x[1]
+    )
+    if not pessoas:
         return None
-    lista = ", ".join(f"{autor} ({n})" for autor, n in sorted(fora.items(), key=lambda x: -x[1]))
+    lista = ", ".join(f"{autor} ({n})" for autor, n in pessoas[:MAXIMO_NO_AVISO])
+    if len(pessoas) > MAXIMO_NO_AVISO:
+        lista += f" e mais {len(pessoas) - MAXIMO_NO_AVISO}"
     return (
         f"aviso: os commits destes e-mails ficaram fora da estimativa: {lista}; se um deles é "
         "seu, rode git config --add trilha.email <e-mail> no repositório"
@@ -519,7 +529,8 @@ def _aviso_da_guarda(configuracao: Path) -> str | None:
 
 
 def _json_seguro(valor: object) -> str:
-    return json.dumps(valor, ensure_ascii=False).replace("</", "<\\/")
+    # Todo < vira \u003c, que o JSON lê igual: nem </script> nem <!-- fecham ou abrem nada.
+    return json.dumps(valor, ensure_ascii=False).replace("<", "\\u003c")
 
 
 def _pagina(nome: str, dias: list[dict]) -> str:
@@ -578,7 +589,7 @@ def main() -> int:
 
     outra_pasta = _aviso_de_outra_pasta(pasta, raiz, resumo)
     try:
-        conversas, ignorados = _ler_resumo(resumo)
+        conversas, ignorados, versao = _ler_resumo(resumo)
     except ResumoIlegivel as erro:
         print(
             f"tempo: o resumo {resumo} não se lê ({erro}). Ele guarda as horas das conversas já "
@@ -588,7 +599,10 @@ def main() -> int:
         return 1
     eventos, ignorados = _eventos(configuracao, raiz, ignorados)
     for sessao, da_conversa in eventos.items():
-        conversas[sessao] = _juntar(conversas.get(sessao, []), _intervalos(da_conversa))
+        # O resumo da 2.8 guarda as horas que ela contava a mais (o tempo fora da raiz, o de um
+        # repositório aninhado): a conversa que ainda existe é recalculada, sem juntar com elas.
+        guardadas = conversas.get(sessao, []) if versao == VERSAO_DO_RESUMO else []
+        conversas[sessao] = _juntar(guardadas, _intervalos(da_conversa))
     commits, de_outros_emails = _commits(raiz)
     dias = _apurar(conversas, commits)
 
