@@ -41,7 +41,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 5. O texto do kit
 
-- [ ] 5.1 O passo 4 do `README.md` do kit pede o perfil do OpenSpec com skills e comandos, além do `verify` (design, decisão 6); conferido pela leitura do passo
+- [x] 5.1 O passo 4 do `README.md` do kit pede o perfil do OpenSpec com skills e comandos, além do `verify` (design, decisão 6); conferido pela leitura do passo
 
 ## 6. O fechamento
 
