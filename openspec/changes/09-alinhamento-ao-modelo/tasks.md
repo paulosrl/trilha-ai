@@ -26,18 +26,18 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 4. O OpenSpec na conferência do método
 
-- [ ] 4.1 O teste `test_openspec_avisa_as_skills_que_o_update_apagaria` comprova o cenário "Perfil só com comandos e skills no projeto": o `update` falso apaga a pasta `.claude/skills/openspec-propose` da pasta que recebe; o aviso cita o arquivo e `openspec config list`, e a saída é 0. Falha antes do código (`-k test_openspec_avisa_as_skills_que_o_update_apagaria`)
-- [ ] 4.2 O teste `test_openspec_em_dia_nao_avisa` comprova o cenário "Perfil igual aos arquivos do projeto": o `update` falso não muda nada; nenhum aviso sobre os arquivos gerados (`-k test_openspec_em_dia_nao_avisa`)
-- [ ] 4.3 O teste `test_openspec_ensaio_nao_toca_o_projeto` comprova o cenário "Projeto intacto depois do aviso": com o `update` falso que apaga, os arquivos do projeto ficam iguais, byte a byte (`-k test_openspec_ensaio_nao_toca_o_projeto`)
-- [ ] 4.4 O teste `test_openspec_ausente_nao_avisa` comprova o cenário "Máquina sem o OpenSpec": só a pasta do falso no PATH, sem `openspec` (`-k test_openspec_ausente_nao_avisa`)
-- [ ] 4.5 O teste `test_openspec_sem_configuracao_global_nao_ensaia` comprova o cenário "Máquina sem a configuração global": o `config path` falso aponta um arquivo que não existe, e o falso grava num registro cada chamada; nenhum `update` é chamado (`-k test_openspec_sem_configuracao_global_nao_ensaia`)
-- [ ] 4.6 O teste `test_openspec_ensaio_com_erro_nao_avisa` comprova o cenário "Ensaio com erro ou sem resposta no prazo": o `update` falso sai com 1; e, com o prazo trocado para 1 segundo no teste, um `update` que dorme 5 (`-k test_openspec_ensaio_com_erro_nao_avisa`)
-- [ ] 4.7 O teste `test_openspec_sem_arquivos_gerados_nao_ensaia` comprova o cenário "Projeto sem arquivos gerados": nenhum `update` é chamado (`-k test_openspec_sem_arquivos_gerados_nao_ensaia`)
-- [ ] 4.8 O teste `test_openspec_versao_diferente_da_do_ci_avisa` comprova o cenário "Versões diferentes": o falso responde `1.14.3` e o CI do projeto instala `@fission-ai/openspec@1.14.1`; o aviso cita as duas e o `npm install -g @fission-ai/openspec@1.14.1`, e a saída é 0. Falha antes do código (`-k test_openspec_versao_diferente_da_do_ci_avisa`)
-- [ ] 4.9 O teste `test_openspec_versao_igual_a_do_ci_nao_avisa` comprova o cenário "Versões iguais" (`-k test_openspec_versao_igual_a_do_ci_nao_avisa`)
-- [ ] 4.10 O teste `test_openspec_sem_versao_no_ci_nao_avisa` comprova o cenário "CI sem a versão fixada": sem o arquivo e com o arquivo sem o pin (`-k test_openspec_sem_versao_no_ci_nao_avisa`)
-- [ ] 4.11 O teste `test_trava_do_commit_nao_consulta_o_openspec` comprova o cenário "Commit sem consultar o OpenSpec": a trava do commit roda com o falso que grava cada chamada; o registro fica vazio (`-k test_trava_do_commit_nao_consulta_o_openspec`)
-- [ ] 4.12 O `modelo/trilha/confere_metodo.py` faz o ensaio e a comparação da versão como o design manda (decisões 3 a 5), atrás do `--sem-plugin`, com o texto de ajuda atualizado; os testes do grupo 4 passam
+- [x] 4.1 O teste `test_openspec_avisa_as_skills_que_o_update_apagaria` comprova o cenário "Perfil só com comandos e skills no projeto": o `update` falso apaga a pasta `.claude/skills/openspec-propose` da pasta que recebe; o aviso cita o arquivo e `openspec config list`, e a saída é 0. Falha antes do código (`-k test_openspec_avisa_as_skills_que_o_update_apagaria`)
+- [x] 4.2 O teste `test_openspec_em_dia_nao_avisa` comprova o cenário "Perfil igual aos arquivos do projeto": o `update` falso não muda nada; nenhum aviso sobre os arquivos gerados (`-k test_openspec_em_dia_nao_avisa`)
+- [x] 4.3 O teste `test_openspec_ensaio_nao_toca_o_projeto` comprova o cenário "Projeto intacto depois do aviso": com o `update` falso que apaga, os arquivos do projeto ficam iguais, byte a byte (`-k test_openspec_ensaio_nao_toca_o_projeto`)
+- [x] 4.4 O teste `test_openspec_ausente_nao_avisa` comprova o cenário "Máquina sem o OpenSpec": só a pasta do falso no PATH, sem `openspec` (`-k test_openspec_ausente_nao_avisa`)
+- [x] 4.5 O teste `test_openspec_sem_configuracao_global_nao_ensaia` comprova o cenário "Máquina sem a configuração global": o `config path` falso aponta um arquivo que não existe, e o falso grava num registro cada chamada; nenhum `update` é chamado (`-k test_openspec_sem_configuracao_global_nao_ensaia`)
+- [x] 4.6 O teste `test_openspec_ensaio_com_erro_nao_avisa` comprova o cenário "Ensaio com erro ou sem resposta no prazo": o `update` falso sai com 1; e, com o prazo trocado para 1 segundo no teste, um `update` que dorme 5 (`-k test_openspec_ensaio_com_erro_nao_avisa`)
+- [x] 4.7 O teste `test_openspec_sem_arquivos_gerados_nao_ensaia` comprova o cenário "Projeto sem arquivos gerados": nenhum `update` é chamado (`-k test_openspec_sem_arquivos_gerados_nao_ensaia`)
+- [x] 4.8 O teste `test_openspec_versao_diferente_da_do_ci_avisa` comprova o cenário "Versões diferentes": o falso responde `1.14.3` e o CI do projeto instala `@fission-ai/openspec@1.14.1`; o aviso cita as duas e o `npm install -g @fission-ai/openspec@1.14.1`, e a saída é 0. Falha antes do código (`-k test_openspec_versao_diferente_da_do_ci_avisa`)
+- [x] 4.9 O teste `test_openspec_versao_igual_a_do_ci_nao_avisa` comprova o cenário "Versões iguais" (`-k test_openspec_versao_igual_a_do_ci_nao_avisa`)
+- [x] 4.10 O teste `test_openspec_sem_versao_no_ci_nao_avisa` comprova o cenário "CI sem a versão fixada": sem o arquivo e com o arquivo sem o pin (`-k test_openspec_sem_versao_no_ci_nao_avisa`)
+- [x] 4.11 O teste `test_trava_do_commit_nao_consulta_o_openspec` comprova o cenário "Commit sem consultar o OpenSpec": a trava do commit roda com o falso que grava cada chamada; o registro fica vazio (`-k test_trava_do_commit_nao_consulta_o_openspec`)
+- [x] 4.12 O `modelo/trilha/confere_metodo.py` faz o ensaio e a comparação da versão como o design manda (decisões 3 a 5), atrás do `--sem-plugin`, com o texto de ajuda atualizado; os testes do grupo 4 passam
 
 ## 5. O texto do kit
 

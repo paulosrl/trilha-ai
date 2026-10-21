@@ -1074,6 +1074,189 @@ class Kit(unittest.TestCase):
         self.assertNotIn("plugin sdd", erro.getvalue())
         self.assertLess(duracao, 3)
 
+    # O OpenSpec da máquina na conferência do método (change 09).
+
+    GERADOS = (".claude/skills/openspec-propose/SKILL.md", ".claude/commands/opsx/propose.md")
+
+    def _projeto_com_gerados(self, tmp: str, gerados: tuple[str, ...] = GERADOS) -> Path:
+        """Um projeto copiado do kit, com os arquivos gerados do OpenSpec no índice do git."""
+        destino = Path(tmp) / "projeto"
+        _copia_do_kit(destino)
+        for nome in gerados:
+            (destino / nome).parent.mkdir(parents=True, exist_ok=True)
+            (destino / nome).write_text(f"gerado: {nome}\n", encoding="utf-8")
+        subprocess.run(["git", "init", "-q"], cwd=destino, check=True)
+        subprocess.run(["git", "add", "-A"], cwd=destino, check=True)
+        return destino
+
+    def _openspec_falso(self, falsos: Path, versao: str = "1.14.1", config: bool = True,
+                        update: str = "exit 0") -> Path:
+        """Um `openspec` de mentira em falsos/, que grava cada chamada num registro e responde ao
+        `config path` (um arquivo que existe, ou não), ao `--version` e ao `update <pasta>` (o corpo
+        dado, com a pasta em $2). Devolve o registro."""
+        registro = falsos / "registro"
+        registro.touch()
+        configuracao = falsos / ("config.json" if config else "nao-existe.json")
+        if config:
+            configuracao.write_text("{}", encoding="utf-8")
+        falso = falsos / "openspec"
+        falso.write_text(
+            "#!/bin/sh\n"
+            f'echo "$*" >> "{registro}"\n'
+            f'if [ "$1 $2" = "config path" ]; then echo "{configuracao}"; exit 0; fi\n'
+            f'if [ "$1" = "--version" ]; then echo "{versao}"; exit 0; fi\n'
+            f'if [ "$1" = "update" ]; then {update}; fi\n',
+            encoding="utf-8",
+        )
+        falso.chmod(0o755)
+        _claude_falso(falsos, "exit 1")
+        for ferramenta in ("git", "rm", "sleep"):
+            (falsos / ferramenta).symlink_to(shutil.which(ferramenta))
+        return registro
+
+    def _metodo_com_openspec(self, destino: Path, *args: str, **falso: object
+                             ) -> tuple[subprocess.CompletedProcess[str], str]:
+        """A conferência do método com o `openspec` falso; devolve a saída e o registro."""
+        with tempfile.TemporaryDirectory() as falsos:
+            registro = self._openspec_falso(Path(falsos), **falso)
+            saida = subprocess.run(
+                [sys.executable, "-I", str(destino / "trilha/confere_metodo.py"), *args],
+                capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos},
+            )
+            return saida, registro.read_text(encoding="utf-8")
+
+    APAGA_A_SKILL = 'rm -r "$2/.claude/skills/openspec-propose"'
+
+    def test_openspec_avisa_as_skills_que_o_update_apagaria(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, _ = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=self.APAGA_A_SKILL)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
+        self.assertIn("apagaria: .claude/skills/openspec-propose/SKILL.md", aviso, saida.stderr)
+        self.assertIn("openspec config list", aviso)
+
+    def test_openspec_em_dia_nao_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp))
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("update", registro)  # o ensaio rodou
+        self.assertNotIn("openspec update mudaria", saida.stderr)
+
+    def test_openspec_ensaio_nao_toca_o_projeto(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = self._projeto_com_gerados(tmp)
+            antes = {str(a): a.read_bytes() for a in destino.rglob("*") if a.is_file() and ".git" not in a.parts}
+            saida, _ = self._metodo_com_openspec(destino, update=self.APAGA_A_SKILL)
+            depois = {str(a): a.read_bytes() for a in destino.rglob("*") if a.is_file() and ".git" not in a.parts}
+        self.assertIn("openspec update mudaria", saida.stderr)
+        self.assertEqual(antes, depois)
+
+    def test_openspec_ausente_nao_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as falsos:
+            destino = self._projeto_com_gerados(tmp)
+            _claude_falso(Path(falsos), "exit 1")
+            (Path(falsos) / "git").symlink_to(shutil.which("git"))
+            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_metodo.py")],
+                                   capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos})
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("openspec", saida.stderr.lower())
+
+    def test_openspec_sem_configuracao_global_nao_ensaia(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp), config=False,
+                                                        update=self.APAGA_A_SKILL)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("config path", registro)
+        self.assertNotIn("update", registro)
+        self.assertNotIn("openspec update mudaria", saida.stderr)
+
+    def test_openspec_ensaio_com_erro_nao_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp),
+                                                        update=self.APAGA_A_SKILL + "; exit 1")
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("update", registro)
+        self.assertNotIn("openspec update mudaria", saida.stderr)
+        # Sem resposta no prazo: o prazo de verdade é de segundos; o teste não espera por ele.
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as falsos:
+            destino = self._projeto_com_gerados(tmp)
+            self._openspec_falso(Path(falsos), update="exec sleep 5")
+            spec = importlib.util.spec_from_file_location("metodo_do_projeto", destino / "trilha/confere_metodo.py")
+            metodo = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(metodo)
+            metodo.PRAZO_DO_OPENSPEC = 0.5
+            antes = os.environ["PATH"]
+            os.environ["PATH"] = falsos
+            try:
+                inicio = time.monotonic()
+                avisos = metodo.avisar_openspec()
+                duracao = time.monotonic() - inicio
+            finally:
+                os.environ["PATH"] = antes
+        self.assertFalse([a for a in avisos if "openspec update mudaria" in a], avisos)
+        self.assertLess(duracao, 4)
+
+    def test_openspec_sem_arquivos_gerados_nao_ensaia(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp, gerados=()),
+                                                        update=self.APAGA_A_SKILL)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("update", registro)
+
+    def test_openspec_versao_diferente_da_do_ci_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = self._projeto_com_gerados(tmp)
+            ci = destino / ".github/workflows/verificacao.yml"
+            self.assertIn("@fission-ai/openspec@1.14.1", ci.read_text(encoding="utf-8"))
+            saida, _ = self._metodo_com_openspec(destino, versao="1.14.3")
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next((l for l in saida.stderr.splitlines() if "1.14.3" in l), "")
+        self.assertIn("1.14.1", aviso, saida.stderr)
+        self.assertIn("npm install -g @fission-ai/openspec@1.14.1", aviso)
+
+    def test_openspec_versao_igual_a_do_ci_nao_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp), versao="1.14.1")
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("--version", registro)
+        self.assertNotIn("npm install -g", saida.stderr)
+
+    def test_openspec_sem_versao_no_ci_nao_avisa(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            destino = self._projeto_com_gerados(tmp)
+            ci = destino / ".github/workflows/verificacao.yml"
+            ci.write_text(ci.read_text(encoding="utf-8").replace("@fission-ai/openspec@1.14.1", "@fission-ai/openspec"),
+                          encoding="utf-8")
+            sem_pin, _ = self._metodo_com_openspec(destino, versao="1.14.3")
+            ci.unlink()
+            sem_ci, _ = self._metodo_com_openspec(destino, versao="1.14.3")
+        for saida in (sem_pin, sem_ci):
+            self.assertEqual(saida.returncode, 0, saida.stderr)
+            self.assertNotIn("npm install -g", saida.stderr)
+
+    def test_trava_do_commit_nao_consulta_o_openspec(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as falsos:
+            pasta = self._projeto_novo(tmp)
+            for nome in self.GERADOS:
+                (pasta / nome).parent.mkdir(parents=True, exist_ok=True)
+                (pasta / nome).write_text("gerado\n", encoding="utf-8")
+            subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
+            registro = self._openspec_falso(Path(falsos), versao="1.14.3", update=self.APAGA_A_SKILL)
+            for ferramenta in ("python3", "bash", "cat", "dirname", "readlink"):
+                caminho = shutil.which(ferramenta)
+                if caminho and not (Path(falsos) / ferramenta).exists():
+                    (Path(falsos) / ferramenta).symlink_to(caminho)
+            env = {**os.environ, "PATH": falsos}
+            trava = subprocess.run(["bash", str(pasta / "trilha/hooks/pre-commit")], cwd=pasta, env=env,
+                                   capture_output=True, text=True, check=False)
+            sem_consulta = registro.read_text(encoding="utf-8")
+            subprocess.run([sys.executable, "-I", str(pasta / "trilha/confere_metodo.py")], cwd=pasta, env=env,
+                           capture_output=True, check=False)
+            com_consulta = registro.read_text(encoding="utf-8")
+        self.assertEqual(trava.returncode, 0, trava.stderr)
+        self.assertEqual(sem_consulta, "")
+        self.assertIn("--version", com_consulta)  # sem o --sem-plugin, o falso é consultado
+
     def test_metodo_aprova_um_repositorio_feito_do_kit(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             destino = Path(tmp)
