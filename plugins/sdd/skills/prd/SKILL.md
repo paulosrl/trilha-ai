@@ -295,3 +295,5 @@ Após salvar:
 3. Declare: "Gate 1 cumprido. Próxima etapa: decisão técnica — acione a skill `tdd` com este PRD."
 
 **Não** exiba o PRD completo no chat — o arquivo é a entrega.
+
+Correção de texto no PRD que não muda requisito (redação, erro, referência) não sobe a versão dele nem a linha "de origem" de quem o cita: fica no registro de processo, se houver, ou na mensagem do commit. Só a mudança de sentido é versão nova, aprovada pelo usuário; ela atualiza a linha "de origem" de quem o cita, sem versão nova dele.

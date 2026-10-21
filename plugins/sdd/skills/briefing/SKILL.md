@@ -21,7 +21,7 @@ Implementação: /opsx:apply → verificação → archive → próxima change
 
 **Fronteira inviolável:** esta skill nunca escreve `proposal.md`, `spec.md`, `design.md` ou `tasks.md`. Quem os gera é o OpenSpec nativo, dentro do repositório, com acesso ao código — única posição de onde changes sobre código existente (brownfield) podem ser especificadas corretamente. Se o usuário pedir que esta skill gere os artefatos diretamente, explique a fronteira em duas frases e gere o briefing. Ela também não acrescenta passo nem ordem ao fluxo do OpenSpec: age antes do propose, na revisão que ele pede e depois do archive.
 
-**Pré-condições:** PRD aprovado (gate 1) e TDD aprovado (gate 2), com o TDD declarando o PRD de origem. Faltando um, direcione à skill correspondente, salvo o briefing curto que o `CLAUDE-comum.md` admite num projeto que nasceu sem PRD ou TDD.
+**Pré-condições:** PRD aprovado (gate 1) e TDD aprovado (gate 2), com o TDD declarando o PRD de origem. Faltando um, direcione à skill correspondente, salvo o briefing curto num projeto que nasceu sem PRD ou TDD: até ele escrever o que falta, uma correção de comportamento que um spec já descreve nasce de um briefing curto, escrito a partir desse spec (o requisito e o cenário corrigidos, o defeito, o esperado, o que já existe), sem requisito novo nem decisão técnica, aprovado pelo usuário; o resto do ciclo é o mesmo. Nesse caso, o passo do ciclo de cada change fica no `ANDAMENTO.md`, e a change arquivada entra na tabela "Ciclo" quando a decomposição nascer.
 
 ## Princípios
 
@@ -82,6 +82,10 @@ Apresente a tabela (change, ESC/RF cobertos, depende de, razão) e **aguarde apr
 Os títulos `## 1.`, `## 2.` e `## Ciclo`, e o número da change na primeira coluna das duas tabelas, são o formato que a conferência do método lê na trava do commit: as changes da seção 1 e as do "Ciclo" são as mesmas. Outras seções (a recepção, as pendências) podem vir entre a 2 e o "Ciclo". O "Ciclo" registra os marcos de cada change e é lido pela página do projeto (`sdd/documentacao.html`): uma linha por change, na ordem; `—` enquanto o passo não aconteceu. Change retirada antes do archive mantém as duas linhas: na seção 1, a razão termina com `retirada em AAAA-MM-DD` e o motivo; no "Ciclo", a coluna archive começa com `retirada em AAAA-MM-DD`. Num projeto que já tem changes arquivadas, as tabelas nascem com elas.
 
 ### 3. Briefing — a entrada do /opsx:propose
+
+Antes de propor, rode `openspec list`: evita change duplicada ou em colisão com outra change ativa. Conte as tarefas de uma change por `openspec instructions apply --change <nome> --json` (`progress.total`) antes de escrever o número.
+
+Nome das pastas: a change ativa nasce como `NN-nome`, e o archive do OpenSpec acrescenta a data (`AAAA-MM-DD-NN-nome`); o número tem dois dígitos até 99 e três a partir de 100, sem renomear os anteriores. Os specs seguem o nome que o OpenSpec dá: o comportamento que o spec descreve, em kebab-case, sem data nem número; o delta de um spec existente usa exatamente o nome da pasta principal. Confira com `ls` antes de criar e depois de arquivar.
 
 Para a change da vez, emita o briefing como bloco de texto pronto para colar no comando nativo, dentro do repositório:
 
@@ -154,3 +158,5 @@ Depois do merge da change, que vem após o archive e os passos que o `openspec/c
 Arquivos desta skill: apenas `sdd/decomposicao-<nome>.md` (tabela aprovada, o que dispensa change e a tabela "Ciclo") e, por ciclo, `sdd/briefing-openspec/briefing-change-NN-<nome>.md`. Artefatos OpenSpec vivem no repositório, gerados pela ferramenta nativa — nunca por esta skill.
 
 Resumo por etapa no chat: recepção (veredicto), decomposição (nº de changes), briefing (change e recorte), auditoria (laudo).
+
+Correção de texto na decomposição que não muda escopo nem ordem (redação, erro, referência) não sobe a versão dela: fica no registro de processo, se houver, ou na mensagem do commit. Só a mudança de sentido é versão nova, aprovada pelo usuário.

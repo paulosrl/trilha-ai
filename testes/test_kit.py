@@ -274,7 +274,9 @@ class Kit(unittest.TestCase):
     def test_comum_sem_repetir_o_openspec_nem_a_si_mesmo(self) -> None:
         """v1.32: a instrução do propose já manda ler o projeto e os specs; o pkill -f num lugar só."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertIn("Antes de propor, rode `openspec list`", comum)
+        briefing = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Antes de propor, rode `openspec list`", briefing)  # v2.12: só na skill
+        self.assertNotIn("rode `openspec list`", comum)
         self.assertEqual(comum.count("`pkill -f`"), 1)
         # A trava confere o --merge e a verificação verde, não o passo em que se está.
         self.assertIn("o merge sem `--merge` ou sem a verificação verde", comum)
@@ -283,7 +285,9 @@ class Kit(unittest.TestCase):
     def test_comum_fecha_a_porta_do_briefing_curto(self) -> None:
         """v1.8: sem decomposição, o passo do ciclo fica no ANDAMENTO.md; com PRD e TDD, a decomposição vem antes."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertIn("o passo do ciclo de cada change fica no `ANDAMENTO.md`", comum)
+        briefing = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("o passo do ciclo de cada change fica no `ANDAMENTO.md`", briefing)
+        self.assertIn("nasce do briefing curto da skill `sdd:briefing`", comum)
         self.assertIn("Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.", comum)
 
     def test_comum_preve_o_registro_de_processo_opcional(self) -> None:
@@ -321,8 +325,8 @@ class Kit(unittest.TestCase):
 
     def test_specs_com_o_nome_do_openspec(self) -> None:
         """v1.11: só as changes levam número e data; os specs seguem o nome que o OpenSpec dá."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertIn("Os specs seguem o nome que o OpenSpec dá", comum)
+        briefing = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("Os specs seguem o nome que o OpenSpec dá", briefing)
 
     def test_auditoria_nao_e_unidade_de_trabalho(self) -> None:
         """v1.12: até a escolha do usuário, a auditoria não muda o ANDAMENTO.md nem o registro de processo."""
@@ -331,9 +335,11 @@ class Kit(unittest.TestCase):
 
     def test_correcao_de_texto_nao_sobe_versao(self) -> None:
         """v1.14: só a mudança de sentido sobe a versão do PRD, do TDD ou da decomposição."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertIn("não sobe a versão dele nem a linha \"de origem\" de quem o cita", comum)
-        self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário", comum)
+        for skill in ("prd", "tdd", "briefing"):
+            texto = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário", texto, skill)
+            if skill != "briefing":
+                self.assertIn("não sobe a versão dele nem a linha \"de origem\" de quem o cita", texto, skill)
 
     def test_prd_e_spec_em_desacordo(self) -> None:
         """v1.15: o PRD aprovado manda sobre o spec; se o certo for o spec, o PRD ganha versão nova."""
@@ -345,8 +351,9 @@ class Kit(unittest.TestCase):
         """v1.16: o "sim" isolado, o que ler antes do propose e a mutação desfeita saem dos CLAUDE.md."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Um \"sim\" isolado responde só à pergunta principal da mensagem", comum)
-        self.assertIn("rode `openspec list`", comum)
-        self.assertIn("(`progress.total`)", comum)
+        briefing = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("rode `openspec list`", briefing)
+        self.assertIn("(`progress.total`)", briefing)
         self.assertIn("desfaça-a por edição inversa, nunca com `git checkout`", comum)
 
     def test_remoto_privado_no_github(self) -> None:
@@ -511,8 +518,9 @@ class Kit(unittest.TestCase):
 
     def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
         """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertIn("atualiza a linha \"de origem\" de quem o cita, sem versão nova dele", comum)
+        for skill in ("prd", "tdd"):
+            texto = (PLUGIN / "skills" / skill / "SKILL.md").read_text(encoding="utf-8")
+            self.assertIn("atualiza a linha \"de origem\" de quem o cita, sem versão nova dele", texto, skill)
 
     def test_ciclo_guarda_os_marcos_e_o_andamento_o_passo(self) -> None:
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
