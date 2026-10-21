@@ -43,6 +43,7 @@ def _claude_falso(pasta: Path, corpo: str) -> None:
 
 _SEM_CLAUDE = tempfile.TemporaryDirectory()
 _PATH_ORIGINAL = os.environ["PATH"]
+_XDG_ORIGINAL = os.environ.get("XDG_CONFIG_HOME")
 
 
 def setUpModule() -> None:
@@ -50,10 +51,15 @@ def setUpModule() -> None:
     depende do que está instalado nela. Os testes do aviso trocam este por outro."""
     _claude_falso(Path(_SEM_CLAUDE.name), "exit 1")
     os.environ["PATH"] = f"{_SEM_CLAUDE.name}:{os.environ['PATH']}"
+    # O openspec falso acha a configuração pelo XDG_CONFIG_HOME, como o de verdade; o da máquina
+    # (o runner do GitHub o define) não vale nos testes (change 09).
+    os.environ.pop("XDG_CONFIG_HOME", None)
 
 
 def tearDownModule() -> None:
     os.environ["PATH"] = _PATH_ORIGINAL
+    if _XDG_ORIGINAL is not None:
+        os.environ["XDG_CONFIG_HOME"] = _XDG_ORIGINAL
     _SEM_CLAUDE.cleanup()
 
 
