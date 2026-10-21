@@ -20,14 +20,13 @@ A descrição curta foi aprovada pelo usuário, com o envio da branch liberado a
   - a sessão de commits tem pelo menos 1 minuto.
 - As conversas:
   - o intervalo entre um evento no repositório e outro fora dele não conta;
-  - a conversa feita dentro de outro repositório git aninhado não conta.
+  - a conversa feita dentro de outro repositório git aninhado não conta, e a de um worktree do próprio repositório continua contando.
 - A página:
   - os dados aparecem só no bloco de dados, e o nome vai ao título com os caracteres de HTML protegidos;
   - o singular ("1 dia");
   - sem a semana vazia a mais quando há mudança de horário;
   - sem a função que nada usa.
 - O aviso do resumo deixado para trás quando o repositório muda de pasta.
-- As horas ficam em número dentro do comando e só viram texto no resumo.
 - A versão passa a 2.9 e o plugin `sdd` a 2.9.0, com a data do dia.
 
 **Fora desta change:**
