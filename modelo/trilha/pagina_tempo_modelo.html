@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITULO__</title>
+<!-- O modelo da página do trilha/tempo.py, que troca __TITULO__ e __DADOS__. Nada vem da rede. -->
+<style>
+/* Uma folha de registro: o calendário semana a semana abre, a fita hora a hora detalha, o método fecha. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #0a0f18;
+  --line: #c3ccd8;
+  --grid: #e1e6ee;
+  --empty: #e6eaf0;
+  --weekend: #f5f7fa;
+  --ia: #2450c8;
+  --ia-soft: #d3def7;
+  --voce: #c25a0c;
+  --on-fill: #ffffff;
+  --display: ui-rounded, "SF Pro Rounded", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --body: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Ubuntu, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c1118; --surface: #131a24; --ink: #eef2f8; --line: #2f3a4a; --grid: #1c2532;
+    --empty: #18202b; --weekend: #161e29; --ia: #5f8af0; --ia-soft: #1d2b4a; --voce: #c96a2c;
+    --on-fill: #0c1118; color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.page { max-width: 1080px; margin: 0 auto; padding: 40px 16px 64px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; font-weight: 800; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.6rem); line-height: 1.04; overflow-wrap: anywhere; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.8rem); }
+h3 { font-size: 1.1rem; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+section, header { display: grid; gap: 18px; min-width: 0; }
+.span { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; font-family: var(--mono); font-size: 14px; }
+.span .rule { flex: 1 1 80px; height: 2px; min-width: 40px; background: repeating-linear-gradient(90deg, var(--ink) 0 6px, transparent 6px 10px); }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--ink); border-bottom: 1px solid var(--line); }
+.stat { padding: 14px 16px 14px 0; display: grid; gap: 2px; }
+.stat + .stat { padding-left: 16px; border-left: 1px solid var(--line); }
+.stat b { font-family: var(--display); font-size: clamp(1.5rem, 4vw, 2.3rem); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { font-size: 13px; }
+@media (max-width: 640px) {
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat:nth-child(3) { padding-left: 0; border-left: 0; }
+  .stat:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+.legend { display: flex; gap: 10px 22px; flex-wrap: wrap; font-size: 13px; align-items: center; }
+.key { display: inline-flex; align-items: center; gap: 8px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; flex: none; }
+.f-voce { background: var(--voce); }
+.f-ia { background: var(--ia); }
+.f-est { background: repeating-linear-gradient(135deg, var(--ia) 0 3px, var(--ia-soft) 3px 6px); }
+.sheet { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 20px; min-width: 0; }
+.scroll { overflow-x: auto; }
+
+/* calendário */
+.cal { display: grid; gap: 3px; }
+.cal .mon, .cal .wd { font-family: var(--mono); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.cal .mon { height: 18px; }
+.cal .wd { display: flex; align-items: center; }
+.cell { aspect-ratio: 1; border-radius: 3px; background: var(--empty); position: relative; overflow: hidden; display: flex; flex-direction: column-reverse; }
+.cell.out { background: transparent; outline: 1px dashed var(--line); outline-offset: -1px; }
+.cell.on { background: var(--ia-soft); }
+.cell .part { flex: none; width: 100%; }
+.cell .n { position: absolute; top: 2px; left: 0; right: 0; text-align: center; font-family: var(--mono); font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cell .n.inv { color: var(--on-fill); }
+.cell.edge { box-shadow: inset 0 0 0 2px var(--ink); }
+[tabindex]:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (max-width: 760px) { .cell .n { display: none; } .cal { gap: 2px; } .sheet { padding: 12px; } }
+
+/* dia da semana */
+.weekdays { display: grid; gap: 4px; }
+.wkrow { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr) 17rem; gap: 14px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--grid); }
+.wkrow .lab { font-family: var(--display); font-weight: 800; font-size: 1.05rem; }
+.stack { height: 22px; display: flex; gap: 2px; }
+.stack i { display: block; height: 100%; min-width: 0; }
+.stack i:last-child { border-radius: 0 4px 4px 0; }
+.bar-val { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 640px) { .wkrow { grid-template-columns: 3.6rem minmax(0, 1fr); } .wkrow .bar-val { grid-column: 2; white-space: normal; } }
+
+/* fita */
+.ribbon { min-width: 560px; display: grid; }
+.row { display: grid; grid-template-columns: 6.6rem minmax(0, 1fr) 9rem; gap: 12px; align-items: center; height: 18px; }
+.row.we { background: var(--weekend); }
+.row .d { font-family: var(--mono); font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.row .d b { display: inline-block; width: 2.3em; }
+.strip { position: relative; height: 10px; background: linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 25% 100%; border-right: 1px solid var(--grid); }
+.seg { position: absolute; top: 0; bottom: 0; border-radius: 2px; min-width: 2px; }
+.row .tot { font-family: var(--mono); font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.month { font-family: var(--mono); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 12px 0 4px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.axis { display: grid; grid-template-columns: 6.6rem minmax(0, 1fr) 9rem; gap: 12px; font-family: var(--mono); font-size: 10.5px; }
+.axis .ticks { position: relative; height: 16px; }
+.axis .ticks span { position: absolute; transform: translateX(-50%); }
+.axis .ticks span:first-child { transform: none; }
+.axis .ticks span:last-child { transform: translateX(-100%); }
+
+/* método e tabela */
+.method { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+@media (max-width: 760px) { .method { grid-template-columns: 1fr; } }
+.method > div { display: grid; gap: 12px; align-content: start; min-width: 0; }
+ul.plain { margin: 0; padding-left: 1.1rem; display: grid; gap: 8px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+summary { cursor: pointer; padding: 14px 16px; font-weight: 600; }
+.tbl-wrap { overflow-x: auto; padding: 0 16px 16px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+.num { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.vazio { font-size: 1.05rem; }
+#tip { position: fixed; z-index: 20; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12.5px; line-height: 1.4; padding: 8px 10px; border-radius: 5px; max-width: 260px; }
+footer { font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+</style>
+</head>
+<body>
+<script id="dados" type="application/json">__DADOS__</script>
+<div class="page" id="page"></div>
+<div id="tip" hidden></div>
+<script>
+const DADOS = JSON.parse(document.getElementById("dados").textContent);
+const WD = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
+const WDL = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+const MES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const MESL = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+const ORDEM = [1, 2, 3, 4, 5, 6, 0];
+
+const dt = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+const key = x => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+const ddmm = x => `${String(x.getDate()).padStart(2, "0")}/${String(x.getMonth() + 1).padStart(2, "0")}`;
+const ddmmaa = x => `${ddmm(x)}/${x.getFullYear()}`;
+const hm = m => { m = Math.round(m); if (m < 60) return `${m} min`; const h = Math.floor(m / 60), r = m % 60; return r ? `${h}h${String(r).padStart(2, "0")}` : `${h}h`; };
+const dec = m => (m / 60).toLocaleString("pt-BR", { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+const clock = m => `${String(Math.floor(m / 60)).padStart(2, "0")}h${String(Math.round(m % 60)).padStart(2, "0")}`;
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const el = (tag, cls, html) => { const e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; };
+const page = document.getElementById("page");
+const dias = DADOS.dias;
+const repo = esc(DADOS.repositorio);
+
+// As partes de um dia: o tempo do usuário, o da IA sozinha e o estimado pelos commits, em minutos.
+const partes = x => x.fonte === "conversas" ? { voce: x.usuario, ia: x.ia, est: 0 } : { voce: 0, ia: 0, est: x.total };
+const LEGENDA = `<div class="legend">
+  <span class="key"><span class="sw f-voce"></span>Você (conversas)</span>
+  <span class="key"><span class="sw f-ia"></span>IA sozinha (conversas)</span>
+  <span class="key"><span class="sw f-est"></span>Estimado pelos commits</span></div>`;
+
+// tooltip
+const tip = document.getElementById("tip");
+function showTip(e, html) {
+  tip.innerHTML = html; tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  let x, y;
+  if (e.type.startsWith("pointer")) { x = e.clientX + 14; y = e.clientY + 14; }
+  else { const b = e.currentTarget.getBoundingClientRect(); x = b.left; y = b.bottom + 8; }
+  x = Math.min(x, innerWidth - r.width - 8); if (y + r.height > innerHeight - 8) y = Math.max(8, y - r.height - 28);
+  tip.style.left = `${Math.max(8, x)}px`; tip.style.top = `${y}px`;
+}
+function tipOn(node, html) {
+  node.tabIndex = 0;
+  node.addEventListener("pointermove", e => showTip(e, html));
+  node.addEventListener("focus", e => showTip(e, html));
+  ["pointerleave", "blur"].forEach(t => node.addEventListener(t, () => (tip.hidden = true)));
+}
+const dayTip = x => {
+  const d = dt(x.d);
+  const linhas = [`<b>${WDL[d.getDay()]}, ${ddmmaa(d)}</b>`, `${hm(x.total)} no total`];
+  if (x.fonte === "conversas") linhas.push(`você: ${hm(x.usuario)} · IA sozinha: ${hm(x.ia)}`);
+  else linhas.push("estimado pelos commits");
+  linhas.push(`${x.commits} commit${x.commits === 1 ? "" : "s"}`);
+  return linhas.join("<br>");
+};
+
+if (!dias.length) {
+  page.append(el("header", null, `<div class="eyebrow">Horas de trabalho</div><h1>${repo}</h1>
+    <p class="vazio">Nenhuma hora apurada: o repositório não tem conversas do Claude Code guardadas nem commits.</p>`));
+} else {
+  const first = dt(dias[0].d), last = dt(dias[dias.length - 1].d);
+  const span = Math.round((last - first) / 864e5) + 1;
+  const total = dias.reduce((a, x) => a + x.total, 0);
+  const conv = dias.filter(x => x.fonte === "conversas");
+  const voce = conv.reduce((a, x) => a + x.usuario, 0), convTotal = conv.reduce((a, x) => a + x.total, 0);
+  const peak = dias.reduce((a, x) => (x.total > a.total ? x : a));
+  const byDay = new Map(dias.map(x => [x.d, x]));
+  const SCALE = Math.max(20 * 60, peak.total);
+
+  // cabeçalho
+  const head = el("header");
+  head.innerHTML = `<div class="eyebrow">Horas de trabalho</div><h1>${repo}</h1>
+    <div class="span"><span><b>Início</b> ${WD[first.getDay()]} ${ddmmaa(first)}</span><span class="rule" aria-hidden="true"></span><span><b>Fim</b> ${WD[last.getDay()]} ${ddmmaa(last)}</span></div>`;
+  const stats = el("div", "stats");
+  [[dias.length, `dias com trabalho, em ${span} dias corridos`], [`${Math.round(total / 60)} h`, "no total"],
+   [hm(total / dias.length), "por dia trabalhado, em média"],
+   [conv.length ? `${Math.round((voce / convTotal) * 100)}%` : "—", conv.length ? `seu, nos ${conv.length} dias com conversa` : "sem conversa guardada"]]
+    .forEach(([v, l]) => stats.append(el("div", "stat", `<b>${v}</b><span>${l}</span>`)));
+  head.append(stats);
+  head.append(el("p", null, `O dia mais longo foi ${WDL[dt(peak.d).getDay()]}, ${ddmmaa(dt(peak.d))}, com ${hm(peak.total)}. ` +
+    `${conv.length} dias vêm das conversas do Claude Code, com a hora exata de cada interação; ${dias.length - conv.length} são estimados pelos commits.`));
+  page.append(head);
+
+  // 1 · calendário (semanas começando na segunda)
+  const s1 = el("section");
+  s1.innerHTML = `<div class="eyebrow">1 · Linha do tempo</div><h2>Semana a semana</h2>
+    <p>Cada coluna é uma semana, de segunda a domingo; cada quadrado, um dia. A cor sobe conforme as horas do dia, numa escala de 0 a ${Math.round(SCALE / 60)} horas. Os quadrados contornados são o primeiro e o último dia.</p>${LEGENDA}`;
+  const sheet = el("div", "sheet scroll"); const cal = el("div", "cal");
+  const mon0 = new Date(first); mon0.setDate(first.getDate() - ((first.getDay() + 6) % 7));
+  const weeks = Math.ceil(((last - mon0) / 864e5 + 1) / 7);
+  cal.style.gridTemplateColumns = `2.4rem repeat(${weeks}, minmax(14px, 1fr))`;
+  cal.style.minWidth = `${2.4 * 16 + weeks * 16}px`;
+  cal.append(el("div", "mon"));
+  let lastMonth = -1;
+  for (let c = 0; c < weeks; c++) {
+    const wk = new Date(mon0); wk.setDate(mon0.getDate() + c * 7);
+    const end = new Date(wk); end.setDate(wk.getDate() + 6);
+    const m = c === 0 ? wk.getMonth() : end.getMonth();
+    cal.append(el("div", "mon", m !== lastMonth ? MES[m] : ""));
+    lastMonth = m;
+  }
+  ORDEM.forEach((wd, r) => {
+    cal.append(el("div", "wd", WD[wd]));
+    for (let c = 0; c < weeks; c++) {
+      const d = new Date(mon0); d.setDate(mon0.getDate() + c * 7 + r);
+      const x = byDay.get(key(d));
+      const cell = el("div", "cell");
+      if (d < first || d > last) cell.classList.add("out");
+      else if (!x) tipOn(cell, `<b>${WDL[d.getDay()]}, ${ddmmaa(d)}</b><br>sem trabalho registrado`);
+      else {
+        cell.classList.add("on");
+        const p = partes(x);
+        [["f-voce", p.voce], ["f-ia", p.ia], ["f-est", p.est]].forEach(([cls, v]) => {
+          if (v > 0) { const part = el("div", `part ${cls}`); part.style.height = `${(v / SCALE) * 100}%`; cell.append(part); }
+        });
+        cell.append(el("div", "n" + (x.total / SCALE > 0.82 ? " inv" : ""), dec(x.total)));
+        tipOn(cell, dayTip(x));
+      }
+      if (key(d) === dias[0].d || key(d) === dias[dias.length - 1].d) cell.classList.add("edge");
+      cal.append(cell);
+    }
+  });
+  sheet.append(cal); s1.append(sheet); page.append(s1);
+
+  // 2 · por dia da semana
+  const agg = ORDEM.map(wd => {
+    const ds = dias.filter(x => dt(x.d).getDay() === wd);
+    const soma = k => ds.reduce((a, x) => a + partes(x)[k], 0);
+    return { wd, n: ds.length, voce: soma("voce"), ia: soma("ia"), est: soma("est"), t: ds.reduce((a, x) => a + x.total, 0) };
+  });
+  const maxAgg = Math.max(...agg.map(a => a.t));
+  const best = agg.reduce((a, b) => (b.t > a.t ? b : a));
+  const fds = agg.slice(5).reduce((s, a) => s + a.t, 0);
+  const s2 = el("section");
+  s2.innerHTML = `<div class="eyebrow">2 · Por dia da semana</div><h2>Horas em cada dia da semana</h2>
+    <p>${WDL[best.wd][0].toUpperCase() + WDL[best.wd].slice(1)} concentra mais horas (${dec(best.t)} h). Sábados e domingos somam ${dec(fds)} h, ${Math.round((fds / total) * 100)}% do total.</p>${LEGENDA}`;
+  const wk = el("div", "weekdays");
+  agg.forEach(a => {
+    const row = el("div", "wkrow");
+    row.append(el("div", "lab", WDL[a.wd]));
+    const st = el("div", "stack");
+    [["f-voce", a.voce], ["f-ia", a.ia], ["f-est", a.est]].forEach(([cls, v]) => {
+      if (v > 0) { const i = el("i", cls); i.style.width = `calc(${(v / maxAgg) * 100}% - 2px)`; st.append(i); }
+    });
+    row.append(st);
+    row.append(el("div", "bar-val", `<b>${dec(a.t)} h</b> · ${a.n} dias · ${hm(a.n ? a.t / a.n : 0)} por dia`));
+    tipOn(row, `<b>${WDL[a.wd]}</b><br>${dec(a.t)} h em ${a.n} dias<br>você: ${hm(a.voce)} · IA sozinha: ${hm(a.ia)}<br>estimado pelos commits: ${hm(a.est)}`);
+    wk.append(row);
+  });
+  s2.append(wk); page.append(s2);
+
+  // 3 · fita hora a hora
+  const s3 = el("section");
+  s3.innerHTML = `<div class="eyebrow">3 · Hora a hora</div><h2>Cada dia, da meia-noite à meia-noite</h2>
+    <p>Uma linha por dia com trabalho, com os trechos na hora do dia em que aconteceram e o total à direita. Sábados e domingos têm o fundo marcado.</p>${LEGENDA}`;
+  const rs = el("div", "sheet scroll"); const rib = el("div", "ribbon");
+  rib.append(el("div", "axis", `<span></span><div class="ticks">${[0, 6, 12, 18, 24].map(h => `<span style="left:${(h / 24) * 100}%">${String(h).padStart(2, "0")}h</span>`).join("")}</div><span>total do dia</span>`));
+  let curM = -1;
+  dias.forEach(x => {
+    const d = dt(x.d);
+    if (d.getMonth() !== curM) { curM = d.getMonth(); rib.append(el("div", "month", `${MESL[curM]} ${d.getFullYear()}`)); }
+    const row = el("div", "row" + (d.getDay() === 0 || d.getDay() === 6 ? " we" : ""));
+    row.append(el("div", "d", `<b>${WD[d.getDay()]}</b>${ddmm(d)}`));
+    const strip = el("div", "strip");
+    const base = x.fonte === "conversas" ? "f-ia" : "f-est";
+    x.faixas.forEach(([a, b]) => { const s = el("div", `seg ${base}`); s.style.left = `${(a / 1440) * 100}%`; s.style.width = `${((b - a) / 1440) * 100}%`; strip.append(s); });
+    x.faixas_usuario.forEach(([a, b]) => { const s = el("div", "seg f-voce"); s.style.left = `${(a / 1440) * 100}%`; s.style.width = `${((b - a) / 1440) * 100}%`; strip.append(s); });
+    row.append(strip, el("div", "tot", hm(x.total)));
+    tipOn(row, dayTip(x));
+    rib.append(row);
+  });
+  rs.append(rib); s3.append(rs); page.append(s3);
+
+  // 4 · método
+  const s4 = el("section");
+  s4.innerHTML = `<div class="eyebrow">4 · Método</div><h2>Como as horas foram apuradas</h2>
+  <div class="method">
+    <div><h3>Dias com conversa do Claude Code</h3><ul class="plain">
+      <li>Cada pedido seu e cada ação da IA ficam gravados na conversa com a hora exata.</li>
+      <li>Entre dois eventos seguidos da mesma conversa, o intervalo de até ${DADOS.pausa} minutos conta como trabalho; um intervalo maior é pausa e não conta.</li>
+      <li>O intervalo que termina num pedido seu é tempo seu (leitura, decisão, escrita do pedido); o que termina numa ação da IA é tempo da IA.</li>
+      <li>Conversas em paralelo contam uma vez só: o total é a união de todos os intervalos, e o tempo da IA sozinha é o total menos o seu.</li>
+      <li>O tempo antes do primeiro pedido de uma sessão e um comando da IA que roda por mais de ${DADOS.pausa} minutos sem nenhum evento não entram.</li>
+    </ul></div>
+    <div><h3>Dias sem conversa guardada</h3><ul class="plain">
+      <li>As horas são estimadas pelos commits, pela data de autor, de todas as branches e tags.</li>
+      <li>Commits com até ${DADOS.sessao_de_commits / 60} horas de intervalo formam uma sessão, e cada sessão começa ${DADOS.antes_do_commit} minutos antes do primeiro commit.</li>
+      <li>A estimativa não vê o trabalho que não terminou em commit e não separa o seu tempo do da IA.</li>
+      <li>Os dias seguem o relógio da máquina; um trecho que passa da meia-noite se divide entre os dois dias.</li>
+    </ul></div>
+  </div>`;
+  page.append(s4);
+
+  // tabela
+  const det = el("details");
+  det.innerHTML = `<summary>Ver todos os dias em tabela</summary>`;
+  const wrap = el("div", "tbl-wrap"); const tbl = el("table");
+  tbl.innerHTML = `<thead><tr><th>Data</th><th>Dia</th><th>Fonte</th><th class="num">Total</th><th class="num">Você</th><th class="num">IA sozinha</th><th class="num">Commits</th></tr></thead>`;
+  const tb = el("tbody");
+  dias.forEach(x => {
+    const d = dt(x.d);
+    tb.append(el("tr", null, `<td class="mono">${ddmmaa(d)}</td><td>${WDL[d.getDay()]}</td><td>${x.fonte}</td><td class="num">${hm(x.total)}</td><td class="num">${x.usuario == null ? "—" : hm(x.usuario)}</td><td class="num">${x.ia == null ? "—" : hm(x.ia)}</td><td class="num">${x.commits}</td>`));
+  });
+  tbl.append(tb); wrap.append(tbl); det.append(wrap); page.append(det);
+}
+page.append(el("footer", null, `Gerada em ${esc(DADOS.gerada)} pelo trilha/tempo.py, a partir das conversas do Claude Code e do histórico Git desta máquina. Nada desta página saiu dela.`));
+</script>
+</body>
+</html>

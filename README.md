@@ -15,12 +15,13 @@ A ordem:
    - uma **conta no GitHub** e o GitHub CLI (`gh`, instalação em https://cli.github.com), autenticado uma vez com `gh auth login`: todo repositório do método tem um remoto privado no GitHub;
    - o marketplace do plugin `sdd`, publicado por este repositório: `claude plugin marketplace add paulosrl/trilha-ai`. O plugin vale por projeto e se instala no passo 4; o que ele faz está em `plugins/sdd/README.md`;
    - opcional, o **CodeGraph** (`npm install -g @colbymchenry/codegraph`), que dá ao Claude um índice do código; sem ele, o método funciona igual.
+   - a **guarda das conversas** do Claude Code: ponha `"cleanupPeriodDays": 3650` no `~/.claude/settings.json`. Sem isso, o Claude Code apaga as conversas depois de 30 dias, e o `python3 trilha/tempo.py` perde a hora exata dos dias apagados que ainda não estavam no resumo dele.
 2. **Crie o repositório com o kit:** com este repositório em `../trilha-ai`, rode `python3 ../trilha-ai/ferramentas/kit.py novo <nome>`. Ele cria a pasta, o git (na branch `main`) e a pasta `sdd/`, copia os arquivos, como na tabela do passo 3, e imprime os próximos passos.
 3. **Preencha o que é do projeto.** A tabela diz o que cada arquivo de `modelo/` é e o que fazer com ele; a cópia à mão, sem a ferramenta, segue a mesma tabela. O resto deste repositório é só do kit e não se copia:
 
    | Arquivo | O que fazer |
    |---|---|
-   | `trilha/` | copiar a pasta inteira **sem mudar nada**: o comum, os verificadores, o `verifica.sh` (a parte fixa da verificação), o gerador da página, a trava do Claude Code (`guarda.py`), a do commit (`hooks/pre-commit`, ligada com `git config core.hooksPath trilha/hooks`, uma vez por clone) e o `hooks/pre-push`, que roda a cada envio o `.githooks/pre-push` do projeto, quando ele existe |
+   | `trilha/` | copiar a pasta inteira **sem mudar nada**: o comum, os verificadores, o `verifica.sh` (a parte fixa da verificação), o gerador da página, a trava do Claude Code (`guarda.py`), a do commit (`hooks/pre-commit`, ligada com `git config core.hooksPath trilha/hooks`, uma vez por clone), o `hooks/pre-push`, que roda a cada envio o `.githooks/pre-push` do projeto, quando ele existe, e o `tempo.py`, que o usuário roda quando quiser ver as horas de trabalho de cada dia (o resumo e a página dele ficam fora do repositório, em `~/.local/share/trilha-ai/tempo/`) |
    | `esqueleto-CLAUDE.md` | copiar como `CLAUDE.md`; preencher o que está entre `<` e `>`; apagar o que não se aplica |
    | `ANDAMENTO.md` | preencher a etapa e a hora; nasce "nada em andamento" |
    | `openspec/config.yaml` | preencher o contexto; as regras por artefato ficam como estão |

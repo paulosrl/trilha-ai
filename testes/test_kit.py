@@ -2837,5 +2837,424 @@ class Kit(unittest.TestCase):
             self.assertEqual(self._ferramenta("atualizar", str(RAIZ)).returncode, 1)
 
 
+TEMPO = MODELO / "trilha" / "tempo.py"
+
+
+class HorasDeTrabalho(unittest.TestCase):
+    """O trilha/tempo.py (change 10): as horas de cada dia, das conversas do Claude Code e dos
+    commits, com o resumo e a página fora do repositório. Tudo em pastas temporárias, em UTC."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        base = Path(self._tmp.name)
+        self.raiz = base / "proj"
+        self.config = base / "config"
+        self.dados = base / "dados"
+        self.casa = base / "casa"
+        for pasta in (self.raiz, self.config / "projects", self.casa):
+            pasta.mkdir(parents=True)
+        subprocess.run(["git", "init", "-q", "-b", "main", str(self.raiz)], check=True)
+
+    def tearDown(self) -> None:
+        self._tmp.cleanup()
+
+    # Montagem
+
+    def _commit(self, quando: str, nome: str = "a") -> None:
+        """Um commit com a data de autor dada (ISO 8601, em UTC)."""
+        env = {**os.environ, **GIT_TESTE, "GIT_AUTHOR_DATE": quando, "GIT_COMMITTER_DATE": quando}
+        (self.raiz / nome).write_text(quando, encoding="utf-8")
+        subprocess.run(["git", "-C", str(self.raiz), "add", "-A"], check=True, env=env)
+        subprocess.run(["git", "-C", str(self.raiz), "commit", "-qm", quando], check=True, env=env)
+
+    @staticmethod
+    def _pedido(hora: str, cwd: Path, sessao: str = "s1", texto: str = "faça") -> dict:
+        return {"type": "user", "timestamp": hora, "sessionId": sessao, "cwd": str(cwd),
+                "isSidechain": False, "message": {"role": "user", "content": texto}}
+
+    @staticmethod
+    def _ia(hora: str, cwd: Path, sessao: str = "s1") -> dict:
+        return {"type": "assistant", "timestamp": hora, "sessionId": sessao, "cwd": str(cwd),
+                "isSidechain": False,
+                "message": {"role": "assistant", "content": [{"type": "text", "text": "feito"}]}}
+
+    @staticmethod
+    def _resultado(hora: str, cwd: Path, sessao: str = "s1") -> dict:
+        return {"type": "user", "timestamp": hora, "sessionId": sessao, "cwd": str(cwd),
+                "isSidechain": False, "message": {"role": "user", "content": [
+                    {"type": "tool_result", "tool_use_id": "x", "content": "ok"}]}}
+
+    def _conversa(self, linhas: list[dict], sessao: str = "s1", pasta: str = "-proj",
+                  config: Path | None = None, subagente: bool = False) -> Path:
+        destino = (config or self.config) / "projects" / pasta
+        arquivo = destino / sessao / "subagents" / "agent-1.jsonl" if subagente else destino / f"{sessao}.jsonl"
+        arquivo.parent.mkdir(parents=True, exist_ok=True)
+        with arquivo.open("a", encoding="utf-8") as saida:
+            saida.write('{"type": "ai-title", "sessionId": "%s"}\n' % sessao)
+            saida.write("isto não é json\n")
+            for linha in linhas:
+                saida.write(json.dumps(linha) + "\n")
+        return arquivo
+
+    def _rodar(self, cwd: Path | None = None, **env_extra: str) -> subprocess.CompletedProcess:
+        env = {**os.environ, "TZ": "UTC", "HOME": str(self.casa),
+               "CLAUDE_CONFIG_DIR": str(self.config), "XDG_DATA_HOME": str(self.dados), **env_extra}
+        return subprocess.run([sys.executable, "-I", str(TEMPO)], cwd=cwd or self.raiz, env=env,
+                              capture_output=True, text=True, check=False)
+
+    # Leitura do que ele gravou
+
+    def _pasta_tempo(self, dados: Path | None = None) -> Path:
+        return (dados or self.dados) / "trilha-ai" / "tempo"
+
+    def _pagina(self, dados: Path | None = None) -> str:
+        paginas = list(self._pasta_tempo(dados).glob("*.html"))
+        self.assertEqual(len(paginas), 1, paginas)
+        return paginas[0].read_text(encoding="utf-8")
+
+    def _resumo(self) -> dict:
+        resumos = list(self._pasta_tempo().glob("*.json"))
+        self.assertEqual(len(resumos), 1, resumos)
+        return json.loads(resumos[0].read_text(encoding="utf-8"))
+
+    def _dias(self) -> dict:
+        """Os dias dos dados embutidos na página, pela data."""
+        bloco = re.search(r'<script id="dados" type="application/json">(.*?)</script>',
+                          self._pagina(), re.S)
+        self.assertIsNotNone(bloco)
+        return {dia["d"]: dia for dia in json.loads(bloco.group(1))["dias"]}
+
+    def _ok(self, **env_extra: str) -> subprocess.CompletedProcess:
+        saida = self._rodar(**env_extra)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        return saida
+
+    # Só sob demanda
+
+    def test_tempo_sem_gancho_no_modelo(self) -> None:
+        settings = json.loads((MODELO / "claude-settings.json").read_text(encoding="utf-8"))
+        comandos = [gancho.get("command", "") for eventos in settings.get("hooks", {}).values()
+                    for grupo in eventos for gancho in grupo.get("hooks", [])]
+        self.assertTrue(comandos)
+        self.assertFalse([c for c in comandos if "tempo.py" in c])
+
+    def test_tempo_fora_de_repositorio(self) -> None:
+        solta = Path(self._tmp.name) / "solta"
+        solta.mkdir()
+        saida = self._rodar(cwd=solta, GIT_CEILING_DIRECTORIES=self._tmp.name)
+        self.assertNotEqual(saida.returncode, 0)
+        self.assertIn("não é um repositório git", saida.stderr)
+        self.assertFalse(self.dados.exists())
+
+    # Conversas do repositório
+
+    def test_tempo_ignora_repositorio_vizinho(self) -> None:
+        vizinho = Path(f"{self.raiz}-antigo")
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", vizinho),
+                        self._ia("2026-10-01T09:20:00Z", vizinho)], pasta="-proj-antigo")
+        self._ok()
+        self.assertNotIn("2026-10-01", self._dias())
+
+    def test_tempo_conta_conversa_em_subpasta(self) -> None:
+        sub = self.raiz / "src"
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", sub)], pasta="-proj-src")
+        sub_ia = self._ia("2026-10-01T09:10:00Z", sub)
+        sub_ia["isSidechain"] = True
+        self._conversa([sub_ia], pasta="-proj-src", subagente=True)
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 10)
+
+    def test_tempo_usa_claude_config_dir(self) -> None:
+        outra = Path(self._tmp.name) / "outra-config"
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:15:00Z", self.raiz)], config=outra)
+        self._ok(CLAUDE_CONFIG_DIR=str(outra))
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 15)
+
+    # Pedido do usuário
+
+    def test_tempo_resultado_de_ferramenta_e_da_ia(self) -> None:
+        self._conversa([self._ia("2026-10-01T09:00:00Z", self.raiz),
+                        self._resultado("2026-10-01T09:10:00Z", self.raiz)])
+        self._ok()
+        dia = self._dias()["2026-10-01"]
+        self.assertEqual((dia["total"], dia["usuario"], dia["ia"]), (10, 0, 10))
+
+    def test_tempo_metadados_nao_sao_pedido(self) -> None:
+        meta = self._pedido("2026-10-01T09:10:00Z", self.raiz)
+        meta["isMeta"] = True
+        self._conversa([self._ia("2026-10-01T09:00:00Z", self.raiz), meta])
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-01"]["usuario"], 0)
+
+    # O resumo
+
+    def test_tempo_resumo_sem_texto(self) -> None:
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz, texto="frase-que-nao-pode-vazar"),
+                        self._ia("2026-10-01T09:05:00Z", self.raiz),
+                        self._pedido("2026-10-01T09:06:00Z", self.raiz, texto="frase-que-nao-pode-vazar")])
+        self._ok()
+        texto = next(self._pasta_tempo().glob("*.json")).read_text(encoding="utf-8")
+        self.assertIn("s1", texto)
+        self.assertNotIn("frase-que-nao-pode-vazar", texto)
+        self.assertNotIn("frase-que-nao-pode-vazar", self._pagina())
+
+    def test_tempo_nao_toca_o_repositorio(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        (self.raiz / "solto.txt").write_text("x", encoding="utf-8")
+        antes = subprocess.run(["git", "-C", str(self.raiz), "status", "--porcelain"],
+                               capture_output=True, text=True, check=True).stdout
+        self._ok()
+        depois = subprocess.run(["git", "-C", str(self.raiz), "status", "--porcelain"],
+                                capture_output=True, text=True, check=True).stdout
+        self.assertEqual(antes, depois)
+
+    def test_tempo_usa_xdg_data_home(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        outra = Path(self._tmp.name) / "outros-dados"
+        self._ok(XDG_DATA_HOME=str(outra))
+        self.assertEqual(len(list(self._pasta_tempo(outra).glob("*.json"))), 1)
+        self.assertEqual(len(list(self._pasta_tempo(outra).glob("*.html"))), 1)
+        self.assertFalse(self.dados.exists())
+
+    def test_tempo_conversa_apagada_continua(self) -> None:
+        arquivo = self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                                  self._ia("2026-10-01T09:20:00Z", self.raiz)])
+        self._ok()
+        primeira, resumo = self._dias(), self._resumo()
+        arquivo.unlink()
+        self._ok()
+        self.assertEqual(self._dias(), primeira)
+        self.assertEqual(self._resumo()["conversas"], resumo["conversas"])
+
+    def test_tempo_conversa_que_cresceu(self) -> None:
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:05:00Z", self.raiz)])
+        self._ok()
+        self._conversa([self._pedido("2026-10-01T09:10:00Z", self.raiz),
+                        self._ia("2026-10-01T09:30:00Z", self.raiz)])
+        self._ok()
+        intervalos = self._resumo()["conversas"]["s1"]
+        self.assertEqual(len(intervalos), len({tuple(i) for i in intervalos}))
+        self.assertEqual(len(intervalos), 3)
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 30)
+
+    # A apuração por dia
+
+    def test_tempo_dois_pedidos_e_duas_respostas(self) -> None:
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:05:00Z", self.raiz),
+                        self._pedido("2026-10-01T09:12:00Z", self.raiz),
+                        self._ia("2026-10-01T09:31:00Z", self.raiz)])
+        self._ok()
+        dia = self._dias()["2026-10-01"]
+        self.assertEqual((dia["fonte"], dia["total"], dia["usuario"], dia["ia"]), ("conversas", 31, 7, 24))
+
+    def test_tempo_pausa_longa_nao_conta(self) -> None:
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:05:00Z", self.raiz),
+                        self._pedido("2026-10-01T10:00:00Z", self.raiz)])
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 5)
+
+    def test_tempo_conversas_em_paralelo(self) -> None:
+        for sessao in ("s1", "s2"):
+            self._conversa([self._ia(f"2026-10-01T10:{m:02d}:00Z", self.raiz, sessao) for m in (0, 20, 40)]
+                           + [self._ia("2026-10-01T11:00:00Z", self.raiz, sessao)], sessao=sessao)
+        self._ok()
+        dia = self._dias()["2026-10-01"]
+        self.assertEqual((dia["total"], dia["usuario"], dia["ia"]), (60, 0, 60))
+
+    def test_tempo_usuario_numa_ia_noutra(self) -> None:
+        self._conversa([self._ia("2026-10-01T10:00:00Z", self.raiz),
+                        self._ia("2026-10-01T10:30:00Z", self.raiz)])
+        self._conversa([self._ia("2026-10-01T10:20:00Z", self.raiz, "s2"),
+                        self._pedido("2026-10-01T10:30:00Z", self.raiz, "s2")], sessao="s2")
+        self._ok()
+        dia = self._dias()["2026-10-01"]
+        self.assertEqual((dia["total"], dia["usuario"], dia["ia"]), (30, 10, 20))
+
+    def test_tempo_virada_do_dia(self) -> None:
+        self._conversa([self._ia("2026-10-01T23:50:00Z", self.raiz),
+                        self._ia("2026-10-02T00:10:00Z", self.raiz)])
+        self._ok()
+        dias = self._dias()
+        self.assertEqual((dias["2026-10-01"]["total"], dias["2026-10-02"]["total"]), (10, 10))
+
+    def test_tempo_sessoes_de_commits(self) -> None:
+        for hora in ("10", "11", "14"):
+            self._commit(f"2026-10-01T{hora}:00:00Z", nome=hora)
+        self._ok()
+        dia = self._dias()["2026-10-01"]
+        self.assertEqual((dia["fonte"], dia["total"]), ("commits", 120))
+
+    def test_tempo_dia_com_conversa_usa_conversa(self) -> None:
+        self._commit("2026-10-01T14:00:00Z")
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:05:00Z", self.raiz)])
+        self._ok()
+        dia = self._dias()["2026-10-01"]
+        self.assertEqual((dia["fonte"], dia["total"]), ("conversas", 5))
+
+    def test_tempo_commit_em_duas_branches(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        subprocess.run(["git", "-C", str(self.raiz), "branch", "outra"], check=True)
+        subprocess.run(["git", "-C", str(self.raiz), "tag", "v1"], check=True)
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-01"]["commits"], 1)
+
+    def test_tempo_dia_de_commits_sem_divisao(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok()
+        dia = self._dias()["2026-10-01"]
+        self.assertEqual((dia["fonte"], dia["total"], dia["usuario"], dia["ia"]), ("commits", 30, None, None))
+
+    # A página e a saída
+
+    def test_tempo_imprime_o_caminho_da_pagina(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        saida = self._ok()
+        pagina = next(self._pasta_tempo().glob("*.html"))
+        self.assertIn(str(pagina), saida.stdout)
+        self.assertTrue(pagina.name.startswith("proj-"))
+
+    def test_tempo_pagina_sem_rede(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok()
+        pagina = self._pagina()
+        self.assertNotRegex(pagina, r"""(?i)\b(src|href)\s*=\s*["']?https?:""")
+        self.assertNotRegex(pagina, r"(?i)@import|url\(\s*[\"']?https?:")
+
+    def test_tempo_avisa_guarda_padrao(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        saida = self._ok()
+        self.assertIn('"cleanupPeriodDays": 3650', saida.stderr)
+
+    def test_tempo_guarda_longa_sem_aviso(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        (self.config / "settings.json").write_text('{"cleanupPeriodDays": 3650}', encoding="utf-8")
+        saida = self._ok()
+        self.assertNotIn("cleanupPeriodDays", saida.stderr)
+
+    # As respostas à revisão (verify e code review da change 10)
+
+    def test_tempo_caminho_com_acento(self) -> None:
+        acento = Path(self._tmp.name) / "projeto-ação"
+        subprocess.run(["git", "init", "-q", "-b", "main", str(acento)], check=True)
+        arquivo = self.config / "projects" / "-projeto-acao" / "s1.jsonl"
+        arquivo.parent.mkdir(parents=True)
+        linhas = [self._pedido("2026-10-01T09:00:00Z", acento), self._ia("2026-10-01T09:20:00Z", acento)]
+        # O Claude Code grava os acentos como são, sem o escape \\u do json.dumps padrão.
+        arquivo.write_text("".join(json.dumps(l, ensure_ascii=False) + "\n" for l in linhas),
+                           encoding="utf-8")
+        saida = self._rodar(cwd=acento)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 20)
+
+    def test_tempo_atividade_de_segundos(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:00:02Z", self.raiz)])
+        self._ok()
+        dia = self._dias()["2026-10-01"]
+        self.assertEqual((dia["fonte"], dia["total"]), ("commits", 30))
+
+    def test_tempo_dia_da_mudanca_de_horario(self) -> None:
+        # 01/11/2026 é o fim do horário de verão nesse fuso: 23:00 local é 04:00 UTC do dia 2.
+        self._conversa([self._ia("2026-11-02T04:00:00Z", self.raiz),
+                        self._ia("2026-11-02T04:20:00Z", self.raiz)])
+        self._ok(TZ="EST5EDT,M3.2.0,M11.1.0")
+        self.assertEqual(self._dias()["2026-11-01"]["faixas"], [[1380, 1400]])
+
+    def test_tempo_commit_depois_da_meia_noite(self) -> None:
+        self._commit("2026-10-02T00:10:00Z")
+        self._ok()
+        dias = self._dias()
+        self.assertNotIn("2026-10-01", dias)
+        self.assertEqual(dias["2026-10-02"]["total"], 10)
+
+    def test_tempo_subagente_apagado_continua(self) -> None:
+        self._conversa([self._pedido("2026-10-01T09:00:00Z", self.raiz),
+                        self._ia("2026-10-01T09:55:00Z", self.raiz)])
+        passos = []
+        for minuto in (10, 20, 30, 40, 50):
+            passo = self._ia(f"2026-10-01T09:{minuto}:00Z", self.raiz)
+            passo["isSidechain"] = True
+            passos.append(passo)
+        subagente = self._conversa(passos, subagente=True)
+        self._ok()
+        primeira = self._dias()["2026-10-01"]["total"]
+        subagente.unlink()
+        self._ok()
+        self.assertEqual(primeira, 55)
+        self.assertEqual(self._dias()["2026-10-01"]["total"], primeira)
+
+    def _resumo_trocado(self, texto: str) -> tuple[Path, subprocess.CompletedProcess]:
+        """O resumo de uma primeira execução trocado pelo texto dado, e a execução seguinte."""
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok()
+        resumo = next(self._pasta_tempo().glob("*.json"))
+        resumo.write_text(texto, encoding="utf-8")
+        return resumo, self._rodar()
+
+    def test_tempo_resumo_corrompido_preservado(self) -> None:
+        resumo, saida = self._resumo_trocado("isto não é json")
+        self.assertNotEqual(saida.returncode, 0)
+        self.assertIn(resumo.name, saida.stderr)
+        self.assertEqual(resumo.read_text(encoding="utf-8"), "isto não é json")
+
+    def test_tempo_entrada_fora_do_formato(self) -> None:
+        texto = json.dumps({"versao": 1, "raiz": str(self.raiz),
+                            "conversas": {"s1": [["2026-10-01T09:00:00+00:00", "ia"]]}})
+        resumo, saida = self._resumo_trocado(texto)
+        self.assertNotEqual(saida.returncode, 0)
+        self.assertNotIn("Traceback", saida.stderr)
+        self.assertEqual(resumo.read_text(encoding="utf-8"), texto)
+
+    def _arquivo_de_outro_repositorio(self) -> tuple[Path, os.stat_result]:
+        """Uma conversa de um vizinho com o caminho do mesmo tamanho, lida numa primeira execução e
+        depois trocada pela deste repositório, com o mesmo tamanho e a mesma data."""
+        vizinho = Path(str(self.raiz)[:-1] + "X")
+        arquivo = self._conversa([self._pedido("2026-10-01T09:00:00Z", vizinho),
+                                  self._ia("2026-10-01T09:20:00Z", vizinho)], pasta="-viz")
+        self._ok()
+        antes = arquivo.stat()
+        arquivo.write_text(arquivo.read_text(encoding="utf-8").replace(str(vizinho), str(self.raiz)),
+                           encoding="utf-8")
+        os.utime(arquivo, ns=(antes.st_atime_ns, antes.st_mtime_ns))
+        self.assertEqual(arquivo.stat().st_size, antes.st_size)
+        return arquivo, antes
+
+    def test_tempo_arquivo_sem_mudanca_nao_e_relido(self) -> None:
+        self._arquivo_de_outro_repositorio()
+        self._ok()
+        self.assertNotIn("2026-10-01", self._dias())
+
+    def test_tempo_arquivo_que_mudou_e_relido(self) -> None:
+        arquivo, antes = self._arquivo_de_outro_repositorio()
+        os.utime(arquivo, ns=(antes.st_atime_ns, antes.st_mtime_ns + 10**10))
+        self._ok()
+        self.assertEqual(self._dias()["2026-10-01"]["total"], 20)
+
+    def test_tempo_guarda_curta_definida(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        (self.config / "settings.json").write_text('{"cleanupPeriodDays": 90}', encoding="utf-8")
+        saida = self._ok()
+        self.assertIn("90 dias", saida.stderr)
+        self.assertNotIn("padrão", saida.stderr)
+
+    def test_tempo_temporario_antigo_nao_atrapalha(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        self._ok()
+        resumo = next(self._pasta_tempo().glob("*.json"))
+        resumo.with_name(resumo.name + ".tmp").mkdir()  # o que uma execução interrompida deixaria
+        self._ok()
+
+    def test_tempo_um_dia_no_singular(self) -> None:
+        self._commit("2026-10-01T10:00:00Z")
+        saida = self._ok()
+        self.assertIn(": 1 dia,", saida.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()
