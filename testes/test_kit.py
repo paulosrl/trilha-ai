@@ -1725,6 +1725,8 @@ class Kit(unittest.TestCase):
         kit = Path(tmp) / "kit"
         shutil.copytree(MODELO / "trilha", kit / "modelo/trilha",
                         ignore=shutil.ignore_patterns("__pycache__"))
+        (kit / "modelo/openspec").mkdir(parents=True)
+        shutil.copy(MODELO / "openspec/config.yaml", kit / "modelo/openspec/config.yaml")
         env = {**os.environ, **GIT_TESTE}
         git = ["git", "-C", str(kit), "-c", "core.hooksPath=/dev/null", "-c", "commit.gpgsign=false",
                "-c", "tag.gpgsign=false"]
@@ -1795,6 +1797,72 @@ class Kit(unittest.TestCase):
             saida = self._regras_no_kit(pasta, self._kit_falso(tmp))
         self.assertEqual(saida.returncode, 1)
         self.assertIn("trilha/guarda.py difere do kit", saida.stderr)
+
+    # As regras por artefato do openspec/config.yaml iguais às do kit (change 09).
+
+    def _regras_com_config(self, troca: tuple[str, str] | None) -> subprocess.CompletedProcess[str]:
+        """A conferência das regras, com --fonte, de um projeto novo com o config.yaml trocado."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            config = pasta / "openspec/config.yaml"
+            if troca is not None:
+                texto = config.read_text(encoding="utf-8")
+                self.assertIn(troca[0], texto)
+                config.write_text(texto.replace(troca[0], troca[1], 1), encoding="utf-8")
+            return self._regras(pasta)
+
+    def test_config_com_as_regras_do_kit_passa(self) -> None:
+        saida = self._regras_com_config(None)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertFalse([l for l in saida.stderr.splitlines() if l.startswith("FALHA") and "config.yaml" in l])
+
+    def test_config_com_regra_propria_reprova(self) -> None:
+        saida = self._regras_com_config(("  proposal:\n", "  proposal:\n    - Uma regra própria.\n"))
+        self.assertEqual(saida.returncode, 1, saida.stderr)
+        falha = next((l for l in saida.stderr.splitlines() if l.startswith("FALHA") and "rules:" in l), "")
+        self.assertIn("openspec/config.yaml", falha, saida.stderr)
+
+    def test_config_sem_linha_do_operations_reprova(self) -> None:
+        modelo = (MODELO / "openspec/config.yaml").read_text(encoding="utf-8")
+        linha = next(l for l in modelo.splitlines() if "O design.md que o propose dispensou" in l)
+        saida = self._regras_com_config((linha + "\n", ""))
+        self.assertEqual(saida.returncode, 1, saida.stderr)
+        self.assertIn("- 'O design.md que o propose dispensou", saida.stderr)
+
+    def test_config_com_acrescimos_proprios_passa(self) -> None:
+        modelo = (MODELO / "openspec/config.yaml").read_text(encoding="utf-8")
+        linha = next(l for l in modelo.splitlines() if "O design.md que o propose dispensou" in l)
+        propria = "      - 'Um passo próprio do archive deste projeto.'"
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            config = pasta / "openspec/config.yaml"
+            texto = config.read_text(encoding="utf-8").replace(linha, f"{linha}\n{propria}")
+            config.write_text(texto + "githubCopilot:\n  cloudAgent: true\n", encoding="utf-8")
+            saida = self._regras(pasta)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+
+    def test_config_da_versao_anterior_passa(self) -> None:
+        """Com o kit à frente, as regras da tag da versão do projeto valem; as da cópia de trabalho, não."""
+        nova = "  proposal:\n    - Uma regra nova do kit.\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            kit = self._kit_falso(tmp)
+            config_do_kit = kit / "modelo/openspec/config.yaml"
+            config_do_kit.write_text(config_do_kit.read_text(encoding="utf-8").replace("  proposal:\n", nova, 1),
+                                     encoding="utf-8")
+            com_as_da_tag = self._regras_no_kit(pasta, kit)
+            shutil.copy(config_do_kit, pasta / "openspec/config.yaml")
+            com_as_novas = self._regras_no_kit(pasta, kit)
+        self.assertEqual(com_as_da_tag.returncode, 0, com_as_da_tag.stderr)
+        self.assertEqual(com_as_novas.returncode, 1, com_as_novas.stderr)
+        self.assertIn("rules:", com_as_novas.stderr)
+
+    def test_projeto_sem_config_nao_reprova_pelo_config(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            (pasta / "openspec/config.yaml").unlink()
+            saida = self._regras(pasta)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
 
     def test_versao_sem_tag_no_kit_avisa_sem_comparar(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

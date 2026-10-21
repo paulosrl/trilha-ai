@@ -16,13 +16,13 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`;
 
 ## 3. As regras do config.yaml na conferência das regras
 
-- [ ] 3.1 O teste `test_config_com_as_regras_do_kit_passa` comprova o cenário "Regras iguais às do kit": um projeto do `kit.py novo`, conferido com `--fonte`, não reprova pelo `config.yaml`. Já passa e guarda o que não pode mudar (`-k test_config_com_as_regras_do_kit_passa`)
-- [ ] 3.2 O teste `test_config_com_regra_propria_reprova` comprova o cenário "Regras próprias": uma regra a mais no bloco `rules:`; a conferência reprova, citando `openspec/config.yaml` e `rules:`. Falha antes do código (`-k test_config_com_regra_propria_reprova`)
-- [ ] 3.3 O teste `test_config_sem_linha_do_operations_reprova` comprova o cenário "Linha do operations que falta": uma linha do `operations.archive` do kit apagada; a conferência reprova, citando o começo dela. Falha antes do código (`-k test_config_sem_linha_do_operations_reprova`)
-- [ ] 3.4 O teste `test_config_com_acrescimos_proprios_passa` comprova o cenário "Acréscimos próprios aceitos": uma linha a mais no `operations.archive` e a chave `githubCopilot` no topo; a conferência não reprova pelo `config.yaml` (`-k test_config_com_acrescimos_proprios_passa`)
-- [ ] 3.5 O teste `test_config_da_versao_anterior_passa` comprova o cenário "Projeto na versão anterior do kit": um kit de teste com a tag da versão do projeto e regras mudadas na cópia de trabalho; o projeto com as regras da tag não reprova, e com as da cópia de trabalho reprova (`-k test_config_da_versao_anterior_passa`)
-- [ ] 3.6 O teste `test_projeto_sem_config_nao_reprova_pelo_config` comprova o cenário "Projeto sem o config.yaml" (`-k test_projeto_sem_config_nao_reprova_pelo_config`)
-- [ ] 3.7 O `modelo/trilha/confere_regras.py` compara o `config.yaml` como o design manda (decisão 2), com a escolha da versão da pasta `trilha/`, e o texto de ajuda dele cita a comparação; os testes do grupo 3 passam
+- [x] 3.1 O teste `test_config_com_as_regras_do_kit_passa` comprova o cenário "Regras iguais às do kit": um projeto do `kit.py novo`, conferido com `--fonte`, não reprova pelo `config.yaml`. Já passa e guarda o que não pode mudar (`-k test_config_com_as_regras_do_kit_passa`)
+- [x] 3.2 O teste `test_config_com_regra_propria_reprova` comprova o cenário "Regras próprias": uma regra a mais no bloco `rules:`; a conferência reprova, citando `openspec/config.yaml` e `rules:`. Falha antes do código (`-k test_config_com_regra_propria_reprova`)
+- [x] 3.3 O teste `test_config_sem_linha_do_operations_reprova` comprova o cenário "Linha do operations que falta": uma linha do `operations.archive` do kit apagada; a conferência reprova, citando o começo dela. Falha antes do código (`-k test_config_sem_linha_do_operations_reprova`)
+- [x] 3.4 O teste `test_config_com_acrescimos_proprios_passa` comprova o cenário "Acréscimos próprios aceitos": uma linha a mais no `operations.archive` e a chave `githubCopilot` no topo; a conferência não reprova pelo `config.yaml` (`-k test_config_com_acrescimos_proprios_passa`)
+- [x] 3.5 O teste `test_config_da_versao_anterior_passa` comprova o cenário "Projeto na versão anterior do kit": um kit de teste com a tag da versão do projeto e regras mudadas na cópia de trabalho; o projeto com as regras da tag não reprova, e com as da cópia de trabalho reprova (`-k test_config_da_versao_anterior_passa`)
+- [x] 3.6 O teste `test_projeto_sem_config_nao_reprova_pelo_config` comprova o cenário "Projeto sem o config.yaml" (`-k test_projeto_sem_config_nao_reprova_pelo_config`)
+- [x] 3.7 O `modelo/trilha/confere_regras.py` compara o `config.yaml` como o design manda (decisão 2), com a escolha da versão da pasta `trilha/`, e o texto de ajuda dele cita a comparação; os testes do grupo 3 passam
 
 ## 4. O OpenSpec na conferência do método
 

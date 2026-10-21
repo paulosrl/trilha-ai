@@ -13,6 +13,9 @@ Confere, na raiz indicada:
 - com --fonte, a pasta trilha/ é igual à modelo/trilha/ da versão do projeto, arquivo a arquivo
   (o cache do Python, __pycache__/, não conta): a cópia de trabalho do kit, na mesma versão; a tag
   vX.Y do kit, noutra, com aviso; sem a tag, só o aviso;
+- com --fonte, o bloco rules: do openspec/config.yaml igual ao do modelo do kit na mesma versão, e
+  cada linha do operations do kit presente no do projeto (as linhas próprias a mais e as chaves
+  próprias no topo passam); sem o config.yaml, ou sem ler o do kit, nada;
 - as travas desligadas (o core.hooksPath, o guarda.py no .claude/settings.json e o
   disableAllHooks), como aviso;
 - os campos < > dos modelos do kit ainda por preencher, como aviso (a stack só vem na etapa 2);
@@ -358,6 +361,55 @@ def avisos_da_stack(raiz: Path) -> list[str]:
     return [aviso]
 
 
+def _blocos(texto: str) -> dict[str, list[str]]:
+    """Os blocos de topo de um config.yaml, pela chave: as linhas não vazias de cada um, sem o
+    espaço do fim. Um bloco abre numa linha sem recuo que começa por uma chave, e não por #."""
+    blocos: dict[str, list[str]] = {}
+    atual: list[str] | None = None
+    for linha in texto.splitlines():
+        chave = re.match(r"([A-Za-z_][\w-]*):", linha)
+        if chave:
+            atual = blocos.setdefault(chave.group(1), [])
+        elif atual is not None and linha.strip() and not linha.startswith("#"):
+            atual.append(linha.rstrip())
+    return blocos
+
+
+def _config_do_kit(raiz: Path, fonte: Path) -> str | None:
+    """O modelo do config.yaml na versão do projeto, escolhida como a da pasta trilha/: a cópia de
+    trabalho do kit, na mesma versão; a tag vX.Y, noutra. None se não se lê."""
+    nossa = _versao(raiz / "trilha" / "CLAUDE-comum.md")
+    do_kit = _versao(fonte / "modelo" / "trilha" / "CLAUDE-comum.md")
+    modelo = fonte / "modelo" / "openspec" / "config.yaml"
+    if not nossa or not do_kit or nossa == do_kit:
+        return modelo.read_text(encoding="utf-8") if modelo.is_file() else None
+    saida = _git(fonte, "show", f"refs/tags/v{nossa}:modelo/openspec/config.yaml")
+    return saida.decode("utf-8") if saida is not None else None
+
+
+def comparar_o_config(raiz: Path, fonte: Path) -> list[str]:
+    """As regras por artefato do openspec/config.yaml, que são do método: o bloco rules: igual ao
+    do kit e o operations com todas as linhas dele (as linhas próprias a mais passam)."""
+    config = raiz / "openspec" / "config.yaml"
+    do_kit = _config_do_kit(raiz, fonte)
+    if not config.is_file() or do_kit is None:
+        return []
+    nossos, deles = _blocos(config.read_text(encoding="utf-8")), _blocos(do_kit)
+    falhas = []
+    if nossos.get("rules", []) != deles.get("rules", []):
+        falhas.append(
+            "openspec/config.yaml: o bloco rules: difere do modelo do kit na versão do projeto; "
+            "copie-o do modelo/openspec/config.yaml do kit (as regras por artefato são do método)"
+        )
+    operations = {linha.strip() for linha in nossos.get("operations", [])}
+    falhas += [
+        f"openspec/config.yaml: falta no operations a linha do kit {linha.strip()[:70]}"
+        for linha in deles.get("operations", [])
+        if linha.strip() not in operations
+    ]
+    return falhas
+
+
 def main(argv: list[str]) -> int:
     if not argv or len(argv) not in (1, 3) or (len(argv) == 3 and argv[1] != "--fonte"):
         print(__doc__, file=sys.stderr)
@@ -368,6 +420,7 @@ def main(argv: list[str]) -> int:
     if fonte is not None:
         da_fonte, avisos_da_fonte = comparar_com_o_kit(raiz, fonte)
         falhas, avisos = falhas + da_fonte, avisos + avisos_da_fonte
+        falhas += comparar_o_config(raiz, fonte)
     for aviso in avisos + avisos_dos_campos(raiz) + avisos_da_stack(raiz):
         print(f"aviso: {aviso}", file=sys.stderr)
     for falha in falhas:
