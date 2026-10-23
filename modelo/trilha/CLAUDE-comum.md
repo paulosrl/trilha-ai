@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 2.14, de 2026-10-21. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
+Versão 2.15, de 2026-10-23. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL; o que é de um projeto fica no `CLAUDE.md` dele, no esqueleto da última seção. Em conflito, vale nesta ordem: as travas do kit; a escolha do usuário; o OpenSpec (fluxo e formato); a regra do `CLAUDE.md` do repositório declarada em "Exceções ao comum", com o motivo (fora dessa seção, regra contrária a esta não vale); este arquivo, que conta como parte do `CLAUDE.md` que o importa; o `openspec/config.yaml`; as skills `sdd:*`.
 
@@ -29,7 +29,7 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 2. `/opsx:propose @sdd/briefing-openspec/briefing-…md`: só planejamento, nenhum código; commit, envio e pull request em rascunho (`gh pr create --draft`), que mostra o plano antes do código;
 3. a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3, pelo checklist da skill `sdd:briefing`. O que reprovar se corrige com `/opsx:update`, ou pelo caminho que ele indicar, depois da escolha do usuário; a revisão termina com a auditoria aprovada, em commit e envio;
 4. `/opsx:apply`, no fluxo do OpenSpec; termina na tarefa que a regra das tarefas do `openspec/config.yaml` põe por último; commit e envio a cada parada, nunca um só no fim;
-5. `/opsx:verify` e a revisão independente do código, o `/code-review <número do PR>` do Claude Code, rodado numa sessão nova, depois do `/clear` (o `ANDAMENTO.md` guarda o ponto de volta): quem escreveu não é o único a revisar, nem com o contexto de quem escreveu. Cada sugestão dos dois é aplicada ou recusada por escrito no `design.md` da change, com o motivo; commit e envio;
+5. `/opsx:verify` e a revisão independente do código, o `/code-review high <número do PR>` do Claude Code (`max` em change de login, deploy, apagar dados ou configuração de produção; nunca `ultra` sem pedido do usuário), sem `--fix` nem `--comment`, rodado por um agente sem o contexto da sessão (ou numa sessão nova, depois do `/clear`, com o ponto de volta no `ANDAMENTO.md`): quem escreveu não é o único a revisar, nem com o contexto de quem escreveu. Cada sugestão dos dois é aplicada ou recusada por escrito no `design.md` da change, com o motivo; commit e envio;
 6. `/opsx:archive`; em seguida, os passos que o `operations.archive` do `openspec/config.yaml` lista; commit e envio, e o PR sai do rascunho (`gh pr ready`): código, specs e página chegam juntos à main;
 7. o merge, só com a verificação do GitHub verde no PR (`gh pr checks`) e com um "sim" só para ele: `gh pr merge --merge --delete-branch` (merge commit, nunca squash nem rebase, que apagariam os pontos de retomada ou a fronteira da change). De volta à main atualizada, o `ANDAMENTO.md` vai a "nada em andamento" num commit, enviado sob o mesmo "sim". A change fecha aqui, não no archive; a próxima abre outra branch.
 

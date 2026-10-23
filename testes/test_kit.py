@@ -496,13 +496,21 @@ class Kit(unittest.TestCase):
         self.assertIn("o CI os procura no histórico (gitleaks)", comum)
 
     def test_revisao_independente_no_verify(self) -> None:
-        """v1.28: no passo 5, o /code-review, desde a 2.3 numa sessão nova, depois do /clear."""
+        """v1.28: no passo 5, o /code-review, desde a 2.3 numa sessão nova, depois do /clear. v2.15:
+        no nível high (max nas changes de risco), sem --fix nem --comment, por um agente sem o
+        contexto da sessão: o mesmo rigor em toda change, sem parar e retomar a sessão."""
         comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
         # Com o alvo: sem ele, o /code-review revisa só o que não foi commitado, vazio depois do commit.
-        self.assertIn("5. `/opsx:verify` e a revisão independente do código, o `/code-review <número do PR>`",
-                      comum)
+        self.assertIn(
+            "5. `/opsx:verify` e a revisão independente do código, o `/code-review high <número do PR>`",
+            comum,
+        )
+        self.assertIn("`max` em change de login, deploy, apagar dados ou configuração de produção", comum)
+        self.assertIn("nunca `ultra` sem pedido do usuário", comum)
+        self.assertIn("sem `--fix` nem `--comment`", comum)
+        self.assertIn("rodado por um agente sem o contexto da sessão", comum)
         self.assertIn("quem escreveu não é o único a revisar", comum)
-        self.assertIn("/code-review <número do PR>", (RAIZ / "mapa-da-trilha.html").read_text())
+        self.assertIn("/code-review high <número do PR>", (RAIZ / "mapa-da-trilha.html").read_text())
 
     def test_a_change_fecha_no_merge(self) -> None:
         """v1.25: a change fecha no merge; a retomada olha o PR; um só lugar para a regra dos envios."""
