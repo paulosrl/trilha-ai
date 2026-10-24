@@ -288,7 +288,7 @@ Das instalações do plugin `sdd` que a lista traz, a conferência do método SH
 - **THEN** a conferência imprime um só aviso de versão, que cita `2.1.0`, `2.2` e `claude plugin update sdd@trilha-ai --scope project`
 
 ### Requirement: Travas desligadas pela configuração
-A conferência das regras SHALL avisar, sem falhar, cada trava desligada: a do commit, quando o `core.hooksPath` do clone não é `trilha-ai/hooks`; a do Claude Code, quando o `.claude/settings.json` não liga o `trilha-ai/guarda.py` ou quando o `disableAllHooks` que vale no projeto é verdadeiro, lido do `.claude/settings.local.json`, que prevalece, e do `.claude/settings.json`.
+A conferência das regras SHALL avisar, sem falhar, cada trava desligada: a do commit, quando o `core.hooksPath` do clone não é `trilha-ai/hooks`, salvo `trilha/hooks` com o link de transição `trilha` no projeto, que conta como ligada, com o aviso para trocar; a do Claude Code, quando o `.claude/settings.json` não liga o `trilha-ai/guarda.py` ou quando o `disableAllHooks` que vale no projeto é verdadeiro, lido do `.claude/settings.local.json`, que prevalece, e do `.claude/settings.json`.
 
 #### Scenario: Hooks desligados pela configuração local
 - **WHEN** o `.claude/settings.local.json` do projeto tem `"disableAllHooks": true`
@@ -306,6 +306,15 @@ A conferência das regras SHALL avisar, sem falhar, cada trava desligada: a do c
 #### Scenario: Travas ligadas no projeto novo
 - **WHEN** a conferência das regras roda num projeto recém-criado pelo kit
 - **THEN** ela não avisa trava desligada
+
+#### Scenario: Trava do commit pelo link de transição
+- **WHEN** o projeto tem o link de transição `trilha` para `trilha-ai` e o `core.hooksPath` do clone é `trilha/hooks`
+- **THEN** a conferência das regras não avisa a trava do commit desligada
+- **AND** avisa que ela está ligada pelo link de transição e dá o comando `git config core.hooksPath trilha-ai/hooks`
+
+#### Scenario: Trava do commit na pasta antiga sem o link
+- **WHEN** o projeto não tem `trilha` e o `core.hooksPath` do clone é `trilha/hooks`
+- **THEN** a conferência das regras avisa a trava do commit desligada
 
 ### Requirement: Regras por artefato iguais às do kit
 Com a pasta do kit indicada, a conferência das regras SHALL comparar o bloco `rules:` do `openspec/config.yaml` do projeto com o do modelo do kit na versão do projeto, escolhida como na pasta `trilha-ai/`, e MUST reprovar o bloco diferente e cada linha do `operations` do kit que falte no projeto. Linhas próprias a mais no `operations`, chaves próprias no topo do arquivo e o projeto sem o `config.yaml` MUST NOT reprovar.
@@ -340,3 +349,19 @@ O kit SHALL manter `modelo/trilha` como link simbólico para `modelo/trilha-ai`,
 #### Scenario: Projeto da 2.18 com o kit novo ao lado
 - **WHEN** a conferência das regras de um projeto feito pelo kit na versão 2.18, ainda na `trilha/`, roda com a pasta do kit 2.19 indicada
 - **THEN** ela não reprova pela pasta do kit, e termina com o código de saída 0
+
+### Requirement: Aviso do link de transição no projeto
+Quando o projeto tem o link simbólico `trilha` que aponta para a `trilha-ai/` dele, a conferência das regras SHALL avisar, sem falhar, que esse é o link de transição da pasta antiga e que ele sai pelo `kit.py atualizar` quando nenhum arquivo do projeto citar mais `trilha/`. Um `trilha` que não é esse link MUST NOT gerar o aviso.
+
+#### Scenario: Projeto com o link de transição
+- **WHEN** a conferência das regras roda num projeto com o link `trilha` para `trilha-ai`
+- **THEN** ela avisa o link de transição e o que o tira
+- **AND** termina com o código de saída 0
+
+#### Scenario: Pasta trilha própria do projeto
+- **WHEN** o projeto tem uma pasta `trilha/` própria, que não é link
+- **THEN** a conferência das regras não avisa o link de transição
+
+#### Scenario: Link em laço
+- **WHEN** o projeto tem um `trilha` que é um link simbólico para ele mesmo
+- **THEN** a conferência das regras não avisa o link de transição e termina com o código de saída 0, sem traceback
