@@ -19,7 +19,12 @@ Antes de mudar qualquer arquivo do projeto, o `kit.py atualizar --openspec` SHAL
 - **AND** termina com o código de saída 0
 
 ### Requirement: Falha da atualização do OpenSpec
-Quando o `npm` falta ou falha, o `openspec` do PATH responde outra versão depois da instalação, ou o dry-run falha, o `kit.py atualizar --openspec` MUST terminar com o código 1, com uma recusa que diz o que falhou, sem mudar arquivo nenhum do projeto. Quando o `openspec update`, que roda depois da cópia, falha, a ferramenta MUST terminar com o código 1, com uma FALHA que o cita, sem sugerir o commit; o que o kit já copiou fica no projeto, sem commit. Quando a migração do `check.sh` falharia, a ferramenta MUST NOT chamar o `npm` nem o `openspec update`.
+Quando o projeto não tem a pasta `openspec/`, o CI do modelo do kit não fixa a versão do OpenSpec, o `npm` falta ou falha, o `openspec` do PATH responde outra versão depois da instalação, ou o dry-run falha, o `kit.py atualizar --openspec` MUST terminar com o código 1, com uma recusa que diz o que falhou, sem mudar arquivo nenhum do projeto. Quando o `openspec update`, que roda depois da cópia, falha, a ferramenta MUST terminar com o código 1, com uma FALHA que o cita, sem sugerir o commit; o que o kit já copiou fica no projeto, sem commit. Quando a migração do `check.sh` falharia, a ferramenta MUST NOT chamar o `npm` nem o `openspec update`.
+
+#### Scenario: Projeto sem a pasta openspec
+- **WHEN** o projeto não tem a pasta `openspec/`, a versão da máquina é outra, e o `kit.py atualizar` roda com `--openspec`
+- **THEN** a saída traz uma recusa que manda rodar o `kit.py atualizar` sem `--openspec`, fazer o commit e rodar de novo com `--openspec`, e a ferramenta não chama o `npm` nem o `openspec update`
+- **AND** termina com o código de saída 1, com o `git status` do projeto vazio
 
 #### Scenario: Máquina sem o npm
 - **WHEN** a versão da máquina é outra e o comando `npm` não existe no PATH
@@ -58,5 +63,5 @@ Com `--openspec` e `--aceitar-apagados`, quando o dry-run listar arquivos do pro
 
 #### Scenario: Opção sem o --openspec
 - **WHEN** o `kit.py atualizar` roda com `--aceitar-apagados`, sem `--openspec`
-- **THEN** a saída traz um erro de uso que cita o `--openspec`, e a ferramenta não chama o `npm` nem o `openspec update`
+- **THEN** a saída traz um erro de uso que diz que o `--aceitar-apagados` só vale com o `--openspec`, e a ferramenta não chama o `npm` nem o `openspec update`
 - **AND** termina com o código de saída 2, com o `git status` do projeto vazio
