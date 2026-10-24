@@ -2005,7 +2005,8 @@ class Kit(unittest.TestCase):
     def _atualizar_com_openspec(self, *opcoes: str, versao: str = "1.14.1", dry_run: str | None = None,
                                 update: str = "exit 0", npm: str | None = "instala", ci: str | None = None,
                                 check_antigo: bool = False, check_extra: str = "", trilha_editada: bool = False,
-                                sem_openspec: bool = False) -> tuple[subprocess.CompletedProcess, list[str], Path]:
+                                sem_openspec: bool = False,
+                                comum: str | None = None) -> tuple[subprocess.CompletedProcess, list[str], Path]:
         """O kit.py atualizar num projeto novo (com uma skill gerada no índice), com um `openspec` e
         um `npm` falsos num PATH só deles: o `openspec` responde ao `--version` com a versão gravada
         em <falsos>/versao, ao dry-run com o corpo gravado em <falsos>/dry-run e ao `update` com o
@@ -2013,7 +2014,8 @@ class Kit(unittest.TestCase):
         dele, e None o tira). O ci troca a versão do OpenSpec no CI do projeto; o check_antigo põe
         no check.sh uma chamada aos scripts/confere_*, que a migração não sabe trocar, e o
         check_extra acrescenta o texto dado; a trilha_editada commita uma linha a mais no
-        trilha/verifica.sh, que a cópia desfaria; o sem_openspec tira a pasta openspec/. Devolve
+        trilha/verifica.sh, que a cópia desfaria; o sem_openspec tira a pasta openspec/; o comum
+        põe a versão dada no trilha/CLAUDE-comum.md do projeto. Devolve
         a saída, as chamadas e a pasta do projeto; o _de_novo roda o atualizar outra vez."""
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
@@ -2036,6 +2038,10 @@ class Kit(unittest.TestCase):
                 verifica.write("# editado\n")
         if sem_openspec:
             shutil.rmtree(pasta / "openspec")
+        if comum:
+            arquivo = pasta / "trilha/CLAUDE-comum.md"
+            arquivo.write_text(re.sub(r"^Versão [\d.]+,", f"Versão {comum},", arquivo.read_text(encoding="utf-8"),
+                                      flags=re.M), encoding="utf-8")
         subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
         subprocess.run(["git", "commit", "-qm", "gerados"], cwd=pasta, check=True, env={**os.environ, **GIT_TESTE})
         falsos = Path(tmp.name) / "falsos"
@@ -2283,6 +2289,73 @@ class Kit(unittest.TestCase):
         self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
         self.assertIn("FALHA: o scripts/check.sh ainda chama", saida.stdout)
         self.assertFalse([c for c in chamadas if c.startswith("npm") or c.startswith("openspec update")], chamadas)
+
+    def _commit_sugerido(self, saida: subprocess.CompletedProcess) -> str:
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        return next((l for l in saida.stdout.splitlines() if l.startswith("commit sugerido:")), "")
+
+    def _versao_do_comum(self) -> str:
+        return FERRAMENTA._versao(MODELO / "trilha/CLAUDE-comum.md")
+
+    SKILL_MUDA = (_dry_run(("update", ".claude/skills/openspec-propose/SKILL.md")),
+                  "echo mudado >> .claude/skills/openspec-propose/SKILL.md")
+
+    def test_atualizar_openspec_commit_so_do_openspec(self) -> None:
+        dry_run, update = self.SKILL_MUDA
+        saida, _, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=dry_run, update=update)
+        self.assertEqual(self._commit_sugerido(saida),
+                         f"commit sugerido: chore(metodo): os arquivos gerados pelo OpenSpec {self.PIN_DO_KIT}")
+
+    def test_atualizar_openspec_commit_da_copia_e_do_openspec(self) -> None:
+        dry_run, update = self.SKILL_MUDA
+        saida, _, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=dry_run, update=update,
+                                                   trilha_editada=True)
+        v = self._versao_do_comum()
+        self.assertEqual(self._commit_sugerido(saida),
+                         f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {v} → {v}, "
+                         f"e os arquivos gerados pelo OpenSpec {self.PIN_DO_KIT}")
+
+    def test_atualizar_openspec_commit_previsto_e_nao_feito(self) -> None:
+        """Revisão da change 19, R1: o dry-run previu a skill, mas o update não a mudou."""
+        dry_run, _ = self.SKILL_MUDA
+        saida, _, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=dry_run,
+                                                   trilha_editada=True)
+        v = self._versao_do_comum()
+        self.assertEqual(self._commit_sugerido(saida), f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {v} → {v}")
+
+    def test_atualizar_openspec_commit_feito_sem_previsao(self) -> None:
+        """Revisão da change 19, R2: o update mudou a skill que o dry-run não previu, sem a cópia mudar nada."""
+        _, update = self.SKILL_MUDA
+        saida, _, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, update=update)
+        self.assertEqual(self._commit_sugerido(saida),
+                         f"commit sugerido: chore(metodo): os arquivos gerados pelo OpenSpec {self.PIN_DO_KIT}")
+
+    def test_atualizar_openspec_commit_de_outra_versao(self) -> None:
+        """Revisão da change 19, V1 e R3: a versão do comum muda, e o OpenSpec também."""
+        dry_run, update = self.SKILL_MUDA
+        saida, _, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=dry_run, update=update,
+                                                   comum="2.17")
+        self.assertEqual(self._commit_sugerido(saida),
+                         f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum 2.17 → {self._versao_do_comum()}, "
+                         f"e os arquivos gerados pelo OpenSpec {self.PIN_DO_KIT}")
+
+    def test_atualizar_openspec_commit_sem_os_de_fora(self) -> None:
+        """Revisão da change 19, R4: o que o dry-run previu fora do projeto não cita o OpenSpec."""
+        fora = _dry_run(("update", "~/.codex/prompts/x.md"), ("update", "../fora.md"))
+        saida, _, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=fora, trilha_editada=True)
+        v = self._versao_do_comum()
+        self.assertEqual(self._commit_sugerido(saida), f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {v} → {v}")
+
+    def test_atualizar_commit_sem_openspec(self) -> None:
+        """Revisão dos artefatos da change 19, A1: sem a opção, a mensagem continua a de antes."""
+        saida, _, _ = self._atualizar_com_openspec(versao=self.PIN_DO_KIT, trilha_editada=True)
+        v = self._versao_do_comum()
+        self.assertEqual(self._commit_sugerido(saida), f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {v} → {v}")
+
+    def test_atualizar_openspec_commit_so_da_copia(self) -> None:
+        saida, _, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, trilha_editada=True)
+        v = self._versao_do_comum()
+        self.assertEqual(self._commit_sugerido(saida), f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {v} → {v}")
 
     def test_atualizar_avisa_o_ci_do_projeto_atras_do_kit(self) -> None:
         """Revisão da change 16, R1: a conferência cita a versão do CI do projeto até ela ser trocada."""
