@@ -271,9 +271,12 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
     # A página nasce ao fechar uma etapa (o comum); aqui, só a que já existe ganha o modelo novo.
     if (pasta / "sdd" / "documentacao.html").is_file():
         _rodar(pasta, [sys.executable, "-I", "trilha-ai/gerar_pagina_sdd.py"])
-    if da_trilha or _link_de_transicao(pasta):  # depois da trava e da página, que citavam a trilha/
-        _cuidar_do_link(pasta, migrou_a_trilha=da_trilha)
-    if da_trilha:
+    # Depois da trava e da página, que também citavam a trilha/; com o link, a sessão aberta e os
+    # outros clones seguem funcionando, e o aviso deles vem quando o link sai.
+    com_link = _link_de_transicao(pasta)
+    if da_trilha or com_link:
+        com_link = _cuidar_do_link(pasta, migrou_a_trilha=da_trilha)
+    if da_trilha and not com_link:
         print(
             "aviso: reabra a sessão do Claude Code aberta neste projeto, que ainda chama a trava "
             "em trilha/guarda.py; nos outros clones, rode git config core.hooksPath trilha-ai/hooks"
@@ -535,22 +538,29 @@ def _migrar(pasta: Path) -> bool:
 # um parêntese, de @, = ou :, com ./ ou sem: nem parte de outro nome (minhatrilha/, trilha-ai/),
 # nem dentro de outro caminho (src/trilha/, ../trilha/).
 NA_TRILHA = re.compile(r"(?m)(?:^|(?<=[\s`\"'(@=:]))(\./)?trilha/")
-# A busca das citações (o aviso e o link de transição) acha também a pasta depois de uma variável
-# do shell ($X/, ${X}/, $(…)/), de uma aspa seguida de barra ("$X"/trilha/) e o nome sozinho entre
-# aspas (Path("trilha")): achar a mais só segura o link por mais tempo; achar a menos o tiraria
-# com o projeto ainda chamando a pasta antiga.
-CITA_A_TRILHA_DO_GREP = (
-    "(^|[[:space:]`\"'(@=:])(\\./)?trilha/"
-    "|(\\$[[:alnum:]_]+|\\$\\{[[:alnum:]_]+\\}|[)\"'])/trilha/"
-    "|[\"']trilha[\"']"
+# A busca das citações (o aviso e o link de transição) acha a pasta em qualquer caminho, desde que
+# não seja parte de outro nome (minhatrilha/, trilha-ai/), e o nome sozinho entre aspas
+# (Path("trilha")): achar a mais só segura o link por mais tempo; achar a menos o tiraria com o
+# projeto ainda chamando a pasta antiga. Ficam fora o histórico que não se edita nem roda (as
+# changes arquivadas do OpenSpec) e a página gerada, que repete os documentos do sdd/.
+CITA_A_TRILHA = re.compile(r"(?m)(?:^|[^\w.-])trilha/|[\"']trilha[\"']")
+CITA_A_TRILHA_DO_GREP = "(^|[^[:alnum:]_.-])trilha/|[\"']trilha[\"']"
+FORA_DA_BUSCA = (
+    ":!trilha/",
+    ":!trilha-ai/",
+    ":!openspec/changes/archive/",
+    ":!sdd/documentacao.html",
 )
 
 
 def _link_de_transicao(pasta: Path) -> bool:
     """A trilha é o link de transição (change 21): um link simbólico que resolve para a trilha-ai/
-    do próprio projeto."""
+    do próprio projeto; o link em laço ou sem permissão não é."""
     link = pasta / "trilha"
-    return link.is_symlink() and link.resolve() == (pasta / "trilha-ai").resolve()
+    try:
+        return link.is_symlink() and link.resolve() == (pasta / "trilha-ai").resolve()
+    except (OSError, RuntimeError):
+        return False
 
 
 def _trilha_do_metodo(pasta: Path) -> bool:
@@ -606,41 +616,55 @@ def _migrar_a_trilha(pasta: Path) -> bool:
     return True
 
 
-def _citacoes(pasta: Path) -> list[str]:
-    """Os arquivos versionados do projeto que ainda citam a trilha/."""
+def _citacoes(pasta: Path) -> list[str] | None:
+    """Os arquivos do projeto que ainda citam a trilha/: os versionados e o
+    .claude/settings.local.json, que o git ignora e pode ligar a trava antiga. None se a busca
+    falhar, que não é o mesmo que nada achado."""
     saida = subprocess.run(
         ["git", "-C", str(pasta), "-c", "core.quotePath=false", "grep", "-l", "-z", "-E"]
-        + [CITA_A_TRILHA_DO_GREP, "--", "."]
-        + [":!trilha/", ":!trilha-ai/"],
+        + [CITA_A_TRILHA_DO_GREP, "--", ".", *FORA_DA_BUSCA],
         capture_output=True,
         text=True,
         check=False,
     )
-    return [nome for nome in saida.stdout.split("\0") if nome] if saida.returncode == 0 else []
+    if saida.returncode not in (0, 1):
+        return None
+    arquivos = [nome for nome in saida.stdout.split("\0") if nome]
+    local = pasta / ".claude" / "settings.local.json"
+    texto = local.read_text(encoding="utf-8", errors="replace") if local.is_file() else ""
+    if CITA_A_TRILHA.search(texto):
+        arquivos.append(".claude/settings.local.json")
+    return arquivos
 
 
-def _cuidar_do_link(pasta: Path, migrou_a_trilha: bool) -> None:
+def _cuidar_do_link(pasta: Path, migrou_a_trilha: bool) -> bool:
     """O link de transição trilha → trilha-ai (change 21): nasce na migração, quando o projeto
-    ainda cita a pasta antiga, fica enquanto ele a cita e sai quando nada mais a cita."""
-    citacoes = ", ".join(_citacoes(pasta))
+    ainda cita a pasta antiga, fica enquanto ele a cita e sai quando nada mais a cita; com a busca
+    falhando, nasce e fica. Devolve se o link ficou."""
+    achados = _citacoes(pasta)
+    citacoes = ", ".join(achados) if achados is not None else "a busca das citações falhou"
     link = pasta / "trilha"
     if migrou_a_trilha:
-        if citacoes:
-            print(f"aviso: ainda citam trilha/, que passou a trilha-ai/: {citacoes}")
-            link.symlink_to("trilha-ai", target_is_directory=True)
-            print(
-                "criado o link de transição trilha → trilha-ai, para o que o projeto ainda chama "
-                "pela pasta antiga continuar funcionando; ele sai num kit.py atualizar quando "
-                "nenhum arquivo citar mais trilha/"
-            )
-    elif citacoes:
-        print(f"aviso: o link de transição trilha → trilha-ai fica; citam trilha/: {citacoes}")
-    else:
-        link.unlink()
+        if achados == []:
+            return False
+        print(f"aviso: ainda citam trilha/, que passou a trilha-ai/: {citacoes}")
+        link.symlink_to("trilha-ai", target_is_directory=True)
         print(
-            "saiu o link de transição trilha → trilha-ai: nenhum arquivo cita mais trilha/; nos "
-            "outros clones, rode git config core.hooksPath trilha-ai/hooks"
+            "criado o link de transição trilha → trilha-ai, para o que o projeto ainda chama pela "
+            "pasta antiga continuar funcionando; ele sai num kit.py atualizar quando nenhum "
+            "arquivo citar mais trilha/"
         )
+        return True
+    if achados != []:
+        print(f"aviso: o link de transição trilha → trilha-ai fica; citam trilha/: {citacoes}")
+        return True
+    link.unlink()
+    print(
+        "saiu o link de transição trilha → trilha-ai: nenhum arquivo cita mais trilha/; reabra a "
+        "sessão do Claude Code aberta neste projeto, confira os arquivos locais que o git não "
+        "versiona e, nos outros clones, rode git config core.hooksPath trilha-ai/hooks"
+    )
+    return False
 
 
 # A parte fixa do scripts/check.sh do kit até a 1.36, que a migração troca pelo

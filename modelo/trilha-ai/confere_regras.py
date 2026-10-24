@@ -310,9 +310,13 @@ def conferir(raiz: Path) -> list[str]:
 
 
 def _link_de_transicao(raiz: Path) -> bool:
-    """A trilha é o link de transição da pasta antiga: resolve para a trilha-ai/ do projeto."""
+    """A trilha é o link de transição da pasta antiga: resolve para a trilha-ai/ do projeto; o
+    link em laço ou sem permissão não é. O kit.py tem a mesma regra (um teste confere)."""
     link = raiz / "trilha"
-    return link.is_symlink() and link.resolve() == (raiz / "trilha-ai").resolve()
+    try:
+        return link.is_symlink() and link.resolve() == (raiz / "trilha-ai").resolve()
+    except (OSError, RuntimeError):
+        return False
 
 
 def avisos_das_travas(raiz: Path) -> list[str]:

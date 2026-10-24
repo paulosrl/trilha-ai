@@ -42,3 +42,7 @@ Quando o projeto tem o link simbólico `trilha` que aponta para a `trilha-ai/` d
 #### Scenario: Pasta trilha própria do projeto
 - **WHEN** o projeto tem uma pasta `trilha/` própria, que não é link
 - **THEN** a conferência das regras não avisa o link de transição
+
+#### Scenario: Link em laço
+- **WHEN** o projeto tem um `trilha` que é um link simbólico para ele mesmo
+- **THEN** a conferência das regras não avisa o link de transição e termina com o código de saída 0, sem traceback

@@ -35,11 +35,14 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 | ferramenta-do-kit | Link de transição criado na migração | Projeto que não cita mais a pasta antiga | `test_migracao_sem_citacao_nao_cria_o_link` |
 | ferramenta-do-kit | Link de transição no atualizar seguinte | Link que fica | `test_atualizar_mantem_o_link_com_citacao` |
 | ferramenta-do-kit | Link de transição no atualizar seguinte | Link que sai | `test_atualizar_tira_o_link_sem_citacao` |
+| ferramenta-do-kit | Link de transição no atualizar seguinte | Busca que falha | `test_busca_que_falha_mantem_o_link` |
+| ferramenta-do-kit | Link de transição no atualizar seguinte | Configuração local que liga a trava antiga | `test_settings_local_que_cita_a_trilha_mantem_o_link` |
 | conferencias | Travas desligadas pela configuração | Hooks desligados pela configuração local | `test_disable_all_hooks_local_avisa` |
 | conferencias | Travas desligadas pela configuração | Hooks desligados pelo projeto | `test_disable_all_hooks_do_projeto_avisa` |
 | conferencias | Travas desligadas pela configuração | Configuração local religa os hooks | `test_disable_all_hooks_religado_pelo_local_nao_avisa` |
-| conferencias | Travas desligadas pela configuração | Travas ligadas no projeto novo | `test_regras_aprovam_o_projeto_com_a_pasta_trilha` |
+| conferencias | Travas desligadas pela configuração | Travas ligadas no projeto novo | `test_projeto_novo_sem_aviso_de_trava` |
 | conferencias | Travas desligadas pela configuração | Trava do commit pelo link de transição | `test_regras_trava_ligada_pelo_link` |
 | conferencias | Travas desligadas pela configuração | Trava do commit na pasta antiga sem o link | `test_regras_trava_antiga_sem_link_desligada` |
 | conferencias | Aviso do link de transição no projeto | Projeto com o link de transição | `test_regras_avisam_o_link_de_transicao` |
 | conferencias | Aviso do link de transição no projeto | Pasta trilha própria do projeto | `test_regras_sem_link_na_pasta_trilha_propria` |
+| conferencias | Aviso do link de transição no projeto | Link em laço | `test_regras_com_o_link_em_laco`, `test_link_de_transicao_igual_na_ferramenta_e_nas_regras` |

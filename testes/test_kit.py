@@ -2921,8 +2921,14 @@ class Kit(unittest.TestCase):
             pasta = self._projeto_da_2_18(tmp)
             (pasta / "docs").mkdir()
             (pasta / "docs/como.md").write_text("Rode `python3 trilha/tempo.py`.\n", encoding="utf-8")
-            (pasta / "docs/outro.md").write_text("A minhatrilha/, a trilha-ai/, o src/trilha/, o src\\trilha/ e o "
-                                                 "../trilha/ não contam.\n", encoding="utf-8")
+            (pasta / "docs/outro.md").write_text("A minhatrilha/ e a trilha-ai/ não contam.\n", encoding="utf-8")
+            # Revisão da change 21: qualquer caminho conta (achar a mais só segura o link), menos o
+            # histórico arquivado do OpenSpec.
+            (pasta / "docs/caminhos.md").write_text("O src/trilha/ e o ../trilha/x.\n", encoding="utf-8")
+            (pasta / "docs/padrao.sh").write_text('cp ${R:-.}/trilha/x "`pwd`/trilha/y"\n', encoding="utf-8")
+            arquivada = pasta / "openspec/changes/archive/2026-01-01-velha"
+            arquivada.mkdir(parents=True)
+            (arquivada / "tasks.md").write_text("O trilha/hooks/pre-push.\n", encoding="utf-8")
             (pasta / "docs/decisões técnicas.md").write_text("Veja trilha/verifica.sh.\n", encoding="utf-8")
             # Change 21, D2: as formas do Heimdall que a busca da 2.19 não achava.
             (pasta / "docs/envio.sh").write_text('cp "$ROOT_DIR/trilha/hooks/pre-push" "$E"\n', encoding="utf-8")
@@ -2937,6 +2943,9 @@ class Kit(unittest.TestCase):
             self.assertIn("docs/decisões técnicas.md", aviso)  # revisão da change 20, R2: o nome inteiro
             self.assertIn("docs/envio.sh", aviso)
             self.assertIn("docs/caminho.py", aviso)
+            self.assertIn("docs/caminhos.md", aviso)
+            self.assertIn("docs/padrao.sh", aviso)
+            self.assertNotIn("openspec/changes/archive", aviso)
 
     def test_migracao_troca_a_importacao_com_espaco(self) -> None:
         """Revisão da change 20, R5: a importação antiga com espaço no fim também se acerta."""
@@ -2993,6 +3002,7 @@ class Kit(unittest.TestCase):
             self.assertEqual(os.readlink(link), "trilha-ai")
             self.assertTrue((pasta / "trilha/tempo.py").is_file())
             self.assertIn("criado o link de transição trilha → trilha-ai", saida.stdout)
+            self.assertNotIn("reabra a sessão", saida.stdout)  # revisão da change 21: o link a mantém
             aviso = next((l for l in saida.stdout.splitlines() if l.startswith("aviso") and "docs/como.md" in l), "")
             self.assertTrue(aviso, saida.stdout)
             self.assertEqual(self._regras(pasta).returncode, 0)
@@ -3022,12 +3032,59 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             pasta, _ = self._migrado_com_citacao(tmp)
             (pasta / "docs/como.md").write_text("Rode `python3 trilha-ai/tempo.py`.\n", encoding="utf-8")
+            arquivada = pasta / "openspec/changes/archive/2026-01-01-velha"
+            arquivada.mkdir(parents=True)
+            (arquivada / "tasks.md").write_text("O trilha/hooks/pre-push, no histórico.\n", encoding="utf-8")
             self._commit_tudo(pasta, "a cópia, com a citação trocada")
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
             self.assertFalse(os.path.lexists(pasta / "trilha"))
             self.assertIn("saiu o link de transição trilha → trilha-ai", saida.stdout)
+            self.assertIn("reabra a sessão do Claude Code", saida.stdout)
             self.assertIn("git config core.hooksPath trilha-ai/hooks", saida.stdout)
+
+    def test_busca_que_falha_mantem_o_link(self) -> None:
+        """Revisão da change 21: o git grep com erro não é "nada achado", e o link fica."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = Path(tmp)  # sem git: o git grep sai com erro
+            (pasta / "trilha-ai").mkdir()
+            (pasta / "trilha").symlink_to("trilha-ai")
+            self.assertIsNone(FERRAMENTA._citacoes(pasta))
+            with contextlib.redirect_stdout(io.StringIO()) as saida:
+                self.assertTrue(FERRAMENTA._cuidar_do_link(pasta, migrou_a_trilha=False))
+            self.assertTrue((pasta / "trilha").is_symlink())
+            self.assertIn("a busca das citações falhou", saida.getvalue())
+
+    def test_settings_local_que_cita_a_trilha_mantem_o_link(self) -> None:
+        """Revisão da change 21: o settings.local.json, que o git ignora, pode ligar a trava antiga."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            (pasta / ".claude/settings.local.json").write_text('{"command": "python3 trilha/guarda.py"}\n',
+                                                               encoding="utf-8")
+            self.assertEqual(FERRAMENTA._citacoes(pasta), [".claude/settings.local.json"])
+
+    def test_link_de_transicao_igual_na_ferramenta_e_nas_regras(self) -> None:
+        """Revisão da change 21: a regra está nos dois, e um link em laço não derruba nenhum."""
+        casos = {"trilha-ai": True, "./trilha-ai": True, "outra": False, "trilha": False, None: False}
+        for alvo, esperado in casos.items():
+            with self.subTest(alvo=alvo), tempfile.TemporaryDirectory() as tmp:
+                pasta = Path(tmp)
+                (pasta / "trilha-ai").mkdir()
+                (pasta / "outra").mkdir()
+                if alvo is None:
+                    (pasta / "trilha").mkdir()
+                else:
+                    (pasta / "trilha").symlink_to(alvo)
+                self.assertEqual(FERRAMENTA._link_de_transicao(pasta), esperado)
+                self.assertEqual(REGRAS._link_de_transicao(pasta), esperado)
+
+    def test_regras_com_o_link_em_laco(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            (pasta / "trilha").symlink_to("trilha")
+            saida = self._regras(pasta)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("Traceback", saida.stderr)
 
     def test_migracao_nao_troca_o_caminho_do_projeto(self) -> None:
         """Revisão dos artefatos, A-menor: um src/trilha/ do projeto no check.sh não vira trilha-ai/."""
