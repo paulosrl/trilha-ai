@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define o que os hooks do git da pasta `trilha/hooks`, ligada pelo `core.hooksPath`, rodam no projeto, para que a trava do método não desligue a verificação que o próprio projeto põe no envio.
+Define o que os hooks do git da pasta `trilha-ai/hooks`, ligada pelo `core.hooksPath`, rodam no projeto, para que a trava do método não desligue a verificação que o próprio projeto põe no envio.
 
 ## Requirements
 

@@ -2843,6 +2843,7 @@ class Kit(unittest.TestCase):
             self.assertEqual(self._regras(pasta).returncode, 0)
             self.assertEqual(self._confere_metodo(pasta).returncode, 0)
             self.assertIn(f"comum 2.18 → {FERRAMENTA._versao(MODELO / 'trilha-ai/CLAUDE-comum.md')}", saida.stdout)
+            self.assertIn("reabra a sessão do Claude Code", saida.stdout)
 
     def test_migracao_avisa_o_arquivo_a_mais_da_trilha(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2869,13 +2870,39 @@ class Kit(unittest.TestCase):
             pasta = self._projeto_da_2_18(tmp)
             (pasta / "docs").mkdir()
             (pasta / "docs/como.md").write_text("Rode `python3 trilha/tempo.py`.\n", encoding="utf-8")
-            (pasta / "docs/outro.md").write_text("A minhatrilha/ e a trilha-ai/ não contam.\n", encoding="utf-8")
+            (pasta / "docs/outro.md").write_text("A minhatrilha/, a trilha-ai/, o src/trilha/ e o ../trilha/ não contam.\n",
+                                                 encoding="utf-8")
             self._commit_tudo(pasta, "documentos")
             saida = self._ferramenta("atualizar", str(pasta))
             aviso = next((l for l in saida.stdout.splitlines() if l.startswith("aviso") and "docs/como.md" in l), "")
             self.assertTrue(aviso, saida.stdout)
             self.assertNotIn("docs/outro.md", saida.stdout)
             self.assertNotIn("CLAUDE.md", aviso)
+            self.assertNotIn("settings.json", aviso)  # revisão dos artefatos, A3: a trava já trocada
+
+    def test_migracao_nao_troca_o_caminho_do_projeto(self) -> None:
+        """Revisão dos artefatos, A-menor: um src/trilha/ do projeto no check.sh não vira trilha-ai/."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            with (pasta / "scripts/check.sh").open("a", encoding="utf-8") as check:
+                check.write("python3 -m pytest src/trilha/ ../trilha/x\n")
+            self._commit_tudo(pasta, "um pacote do projeto")
+            self.assertEqual(self._ferramenta("atualizar", str(pasta)).returncode, 0)
+            texto = (pasta / "scripts/check.sh").read_text(encoding="utf-8")
+            self.assertIn("python3 -m pytest src/trilha/ ../trilha/x", texto)
+            self.assertIn("bash trilha-ai/verifica.sh", texto)
+
+    def test_migracao_le_as_versoes_da_pasta_trilha(self) -> None:
+        """Revisão dos artefatos, A-menor: o kit lê o comum da 2.18 pelo nome novo (o _caminhos)."""
+        self.assertIn("Versão 2.18,", FERRAMENTA._na_versao("v2.18", "trilha-ai/CLAUDE-comum.md"))
+
+    def test_projeto_da_2_18_confere_com_o_kit_novo(self) -> None:
+        """A verificação de um projeto ainda na trilha/ passa com o kit novo ao lado, pelo link."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            saida = subprocess.run([sys.executable, "-I", str(pasta / "trilha/confere_regras.py"), str(pasta),
+                                    "--fonte", str(RAIZ)], capture_output=True, text=True, check=False)
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
 
     def test_migracao_preserva_e_avisa_o_hook_proprio(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

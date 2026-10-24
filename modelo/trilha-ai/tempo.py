@@ -10,10 +10,10 @@ uma sessão, que começa 30 minutos antes do primeiro. Os dias seguem o relógio
 Guarda, fora do repositório, em <XDG_DATA_HOME ou ~/.local/share>/trilha-ai/tempo/, um resumo só
 com datas e horas (nenhum texto das conversas), completado a cada execução: as horas apuradas
 sobrevivem quando o Claude Code apaga as conversas. A página fica ao lado do resumo; o visual e o
-comportamento dela ficam em trilha/pagina_tempo_modelo.html.
+comportamento dela ficam em trilha-ai/pagina_tempo_modelo.html.
 
 Uso (Python 3 puro, sem dependências), dentro do repositório:
-    python3 trilha/tempo.py
+    python3 trilha-ai/tempo.py
 """
 
 from __future__ import annotations

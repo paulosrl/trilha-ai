@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define o que o `trilha/tempo.py` faz: apurar, sob demanda e sem nada rodar a cada interação, as horas de trabalho de cada dia num repositório, separando o tempo do usuário do tempo da IA sozinha, a partir das conversas do Claude Code e dos commits, e mostrá-las numa página fora do repositório.
+Define o que o `trilha-ai/tempo.py` faz: apurar, sob demanda e sem nada rodar a cada interação, as horas de trabalho de cada dia num repositório, separando o tempo do usuário do tempo da IA sozinha, a partir das conversas do Claude Code e dos commits, e mostrá-las numa página fora do repositório.
 
 ## Requirements
 

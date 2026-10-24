@@ -143,3 +143,12 @@ Com a pasta do kit indicada, a conferência das regras SHALL comparar o bloco `r
 - **WHEN** o projeto não tem `openspec/config.yaml`
 - **THEN** a conferência das regras não reprova pelo `config.yaml`
 
+
+## ADDED Requirements
+
+### Requirement: Link de transição da pasta antiga no kit
+O kit SHALL manter `modelo/trilha` como link simbólico para `modelo/trilha-ai`, para a conferência das regras de um projeto de antes da 2.19, que procura a pasta pelo nome antigo, achar a do kit e comparar a do projeto com a tag da versão dele.
+
+#### Scenario: Projeto da 2.18 com o kit novo ao lado
+- **WHEN** a conferência das regras de um projeto feito pelo kit na versão 2.18, ainda na `trilha/`, roda com a pasta do kit 2.19 indicada
+- **THEN** ela não reprova pela pasta do kit, e termina com o código de saída 0

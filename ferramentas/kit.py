@@ -30,13 +30,13 @@ KIT = Path(__file__).resolve().parent.parent
 MODELO = KIT / "modelo"
 
 
-# Copiados sem mudar: a pasta trilha/ inteira, que a atualização troca por inteiro. O cache do
+# Copiados sem mudar: a pasta trilha-ai/ inteira, que a atualização troca por inteiro. O cache do
 # Python (__pycache__/), que os testes do kit criam ao importar os verificadores, não conta.
 def _do_metodo() -> tuple[str, ...]:
-    """Os arquivos versionados de modelo/trilha/ (um arquivo solto ali não vai aos projetos); sem
+    """Os arquivos versionados de modelo/trilha-ai/ (um arquivo solto ali não vai aos projetos); sem
     o git, o que estiver na pasta."""
     saida = subprocess.run(
-        ["git", "-C", str(KIT), "ls-files", "-z", "modelo/trilha"],
+        ["git", "-C", str(KIT), "ls-files", "-z", "modelo/trilha-ai"],
         capture_output=True,
         text=True,
         check=False,
@@ -44,8 +44,8 @@ def _do_metodo() -> tuple[str, ...]:
     nomes = [nome.removeprefix("modelo/") for nome in saida.stdout.split("\0") if nome]
     if saida.returncode != 0 or not nomes:
         nomes = [
-            f"trilha/{arquivo.relative_to(MODELO / 'trilha')}"
-            for arquivo in (MODELO / "trilha").rglob("*")
+            f"trilha-ai/{arquivo.relative_to(MODELO / 'trilha-ai')}"
+            for arquivo in (MODELO / "trilha-ai").rglob("*")
             if arquivo.is_file() and "__pycache__" not in arquivo.parts
         ]
     return tuple(sorted(nomes))
@@ -70,13 +70,13 @@ A_PREENCHER = {
 # Dos preenchidos, os que o projeto pode apagar (a falta deles é uma escolha), com a versão do kit
 # que os trouxe: a atualização só os cria na passagem de uma versão anterior a ela.
 APAGAVEIS = {"sdd/padroes-tecnicos.md": (2, 2)}
-# Antes da 2.0, o que hoje está em trilha/ ficava solto; as versões antigas são lidas assim. É
+# Antes da 2.0, o que hoje está em trilha-ai/ ficava solto; as versões antigas são lidas assim. É
 # também o que a migração de um projeto antigo tira da raiz, de scripts/ e de .githooks/.
 ANTES_DA_2_0 = {
-    "trilha/CLAUDE-comum.md": "CLAUDE-comum.md",
-    "trilha/hooks/pre-commit": ".githooks/pre-commit",
+    "trilha-ai/CLAUDE-comum.md": "CLAUDE-comum.md",
+    "trilha-ai/hooks/pre-commit": ".githooks/pre-commit",
     **{
-        f"trilha/{nome}": f"scripts/{nome}"
+        f"trilha-ai/{nome}": f"scripts/{nome}"
         for nome in (
             "confere_regras.py",
             "confere_metodo.py",
@@ -114,10 +114,11 @@ LINGUA = (
     "Write every Portuguese word with its accents."
 )
 # O plugin vale por projeto: o settings.json o declara, e cada máquina o instala uma vez nele. O
-# trilha/confere_metodo.py, que roda no projeto sem este arquivo, cita o mesmo comando.
+# trilha-ai/confere_metodo.py, que roda no projeto sem este arquivo, cita o mesmo comando.
 INSTALAR_NO_PROJETO = "claude plugin install sdd@trilha-ai --scope project"
-# A trava do Claude Code em cada versão do kit: antes da 2.0, em scripts/; depois, em trilha/.
-GUARDAS = ("scripts/guarda.py", "trilha/guarda.py")
+# A trava do Claude Code em cada versão do kit: antes da 2.0, em scripts/; da 2.0 à 2.18, em
+# trilha/; depois, em trilha-ai/.
+GUARDAS = ("scripts/guarda.py", "trilha/guarda.py", "trilha-ai/guarda.py")
 # O OpenSpec que o kit espera, o do CI do modelo, e o ambiente dos comandos dele: sem a consulta da
 # versão nova (que, no openspec update, pergunta se a instala) e sem a telemetria.
 PIN_DO_OPENSPEC = re.compile(r"@fission-ai/openspec@(\d+\.\d+\.\d+[^\s\"']*)")
@@ -172,7 +173,7 @@ def novo(pasta: Path) -> None:
     for nome, origem in A_PREENCHER.items():
         _copiar(pasta, nome, origem)
     _ligar_travas(pasta)
-    print(f"criado: {pasta}, com o kit (comum {_versao(MODELO / 'trilha' / 'CLAUDE-comum.md')})")
+    print(f"criado: {pasta}, com o kit (comum {_versao(MODELO / 'trilha-ai' / 'CLAUDE-comum.md')})")
     print("próximos passos (README do kit, passos 3 a 6):")
     print("  3. preencha o que está entre < e > no CLAUDE.md, no ANDAMENTO.md e no config.yaml;")
     print("  4. inicialize as ferramentas:")
@@ -229,16 +230,17 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
         r"\*\*Estado:\*\*\s*em andamento", andamento.read_text(encoding="utf-8")
     ):
         raise Recusa('o ANDAMENTO.md diz "em andamento"; termine a unidade em curso antes')
-    trilha = pasta / "trilha"
+    trilha = pasta / "trilha-ai"
     if trilha.is_dir() and not (trilha / "CLAUDE-comum.md").is_file():
         raise Recusa(
-            "a pasta trilha/ já existe e não é a do método (não tem o CLAUDE-comum.md); "
+            "a pasta trilha-ai/ já existe e não é a do método (não tem o CLAUDE-comum.md); "
             "renomeie-a antes de atualizar"
         )
     _ler_settings(pasta)  # o settings.json que a soma não entende recusa antes de mudar algo
 
-    comum = pasta / "trilha" / "CLAUDE-comum.md"
-    antes = _versao(comum if comum.is_file() else pasta / "CLAUDE-comum.md")
+    # A versão de antes: a da trilha-ai/, a da trilha/ (da 2.0 à 2.18) ou a da raiz (antes da 2.0).
+    comuns = [pasta / nome / "CLAUDE-comum.md" for nome in ("trilha-ai", "trilha", ".")]
+    antes = _versao(next((comum for comum in comuns if comum.is_file()), comuns[-1]))
     _conferir_o_kit(antes)  # antes de mudar qualquer arquivo do projeto
     # O que pode recusar o OpenSpec vem antes de mudar o projeto (a máquina já pode mudar); sem a
     # migração do check.sh, a atualização falha, e o OpenSpec não muda a máquina à toa.
@@ -254,6 +256,7 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
             "aviso: o --openspec não roda: o scripts/check.sh ainda chama os scripts/confere_*, "
             "que a migração não sabe trocar"
         )
+    da_trilha = (pasta / "trilha" / "CLAUDE-comum.md").is_file()
     migrou = _migrar(pasta)
     _copiar_trilha(pasta)
     for nome, origem in A_PREENCHER.items():
@@ -266,19 +269,25 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
     _avisar_parte_fixa(pasta, antes)
     # A página nasce ao fechar uma etapa (o comum); aqui, só a que já existe ganha o modelo novo.
     if (pasta / "sdd" / "documentacao.html").is_file():
-        _rodar(pasta, [sys.executable, "-I", "trilha/gerar_pagina_sdd.py"])
+        _rodar(pasta, [sys.executable, "-I", "trilha-ai/gerar_pagina_sdd.py"])
+    if da_trilha:  # depois da trava e da página, que também citavam a trilha/
+        _avisar_as_citacoes(pasta)
+        print(
+            "aviso: reabra a sessão do Claude Code aberta neste projeto, que ainda chama a trava "
+            "em trilha/guarda.py; nos outros clones, rode git config core.hooksPath trilha-ai/hooks"
+        )
     copiados = _mudados(pasta)  # o que a cópia mudou, antes do update
     falha_do_openspec = _rodar_o_update(pasta) if preparado else ""
     if not openspec:
         _avisar_o_openspec()
     _avisar_o_ci_do_projeto(pasta)
 
-    regras = ["trilha/confere_regras.py", ".", "--fonte", str(KIT)]
+    regras = ["trilha-ai/confere_regras.py", ".", "--fonte", str(KIT)]
     ok = _rodar(pasta, [sys.executable, "-I", *regras])
-    ok = _rodar(pasta, [sys.executable, "-I", "trilha/confere_metodo.py"]) and ok
+    ok = _rodar(pasta, [sys.executable, "-I", "trilha-ai/confere_metodo.py"]) and ok
     if not any((pasta / ".claude").glob("**/*verify*")):
         print("aviso: o /opsx:verify não está instalado; ligue-o no perfil e rode openspec update")
-    depois = _versao(MODELO / "trilha" / "CLAUDE-comum.md")
+    depois = _versao(MODELO / "trilha-ai" / "CLAUDE-comum.md")
     mudou = _git(pasta, "status", "--short")
     print(mudou or "nada mudou: o projeto já está na versão do kit")
     if not migrou:
@@ -448,7 +457,7 @@ def _conferir_o_kit(antes: str) -> None:
             f"o kit em {KIT} é um clone raso, sem o histórico que a atualização lê: rode "
             f"git fetch --unshallow --tags, na pasta dele ({KIT})"
         )
-    depois = _versao(MODELO / "trilha" / "CLAUDE-comum.md")
+    depois = _versao(MODELO / "trilha-ai" / "CLAUDE-comum.md")
     if "?" not in (antes, depois) and _numeros(depois) < _numeros(antes):
         raise Recusa(
             f"o projeto está na {antes} e o kit na {depois}, atrás dele: a atualização o "
@@ -462,10 +471,10 @@ def _numeros(versao: str) -> tuple[int, int]:
 
 
 def _copiar_trilha(pasta: Path) -> None:
-    """A pasta trilha/ do projeto igual à do kit: copia tudo e apaga o que o kit não tem mais."""
-    trilha = pasta / "trilha"
+    """A pasta trilha-ai/ do projeto igual à do kit: copia tudo e apaga o que o kit não tem mais."""
+    trilha = pasta / "trilha-ai"
     for arquivo in sorted(trilha.rglob("*"), reverse=True) if trilha.is_dir() else []:
-        nome = f"trilha/{arquivo.relative_to(trilha)}"
+        nome = f"trilha-ai/{arquivo.relative_to(trilha)}"
         if arquivo.is_file() and nome not in SEM_MUDAR:
             arquivo.unlink()
         elif arquivo.is_dir() and not any(arquivo.iterdir()):
@@ -475,22 +484,26 @@ def _copiar_trilha(pasta: Path) -> None:
 
 
 def _migrar(pasta: Path) -> bool:
-    """O projeto de antes da 2.0 passa à pasta trilha/: sem as cópias soltas e com as citações."""
+    """O projeto de antes da 2.19 passa à pasta trilha-ai/: sem a trilha/ do método (da 2.0 à
+    2.18) ou sem as cópias soltas (antes da 2.0), e com as citações."""
+    _migrar_a_trilha(pasta)
     antigas = [nome for nome in ANTES_DA_2_0.values() if (pasta / nome).is_file()]
     for nome in antigas:
         (pasta / nome).unlink()
     if antigas:
-        print(f"migrado para trilha/: saíram {', '.join(antigas)}")
+        print(f"migrado para trilha-ai/: saíram {', '.join(antigas)}")
     ganchos = pasta / ".githooks"
     if antigas and ganchos.is_dir():
         proprios = sorted(arquivo.name for arquivo in ganchos.iterdir())
-        # O pre-push próprio roda pelo trilha/hooks/pre-push; os outros ficam sem quem os chame.
+        # O pre-push próprio roda pelo trilha-ai/hooks/pre-push; os outros ficam sem quem os chame.
         for nome in (nome for nome in proprios if nome != "pre-push"):
             print(
                 f"aviso: .githooks/{nome} não roda mais, porque a trava do commit passou a "
-                "trilha/hooks; ligue-o de outro jeito (por exemplo, chamado pelo scripts/check.sh)"
+                "trilha-ai/hooks; ligue-o de outro jeito (por exemplo, chamado pelo "
+                "scripts/check.sh)"
             )
-        # O que o trilha/hooks/pre-push recusaria: o aviso vem já aqui, e não só no primeiro envio.
+        # O que o trilha-ai/hooks/pre-push recusaria: o aviso vem já aqui, e não só no primeiro
+        # envio.
         envio = ganchos / "pre-push"
         if envio.is_symlink() and not envio.exists():
             print(
@@ -507,16 +520,61 @@ def _migrar(pasta: Path) -> bool:
     claude = pasta / "CLAUDE.md"
     if claude.is_file():
         texto = claude.read_text(encoding="utf-8")
-        importacao = re.compile(r"^@CLAUDE-comum\.md[ \t]*$", re.MULTILINE)
-        migrado = importacao.sub("@trilha/CLAUDE-comum.md", texto)
+        importacao = re.compile(r"^@(trilha/)?CLAUDE-comum\.md[ \t]*$", re.MULTILINE)
+        migrado = importacao.sub("@trilha-ai/CLAUDE-comum.md", texto)
         if migrado != texto:
             claude.write_text(migrado, encoding="utf-8")
-            print("CLAUDE.md: a importação passou a @trilha/CLAUDE-comum.md")
+            print("CLAUDE.md: a importação passou a @trilha-ai/CLAUDE-comum.md")
     # As trocas rodam sempre: repeti-las não muda nada, e a migração parcial também se completa.
     return _migrar_check(pasta)
 
 
-# A parte fixa do scripts/check.sh do kit até a 1.36, que a migração troca pelo trilha/verifica.sh.
+# A pasta do método até a 2.18, citada do começo da linha ou depois de um espaço, de uma aspa, de
+# um parêntese, de @, = ou :, com ./ ou sem: nem parte de outro nome (minhatrilha/, trilha-ai/),
+# nem dentro de outro caminho (src/trilha/, ../trilha/). O git grep usa o mesmo limite.
+NA_TRILHA = re.compile(r"(?m)(?:^|(?<=[\s`\"'(@=:]))(\./)?trilha/")
+NA_TRILHA_DO_GREP = r"(^|[[:space:]`\"'(@=:])(\./)?trilha/"
+
+
+def _migrar_a_trilha(pasta: Path) -> bool:
+    """A pasta trilha/ do método (a que tem o comum) sai, avisando o que nela não era do kit, e o
+    CLAUDE.md e o scripts/check.sh passam a citar a trilha-ai/; sem o comum, a pasta é do projeto
+    e fica. Devolve se migrou."""
+    velha = pasta / "trilha"
+    if not (velha / "CLAUDE-comum.md").is_file():
+        return False
+    do_kit = {nome.removeprefix("trilha-ai/") for nome in SEM_MUDAR}
+    for arquivo in sorted(velha.rglob("*")):
+        nome = str(arquivo.relative_to(velha))
+        if arquivo.is_file() and "__pycache__" not in arquivo.parts and nome not in do_kit:
+            print(f"aviso: trilha/{nome} saiu com a pasta trilha/ e não é do kit; o git o guarda")
+    shutil.rmtree(velha)
+    print("migrado para trilha-ai/: saiu a pasta trilha/")
+    for nome in ("CLAUDE.md", "scripts/check.sh"):
+        arquivo = pasta / nome
+        texto = arquivo.read_text(encoding="utf-8") if arquivo.is_file() else ""
+        if NA_TRILHA.search(texto):
+            arquivo.write_text(NA_TRILHA.sub(r"\1trilha-ai/", texto), encoding="utf-8")
+            print(f"{nome}: as citações à trilha/ passaram a trilha-ai/")
+    return True
+
+
+def _avisar_as_citacoes(pasta: Path) -> None:
+    """Os arquivos versionados do projeto que ainda citam a trilha/, para a troca à mão."""
+    saida = subprocess.run(
+        ["git", "-C", str(pasta), "grep", "-l", "-E", NA_TRILHA_DO_GREP, "--", "."]
+        + [":!trilha/", ":!trilha-ai/"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    arquivos = saida.stdout.split() if saida.returncode == 0 else []
+    if arquivos:
+        print(f"aviso: ainda citam trilha/, que passou a trilha-ai/: {', '.join(arquivos)}")
+
+
+# A parte fixa do scripts/check.sh do kit até a 1.36, que a migração troca pelo
+# trilha-ai/verifica.sh.
 CHECK_ANTIGO = (
     "# Parte fixa: as regras do repositório (CLAUDE.md, CLAUDE-comum.md, ANDAMENTO.md), "
     "com o comum\n"
@@ -536,14 +594,14 @@ CHAMADA_ANTIGA = "python3 -I scripts/confere_metodo.py"
 
 
 def _check_migrado(texto: str) -> str | None:
-    """O check.sh com a parte fixa do kit trocada pelo trilha/verifica.sh (o mesmo texto, sem a
+    """O check.sh com a parte fixa do kit trocada pelo trilha-ai/verifica.sh (o mesmo texto, sem a
     parte antiga); None quando a parte antiga não é a do kit, que a troca não sabe mudar."""
     if "scripts/confere_" not in texto:
         return texto
     if BLOCO_ANTIGO not in texto or texto.count(CHAMADA_ANTIGA) != 1:
         return None
     texto = texto.replace(CHECK_ANTIGO, "# Parte fixa: as regras, o método e os specs.\n")
-    return texto.replace(BLOCO_ANTIGO, "").replace(CHAMADA_ANTIGA, "bash trilha/verifica.sh")
+    return texto.replace(BLOCO_ANTIGO, "").replace(CHAMADA_ANTIGA, "bash trilha-ai/verifica.sh")
 
 
 def _texto_do_check(pasta: Path) -> str:
@@ -562,17 +620,17 @@ def _migrado_por_inteiro(migrado: str | None) -> bool:
 
 
 def _migrar_check(pasta: Path) -> bool:
-    """A parte fixa do check.sh, se for a do kit, vira o trilha/verifica.sh, com os --vizinho."""
+    """A parte fixa do check.sh, se for a do kit, vira o trilha-ai/verifica.sh, com os --vizinho."""
     texto = _texto_do_check(pasta)
     migrado = _check_migrado(texto)
     if migrado is not None:
         if migrado != texto:
             (pasta / "scripts" / "check.sh").write_text(migrado, encoding="utf-8")
-            print("scripts/check.sh: a parte fixa passou a `bash trilha/verifica.sh`")
+            print("scripts/check.sh: a parte fixa passou a `bash trilha-ai/verifica.sh`")
         return _migrado_por_inteiro(migrado)
     print(
         "aviso: a parte fixa do scripts/check.sh não é a do kit; troque à mão a chamada aos "
-        "scripts/confere_*.py por `bash trilha/verifica.sh` (com os --vizinho que houver)"
+        "scripts/confere_*.py por `bash trilha-ai/verifica.sh` (com os --vizinho que houver)"
     )
     return False
 
@@ -625,7 +683,7 @@ def _tipo_diferente(atual: object, modelo: object, caminho: str) -> str:
 def _ligar_travas(pasta: Path) -> None:
     """A trava do commit (core.hooksPath, do clone) e o settings.json com o que o modelo tem: a
     trava do Claude Code e a declaração do plugin. O arquivo só é escrito quando algo muda."""
-    _git(pasta, "config", "core.hooksPath", "trilha/hooks")
+    _git(pasta, "config", "core.hooksPath", "trilha-ai/hooks")
     settings = pasta / ".claude" / "settings.json"
     atual, modelo = _ler_settings(pasta), _modelo_do_settings()
     antes = json.dumps(atual, sort_keys=True)
@@ -639,7 +697,7 @@ def _ligar_travas(pasta: Path) -> None:
 
 def _sem_guardas_antigas(atual: dict, modelo: dict) -> None:
     """Sai a trava do Claude Code de outra versão do kit (a de scripts/, de antes da 2.0, ou a de
-    trilha/ chamada de outro jeito), e o grupo que só a tinha; a soma põe a do modelo."""
+    trilha-ai/ chamada de outro jeito), e o grupo que só a tinha; a soma põe a do modelo."""
     do_modelo = [gancho for grupo in modelo["hooks"]["PreToolUse"] for gancho in grupo["hooks"]]
 
     def antiga(gancho: object) -> bool:
@@ -682,11 +740,18 @@ def _contido(parte: object, todo: object) -> bool:
 
 
 def _caminhos(origem: str) -> list[str]:
-    """Onde a origem esteve no kit: em modelo/ (com trilha/ desde a 2.0) e, até a 1.34, na raiz."""
+    """Onde a origem esteve no kit: em modelo/ (com trilha-ai/ desde a 2.19, trilha/ da 2.0 à
+    2.18) e, até a 1.34, na raiz."""
     antiga = ANTES_DA_2_0.get(origem, origem)
+    na_trilha = re.sub(r"^trilha-ai/", "trilha/", origem)
     return list(
         dict.fromkeys(
-            [f"modelo/{origem}", f"modelo/{antiga}", NA_RAIZ_ATE_1_34.get(antiga, antiga)]
+            [
+                f"modelo/{origem}",
+                f"modelo/{na_trilha}",
+                f"modelo/{antiga}",
+                NA_RAIZ_ATE_1_34.get(antiga, antiga),
+            ]
         )
     )
 
@@ -753,7 +818,7 @@ def _avisar_parte_fixa(pasta: Path, antes: str) -> None:
     """Diz o que falta da parte fixa do modelo atual no projeto e o que o kit tirou dela desde a
     versão do projeto; a cópia fica com o usuário."""
     # O commit que trouxe a versão do comum do projeto; só por ele se sabe o que o kit tirou.
-    comum = _caminhos("trilha/CLAUDE-comum.md")
+    comum = _caminhos("trilha-ai/CLAUDE-comum.md")
     desde = _git(KIT, "log", "--format=%h", "-S", f"Versão {antes},", "--", *comum)
     desde = "" if antes == "?" else desde
     for nome in COM_PARTE_FIXA:

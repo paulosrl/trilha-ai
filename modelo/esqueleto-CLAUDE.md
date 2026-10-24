@@ -1,8 +1,8 @@
 # CLAUDE.md — <nome do produto>
 
-Regras só deste repositório. As comuns a todo projeto estão em `trilha/CLAUDE-comum.md`, importado abaixo.
+Regras só deste repositório. As comuns a todo projeto estão em `trilha-ai/CLAUDE-comum.md`, importado abaixo.
 
-@trilha/CLAUDE-comum.md
+@trilha-ai/CLAUDE-comum.md
 
 ## O que é
 
@@ -18,7 +18,7 @@ Regras só deste repositório. As comuns a todo projeto estão em `trilha/CLAUDE
 
 ```bash
 <instalar as dependências>
-scripts/check.sh    # a parte fixa (trilha/verifica.sh: regras, método, specs) e, depois da etapa 2, lint, tipos e testes
+scripts/check.sh    # a parte fixa (trilha-ai/verifica.sh: regras, método, specs) e, depois da etapa 2, lint, tipos e testes
 <rodar>
 ```
 

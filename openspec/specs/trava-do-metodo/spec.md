@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define o que a trava do Claude Code (`trilha/guarda.py`, hook antes de cada comando Bash) barra e deixa passar, para que o agente não pule a verificação, não force um envio e não faça o merge fora do método, nem por um caminho indireto.
+Define o que a trava do Claude Code (`trilha-ai/guarda.py`, hook antes de cada comando Bash) barra e deixa passar, para que o agente não pule a verificação, não force um envio e não faça o merge fora do método, nem por um caminho indireto.
 
 ## Requirements
 

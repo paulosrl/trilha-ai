@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Define o que a ferramenta do kit (`ferramentas/kit.py`) faz num repositório: criar um projeto novo no método e atualizar um existente para a versão do kit, inclusive migrar o layout antigo para a pasta `trilha/`, sem fazer commit nem envio.
+Define o que a ferramenta do kit (`ferramentas/kit.py`) faz num repositório: criar um projeto novo no método e atualizar um existente para a versão do kit, inclusive migrar o layout antigo para a pasta `trilha-ai/`, sem fazer commit nem envio.
 
 ## Requirements
 

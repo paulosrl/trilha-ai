@@ -9,7 +9,8 @@ A descrição curta foi aprovada pelo usuário.
 ## What Changes
 
 - **BREAKING** A pasta do método passa de `trilha/` a `trilha-ai/`: no kit, `modelo/trilha/` vira `modelo/trilha-ai/`, e todo caminho que a cita acompanha (os verificadores, as travas, o `verifica.sh`, o comum, o esqueleto do `CLAUDE.md`, o `scripts/check.sh` e o `claude-settings.json` do modelo, o `kit.py`, o README e os specs).
-- O `kit.py atualizar` migra o projeto que tem a pasta `trilha/` do método (com o `trilha/CLAUDE-comum.md`): tira a pasta, cria a `trilha-ai/`, troca a importação do `CLAUDE.md`, o `bash trilha/verifica.sh` do `check.sh` (com os argumentos), a trava do `settings.json` e o `core.hooksPath`; avisa o arquivo a mais que a pasta antiga tinha e os arquivos do projeto que ainda citam `trilha/`. Uma pasta `trilha/` sem o comum é do projeto e fica.
+- O `kit.py atualizar` migra o projeto que tem a pasta `trilha/` do método (com o `trilha/CLAUDE-comum.md`): tira a pasta, cria a `trilha-ai/`, troca as citações à pasta no `CLAUDE.md` (a importação e o texto) e no `check.sh` (a chamada do `verifica.sh`, com os argumentos), a trava do `settings.json` e o `core.hooksPath`; avisa o arquivo a mais que a pasta antiga tinha, os outros arquivos do projeto que ainda citam `trilha/` e que a sessão do Claude Code aberta no projeto precisa ser reaberta. Uma pasta `trilha/` sem o comum é do projeto e fica. O usuário aprovou essas trocas e esses avisos além da descrição curta (2026-10-24).
+- O kit mantém `modelo/trilha` como link simbólico para `modelo/trilha-ai`, escolha do usuário (2026-10-24): a verificação de um projeto ainda de antes da 2.19 acha a pasta do kit pelo nome antigo e não quebra até a atualização dele.
 - A recusa da pasta que não é do método passa a valer para a `trilha-ai/`.
 - O kit continua lendo as versões antigas: as tags de antes da 2.19 têm `modelo/trilha/`, que a ferramenta e a conferência das regras leem.
 - O método vai à 2.19: a versão do comum, o plugin `sdd` 2.19.0 e a tag `v2.19`.
@@ -35,7 +36,7 @@ A descrição curta foi aprovada pelo usuário.
 
 ## Impact
 
-- `modelo/`: a pasta renomeada e os arquivos que a citam; a versão do comum.
+- `modelo/`: a pasta renomeada, o link de transição e os arquivos que a citam; a versão do comum.
 - `plugins/sdd/`: o `plugin.json` na 2.19.0 e o README.
 - `ferramentas/kit.py` e `testes/test_kit.py`.
-- O kit: `README.md`, `CLAUDE.md`, `mapa-da-trilha.html`, `openspec/config.yaml` (o contexto) e o CI (`.github/workflows/testes.yml`), que rodam o ruff em `modelo/trilha-ai/`.
+- O kit: `README.md`, `CLAUDE.md`, `ferramentas/validar-projeto.md`, os Purpose de quatro specs principais, `openspec/config.yaml` (o contexto) e o CI (`.github/workflows/testes.yml`), que rodam o ruff em `modelo/trilha-ai/`.
