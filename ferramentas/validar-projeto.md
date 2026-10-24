@@ -21,7 +21,7 @@ Confira, rodando os comandos e lendo o código de saída de cada um:
 8. Os dados: arquivos no git com dados pessoais ou segredos, fora do que o "Dados a proteger" do CLAUDE.md permite.
 9. As ferramentas da máquina: o openspec --version diante do @fission-ai/openspec@X do CI do projeto; o perfil do OpenSpec (openspec config list), com o verify e a entrega em skills e comandos (both); os avisos do OpenSpec que o item 3 dá (o que o openspec update mudaria nos arquivos gerados); o plugin sdd na versão X.Y.0 do comum (claude plugin list); o gh e o Claude Code (gh --version, claude --version) diante da última versão publicada, como aviso. O .gitignore, o CI, o Dependabot e o check.sh comparados ao modelo do kit, fora dos blocos da parte da stack (o kit.py atualizar avisa o que falta).
 
-Se não houver pasta trilha/, o veredito é "não segue o kit": diga o que falta e o comando do kit que resolve (python3 ferramentas/kit.py novo|atualizar <pasta>).
+Se não houver pasta trilha/, o veredito é "não segue o kit": diga o que falta e o comando do kit que resolve (python3 ferramentas/kit.py novo|atualizar <pasta>). Se o OpenSpec da máquina estiver noutra versão que a do kit, ou o openspec update mudaria arquivos gerados, o python3 ferramentas/kit.py atualizar <pasta> --openspec resolve os dois de uma vez.
 
 Grave o relatório em <pasta>/docs/validacao-trilha-ai.md, sobrescrevendo o anterior, com:
 - a data e a hora, lidas do `date`; a versão do comum no projeto e no kit;

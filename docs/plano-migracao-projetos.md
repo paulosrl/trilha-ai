@@ -207,3 +207,13 @@ As opções para levar à decisão do usuário:
 - e acrescentar uma regra ao "Dados a proteger" do `CLAUDE.md` de cada repositório afetado.
 
 Apagar os dados do histórico pede reescrever a história e enviar com força. O método nunca faz isso, e o `guarda.py` barra; se o usuário escolher esse caminho, ele faz isso por fora (`git filter-repo`), sabendo que os clones guardam a cópia antiga.
+
+## A fila de 2026-10-24 (a que vale agora)
+
+O kit foi à 2.18 (o OpenSpec 1.15.0, o `kit.py atualizar --openspec`, os requisitos curtos e o aviso do resumo sem a raiz). Os projetos seguem na 2.12. A atualização é um a um, e cada um só começa quando o usuário o nomear:
+
+1. Xavier;
+2. Heimdall;
+3. HubIA.
+
+O comando de cada um: `python3 ferramentas/kit.py atualizar ../<projeto> --openspec`. Ele põe o OpenSpec da máquina na versão do kit e roda o `openspec update` no projeto. A versão do OpenSpec no CI de cada projeto se troca à mão, como o kit avisa. O modelo-interface-heimdall fica fora, na 2.6, e a etapa 7 (os dados pessoais) continua como acima.
