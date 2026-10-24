@@ -582,23 +582,29 @@ def _pagina(nome: str, dias: list[dict]) -> str:
     return modelo.replace('<script id="dados" type="application/json">__DADOS__</script>', bloco, 1)
 
 
-def _outros_resumos(pasta: Path, raiz: Path) -> list[tuple[Path, str]]:
-    """Os resumos de outro caminho com o mesmo nome de repositório, com a raiz gravada; o que
-    nem a raiz deixa ler é ignorado."""
+def _outros_resumos(
+    pasta: Path, raiz: Path, proprio: Path
+) -> tuple[list[tuple[Path, str]], list[Path]]:
+    """Os resumos de outro caminho com o mesmo nome de repositório, com a raiz gravada, e os que
+    nem a raiz deixam ler (não são JSON, não são um objeto, ou não têm a raiz em texto): estes
+    podem ser de uma pasta antiga deste repositório, e só o aviso diz que as horas deles faltam."""
     if not pasta.is_dir():
-        return []
+        return [], []
     nome = re.compile(re.escape(raiz.name) + r"-[0-9a-f]{8}\.json")
-    achados = []
+    achados, sem_raiz = [], []
     for outro in sorted(pasta.glob("*.json")):
-        if not nome.fullmatch(outro.name):
+        if not nome.fullmatch(outro.name) or outro == proprio:
             continue
         try:
-            antiga = json.loads(outro.read_text(encoding="utf-8")).get("raiz")
-        except (OSError, ValueError, AttributeError):
-            continue
-        if isinstance(antiga, str) and antiga != str(raiz) and Path(antiga).name == raiz.name:
+            resumo = json.loads(outro.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            resumo = None
+        antiga = resumo.get("raiz") if isinstance(resumo, dict) else None
+        if not isinstance(antiga, str):
+            sem_raiz.append(outro)
+        elif antiga != str(raiz) and Path(antiga).name == raiz.name:
             achados.append((outro, antiga))
-    return achados
+    return achados, sem_raiz
 
 
 def _renomear_juntado(arquivo: Path) -> Path:
@@ -651,8 +657,15 @@ def main() -> int:
     # O resumo de outro caminho de mesmo nome: se a raiz dele não tem mais o .git, o repositório
     # mudou de pasta, e as horas guardadas lá vêm para cá; se tem, é outra cópia, mesmo que o git
     # a recuse (de outro dono); se não se confere, nada vem, e o aviso sai em toda execução.
-    juntados, avisos_de_pasta = [], []
-    for outro, antiga in _outros_resumos(pasta, raiz):
+    outros, sem_raiz = _outros_resumos(pasta, raiz, resumo)
+    juntados = []
+    avisos_de_pasta = [
+        f"aviso: o resumo {outro} tem o nome deste repositório e não se lê nem a raiz dele; se "
+        "for de uma pasta antiga deste repositório, as horas guardadas nele não vieram para este: "
+        "corrija-o ou mova-o, e rode de novo"
+        for outro in sem_raiz
+    ]
+    for outro, antiga in outros:
         tem_git = _tem_git(Path(antiga))
         if tem_git is None:
             avisos_de_pasta.append(

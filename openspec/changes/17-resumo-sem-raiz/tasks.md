@@ -4,12 +4,12 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 1. A versão
 
-- [ ] 1.1 "Versão 2.17, de 2026-10-24." no `modelo/trilha/CLAUDE-comum.md` e `2.17.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar; os testes `test_kit_sem_mudanca_depois_da_tag`, `test_versao_no_comum` e o da versão do plugin passam (`python3 -m unittest discover -s testes -k test_kit_sem_mudanca_depois_da_tag -k test_versao -k plugin`)
+- [x] 1.1 "Versão 2.17, de 2026-10-24." no `modelo/trilha/CLAUDE-comum.md` e `2.17.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar; os testes `test_kit_sem_mudanca_depois_da_tag`, `test_versao_no_comum` e o da versão do plugin passam (`python3 -m unittest discover -s testes -k test_kit_sem_mudanca_depois_da_tag -k test_versao -k plugin`)
 
 ## 2. O aviso
 
-- [ ] 2.1 O `test_tempo_resumo_de_mesmo_nome_sem_raiz` comprova os cenários "Resumo de mesmo nome que não é JSON" (o aviso, o código 0 e o arquivo igual), "Resumo de mesmo nome sem a raiz" (uma lista e um objeto sem a raiz) e "Resumo de outro nome que não é JSON" (sem o aviso); falha antes do código (`python3 -m unittest discover -s testes -k test_tempo_resumo_de_mesmo_nome_sem_raiz`)
-- [ ] 2.2 O `_outros_resumos` devolve também os resumos de mesmo nome sem a raiz legível, e o `main` os avisa em toda execução; os testes do `tempo.py` passam (`python3 -m unittest discover -s testes -k test_tempo`)
+- [x] 2.1 O `test_tempo_resumo_de_mesmo_nome_sem_raiz` comprova os cenários "Resumo de mesmo nome que não é JSON" (o aviso, o código 0 e o arquivo igual), "Resumo de mesmo nome sem a raiz" (uma lista e um objeto sem a raiz) e "Resumo de outro nome que não é JSON" (sem o aviso); falha antes do código (`python3 -m unittest discover -s testes -k test_tempo_resumo_de_mesmo_nome_sem_raiz`)
+- [x] 2.2 O `_outros_resumos` devolve também os resumos de mesmo nome sem a raiz legível, e o `main` os avisa em toda execução; os testes do `tempo.py` passam (`python3 -m unittest discover -s testes -k test_tempo`)
 
 ## 3. Integração
 

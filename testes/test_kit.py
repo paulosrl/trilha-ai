@@ -3882,6 +3882,24 @@ class HorasDeTrabalho(unittest.TestCase):
         self.assertIn("corrija-o ou mova-o", saida.stderr)
         self.assertNotIn("2026-10-02", self._dias())
 
+    def test_tempo_resumo_de_mesmo_nome_sem_raiz(self) -> None:
+        """Change 17: o resumo de mesmo nome que nem deixa ler a raiz avisa, sem falhar nem mudar."""
+        pasta = self._pasta_tempo()
+        pasta.mkdir(parents=True, exist_ok=True)
+        for conteudo in ("isto não é json", "[]", json.dumps({"versao": 2, "raiz": 7})):
+            with self.subTest(conteudo=conteudo):
+                antigo = pasta / "proj-0123abcd.json"
+                antigo.write_text(conteudo, encoding="utf-8")
+                for _ in range(2):  # em toda execução
+                    saida = self._ok()
+                    aviso = next((l for l in saida.stderr.splitlines() if antigo.name in l), "")
+                    self.assertIn("corrija-o ou mova-o", aviso, saida.stderr)
+                self.assertEqual(antigo.read_text(encoding="utf-8"), conteudo)
+                antigo.unlink()
+        vizinho = pasta / "proj-antigo-0123abcd.json"
+        vizinho.write_text("isto não é json", encoding="utf-8")
+        self.assertNotIn(vizinho.name, self._ok().stderr)
+
     def test_tempo_pasta_antiga_com_git_que_falha(self) -> None:
         antiga = Path(self._tmp.name) / "a" / "proj"
         antiga.mkdir(parents=True)
