@@ -13,7 +13,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 ## 3. Integração
 
 - [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
-- [ ] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade, só num projeto descartável no scratchpad, com o `XDG_CONFIG_HOME` e o `HOME` no scratchpad: com a `trilha/` editada e uma skill gerada alterada, o `kit.py atualizar --openspec` sugere a mensagem com as duas partes; o resultado vai a "Verificação", no `design.md`
+- [x] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade, só num projeto descartável no scratchpad, com o `XDG_CONFIG_HOME` e o `HOME` no scratchpad: com a `trilha/` editada e uma skill gerada alterada, o `kit.py atualizar --openspec` sugere a mensagem com as duas partes; o resultado vai a "Verificação", no `design.md`
 
 ## Workflow follow-up
 

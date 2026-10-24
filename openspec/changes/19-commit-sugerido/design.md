@@ -35,6 +35,12 @@ Uma função recebe o texto devolvido pelo `_check_migrado` (ou o `None`) e diz 
 - [Com `--openspec`, a reserva do D3 traz de volta "comum V → V" (o achado R9 da change 16), se algum caminho desconhecido mudar o projeto sem cópia nem plano] → Aceito: o `git status` impresso acima da sugestão mostra o que mudou.
 - [O dry-run previu mudanças que o update, por algum motivo, não fez] → A mensagem citaria o OpenSpec sem arquivo dele no commit; o `git status` impresso logo acima mostra o que mudou de fato.
 
+## Verificação
+
+**Os testes antes do código (tarefa 1.1):** o `test_atualizar_openspec_commit_da_copia_e_do_openspec` e o `test_atualizar_openspec_commit_so_da_copia` falharam antes do código, com a mensagem antiga "os arquivos gerados pelo OpenSpec 1.15.0"; o `test_atualizar_openspec_commit_so_do_openspec` e o `test_atualizar_commit_sem_openspec` passaram antes, como previsto, e protegem o comportamento de antes.
+
+**Execução manual (tarefa 3.2), em 2026-10-24,** com o OpenSpec 1.15.0 de verdade, no projeto descartável da change 18 (no scratchpad, com o `XDG_CONFIG_HOME` e o `HOME` nele), com a `trilha/verifica.sh` editada e a skill `openspec-propose` alterada, commitadas; o dry-run listava a troca da skill. O `kit.py atualizar --openspec` terminou com 0, o `git status` mostrou a skill e a `trilha/verifica.sh`, e a sugestão foi "commit sugerido: chore(metodo): cópia do kit Trilha AI, comum 2.18 → 2.18, e os arquivos gerados pelo OpenSpec 1.15.0".
+
 ## Respostas à revisão
 
 ### Revisão dos artefatos, antes do apply
