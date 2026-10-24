@@ -51,6 +51,13 @@ O método vai à 2.20: o comum, o `plugin.json` na 2.20.0 e a tag `v2.20`. O rot
 
 Nada a migrar no kit. Nos projetos, o próximo `kit.py atualizar` cria o link onde houver citação. Para voltar atrás antes do commit, `git reset --hard` e `git clean` no projeto, como em toda atualização.
 
+## Verificação
+
+**Execução manual (tarefa 3.2), em 2026-10-24,** no scratchpad, num clone descartável do Heimdall (comum 2.15, na `master` do `1fd4cc5`), com o `core.hooksPath` em `trilha/hooks`, como nos clones dele.
+- O `kit.py atualizar --openspec` do kit desta change terminou com 0. A saída listou as citações a `trilha/` (o `.githooks/pre-push`, os scripts, os testes, o TDD, a decomposição, as changes arquivadas), disse "criado o link de transição trilha → trilha-ai" e sugeriu "chore(metodo): cópia do kit Trilha AI, comum 2.15 → 2.20, e os arquivos gerados pelo OpenSpec 1.15.0". As duas conferências passaram, e a das regras avisou o link. No ensaio com o kit 2.19, sem o link, a conferência tinha reprovado a evidência do TDD (`trilha/hooks/pre-push`).
+- O commit da cópia, pela trava em `trilha-ai/hooks`, passou, e o git guardou `trilha` como link (modo `120000`). O `bash scripts/check.sh` do Heimdall terminou com 0.
+- Com o `core.hooksPath` em `trilha/hooks`: um commit passou pela trava, que avisou "trava do commit ligada pelo link de transição"; o envio a um remoto local descartável passou pelo `trilha/hooks/pre-push`, que rodou o `.githooks/pre-push` do Heimdall (o encoding, o `openspec validate --specs --strict` e os 49 testes pareados, `ok` todos) e terminou com 0, e o remoto recebeu o commit.
+
 ## Revisão dos artefatos
 
 Feita antes do apply, em 2026-10-24, pela coerência entre a proposta, os deltas, o design e as tarefas, e diante do código do `atualizar`.

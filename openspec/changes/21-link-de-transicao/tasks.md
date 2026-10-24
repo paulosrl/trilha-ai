@@ -16,7 +16,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 ## 3. Integração
 
 - [x] 3.1 O conjunto dos testes, o ruff (`check` e `format --check`) e o `openspec validate --all --no-interactive` passam
-- [ ] 3.2 A execução manual, por último, só no scratchpad: um clone descartável do Heimdall (2.15), com o `core.hooksPath` em `trilha/hooks`, levado pelo `kit.py atualizar --openspec` do kit desta change; a saída diz que criou o link; com a cópia commitada no clone, o `bash scripts/check.sh` e o `.githooks/pre-push` do Heimdall terminam com 0, e a trava do commit roda; o resultado vai a "Verificação", no `design.md`
+- [x] 3.2 A execução manual, por último, só no scratchpad: um clone descartável do Heimdall (2.15), com o `core.hooksPath` em `trilha/hooks`, levado pelo `kit.py atualizar --openspec` do kit desta change; a saída diz que criou o link; com a cópia commitada no clone, o `bash scripts/check.sh` e o `.githooks/pre-push` do Heimdall terminam com 0, e a trava do commit roda; o resultado vai a "Verificação", no `design.md`
 
 ## Os cenários e os testes
 
