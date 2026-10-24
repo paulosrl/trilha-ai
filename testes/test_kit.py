@@ -2003,14 +2003,17 @@ class Kit(unittest.TestCase):
 
     def _atualizar_com_openspec(self, *opcoes: str, versao: str = "1.14.1", dry_run: str | None = None,
                                 update: str = "exit 0", npm: str | None = "instala", ci: str | None = None,
-                                check_antigo: bool = False) -> tuple[subprocess.CompletedProcess, list[str], Path]:
+                                check_antigo: bool = False, check_extra: str = "", trilha_editada: bool = False,
+                                sem_openspec: bool = False) -> tuple[subprocess.CompletedProcess, list[str], Path]:
         """O kit.py atualizar num projeto novo (com uma skill gerada no índice), com um `openspec` e
         um `npm` falsos num PATH só deles: o `openspec` responde ao `--version` com a versão gravada
-        em <falsos>/versao, ao dry-run com o corpo dado e ao `update` com o outro; o `npm install`
-        grava a versão que instala (com npm="instala"; outro texto é o corpo dele, e None o tira).
-        O ci troca a versão do OpenSpec no CI do projeto; o check_antigo põe no check.sh uma
-        chamada aos scripts/confere_*, que a migração não sabe trocar. Devolve a saída, as
-        chamadas e a pasta do projeto."""
+        em <falsos>/versao, ao dry-run com o corpo gravado em <falsos>/dry-run e ao `update` com o
+        outro; o `npm install` grava a versão que instala (com npm="instala"; outro texto é o corpo
+        dele, e None o tira). O ci troca a versão do OpenSpec no CI do projeto; o check_antigo põe
+        no check.sh uma chamada aos scripts/confere_*, que a migração não sabe trocar, e o
+        check_extra acrescenta o texto dado; a trilha_editada commita uma linha a mais no
+        trilha/verifica.sh, que a cópia desfaria; o sem_openspec tira a pasta openspec/. Devolve
+        a saída, as chamadas e a pasta do projeto; o _de_novo roda o atualizar outra vez."""
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         pasta = self._projeto_novo(tmp.name)
@@ -2024,6 +2027,14 @@ class Kit(unittest.TestCase):
         if check_antigo:
             with (pasta / "scripts/check.sh").open("a", encoding="utf-8") as check:
                 check.write("python3 -I scripts/confere_regras.py .\n")
+        if check_extra:
+            with (pasta / "scripts/check.sh").open("a", encoding="utf-8") as check:
+                check.write(check_extra)
+        if trilha_editada:
+            with (pasta / "trilha/verifica.sh").open("a", encoding="utf-8") as verifica:
+                verifica.write("# editado\n")
+        if sem_openspec:
+            shutil.rmtree(pasta / "openspec")
         subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
         subprocess.run(["git", "commit", "-qm", "gerados"], cwd=pasta, check=True, env={**os.environ, **GIT_TESTE})
         falsos = Path(tmp.name) / "falsos"
@@ -2037,11 +2048,12 @@ class Kit(unittest.TestCase):
             f'echo "openspec $*" >> "{registro}"\n'
             f'if [ "$1" = "--version" ]; then cat "{falsos}/versao"; exit 0; fi\n'
             'if [ "$1 $2" = "config path" ]; then echo /nao/existe/config.json; exit 0; fi\n'
-            f'if [ "$1 $2" = "update --dry-run" ]; then {dry_run or _dry_run()}; exit; fi\n'
+            f'if [ "$1 $2" = "update --dry-run" ]; then . "{falsos}/dry-run"; exit; fi\n'
             f'if [ "$1" = "update" ]; then {update}; fi\n',
             encoding="utf-8",
         )
         falso.chmod(0o755)
+        (falsos / "dry-run").write_text(f"{dry_run or _dry_run()}\n", encoding="utf-8")
         if npm is not None:
             corpo = f'echo "${{3##*@}}" > "{falsos}/versao"' if npm == "instala" else npm
             (falsos / "npm").write_text(
@@ -2056,6 +2068,26 @@ class Kit(unittest.TestCase):
             (falsos / ferramenta).symlink_to(shutil.which(ferramenta))
         saida = self._ferramenta("atualizar", str(pasta), *opcoes, env={**os.environ, "PATH": str(falsos)})
         return saida, registro.read_text(encoding="utf-8").splitlines(), pasta
+
+    def _de_novo(self, pasta: Path, *opcoes: str, dry_run: str) -> tuple[subprocess.CompletedProcess, list[str]]:
+        """O kit.py atualizar outra vez no projeto do _atualizar_com_openspec, com outro dry-run;
+        devolve a saída e só as chamadas desta vez."""
+        falsos = pasta.parent / "falsos"
+        (falsos / "dry-run").write_text(f"{dry_run}\n", encoding="utf-8")
+        registro = falsos / "registro"
+        registro.write_text("", encoding="utf-8")
+        saida = self._ferramenta("atualizar", str(pasta), *opcoes, env={**os.environ, "PATH": str(falsos)})
+        return saida, registro.read_text(encoding="utf-8").splitlines()
+
+    def _limpo(self, pasta: Path) -> None:
+        """O projeto como estava: nada por commitar e a trilha/ editada sem a cópia do kit."""
+        estado = subprocess.run(["git", "status", "--porcelain"], cwd=pasta, capture_output=True, text=True, check=True)
+        self.assertEqual(estado.stdout, "")
+        self.assertIn("# editado", (pasta / "trilha/verifica.sh").read_text(encoding="utf-8"))
+
+    def _recusa(self, texto: str, trecho: str) -> str:
+        """A linha da recusa que tem o trecho, ou vazio."""
+        return next((l for l in texto.splitlines() if l.startswith("recusado:") and trecho in l), "")
 
     def test_atualizar_openspec_instala_a_versao_do_kit(self) -> None:
         saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao="1.14.1")
@@ -2081,26 +2113,30 @@ class Kit(unittest.TestCase):
     def test_atualizar_openspec_recusa_o_update_que_apagaria(self) -> None:
         apaga = _dry_run(("delete", ".claude/skills/openspec-propose/SKILL.md"), ("update", "~/.config/openspec/config.json"),
                          ("delete", "~/.codex/prompts/opsx-ff.md"), ("delete", "/etc/openspec/x.md"))
-        saida, chamadas, pasta = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=apaga)
+        saida, chamadas, pasta = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=apaga,
+                                                              trilha_editada=True)
         texto = saida.stdout + saida.stderr
         self.assertEqual(saida.returncode, 1, texto)
-        falha = next((l for l in texto.splitlines() if l.startswith("FALHA") and "openspec-propose" in l), "")
-        self.assertIn("openspec config list", falha, texto)
-        self.assertIn("openspec config profile", falha)  # revisão da change 16, R10
+        recusa = self._recusa(texto, "openspec-propose")
+        self.assertIn("openspec config list", recusa, texto)
+        self.assertIn("openspec config profile", recusa)  # revisão da change 16, R10
+        self.assertIn("--aceitar-apagados", recusa)
         for fora in ("config.json", "opsx-ff.md", "/etc/openspec"):  # revisão da change 16, V2
-            self.assertNotIn(fora, falha)
+            self.assertNotIn(fora, recusa)
         self.assertNotIn("openspec update", chamadas)
         self.assertTrue((pasta / ".claude/skills/openspec-propose/SKILL.md").is_file())
         self.assertNotIn("commit sugerido", texto)
+        self._limpo(pasta)
 
-    def test_atualizar_openspec_sem_npm_falha(self) -> None:
-        saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao="1.14.1", npm=None)
+    def test_atualizar_openspec_sem_npm_recusa(self) -> None:
+        saida, chamadas, pasta = self._atualizar_com_openspec("--openspec", versao="1.14.1", npm=None,
+                                                              trilha_editada=True)
         texto = saida.stdout + saida.stderr
         self.assertEqual(saida.returncode, 1, texto)
-        falha = next((l for l in texto.splitlines() if l.startswith("FALHA") and "npm" in l), "")
-        self.assertIn(f"npm install -g @fission-ai/openspec@{self.PIN_DO_KIT}", falha, texto)
+        self.assertTrue(self._recusa(texto, f"npm install -g @fission-ai/openspec@{self.PIN_DO_KIT}"), texto)
         self.assertNotIn("openspec update", chamadas)
         self.assertNotIn("commit sugerido", texto)
+        self._limpo(pasta)
 
     def test_atualizar_openspec_update_com_erro_falha(self) -> None:
         saida, _, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, update="exit 1")
@@ -2119,36 +2155,95 @@ class Kit(unittest.TestCase):
         aviso = next((l for l in texto.splitlines() if l.startswith("aviso") and "opsx-ff.md" in l), "")
         self.assertIn("/etc/openspec/x.md", aviso, texto)
 
-    def test_atualizar_openspec_dry_run_com_erro_falha(self) -> None:
+    def test_atualizar_openspec_dry_run_com_erro_recusa(self) -> None:
         """Revisão da change 16, V1 e V3: a saída do dry-run que falha aparece, e o update não roda."""
         erro = _responde({"status": [{"message": "No OpenSpec directory found."}]}) + "; exit 1"
-        saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=erro)
+        saida, chamadas, pasta = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=erro,
+                                                              trilha_editada=True)
         texto = saida.stdout + saida.stderr
         self.assertEqual(saida.returncode, 1, texto)
         self.assertIn("No OpenSpec directory found.", texto)
-        self.assertTrue([l for l in texto.splitlines() if l.startswith("FALHA") and "--dry-run" in l], texto)
+        self.assertTrue(self._recusa(texto, "--dry-run"), texto)
         self.assertNotIn("openspec update", chamadas)
+        self._limpo(pasta)
 
-    def test_atualizar_openspec_npm_com_erro_falha(self) -> None:
+    def test_atualizar_openspec_npm_com_erro_recusa(self) -> None:
         """Revisão da change 16, V3 e R6: o npm que falha, e o que sai com 0 sem a versão mudar."""
         instalar = f"npm install -g @fission-ai/openspec@{self.PIN_DO_KIT}"
-        saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao="1.14.1", npm="exit 1")
+        saida, chamadas, pasta = self._atualizar_com_openspec("--openspec", versao="1.14.1", npm="exit 1",
+                                                              trilha_editada=True)
         texto = saida.stdout + saida.stderr
         self.assertEqual(saida.returncode, 1, texto)
-        self.assertTrue([l for l in texto.splitlines() if l.startswith("FALHA") and instalar in l], texto)
+        self.assertTrue(self._recusa(texto, instalar), texto)
         self.assertNotIn("openspec update", chamadas)
-        saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao="1.14.1", npm="exit 0")
+        self._limpo(pasta)
+        saida, chamadas, pasta = self._atualizar_com_openspec("--openspec", versao="1.14.1", npm="exit 0",
+                                                              trilha_editada=True)
         texto = saida.stdout + saida.stderr
         self.assertEqual(saida.returncode, 1, texto)
-        falha = next((l for l in texto.splitlines() if l.startswith("FALHA")), "")
-        self.assertIn("outro openspec", falha, texto)
+        self.assertTrue(self._recusa(texto, "outro openspec"), texto)
         self.assertNotIn("openspec update", chamadas)
+        self._limpo(pasta)
 
     def test_atualizar_openspec_nao_roda_com_a_migracao_que_falha(self) -> None:
         """Revisão da change 16, R4: sem a migração do check.sh, nem o npm nem o update."""
         saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao="1.14.1", check_antigo=True)
         self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
         self.assertFalse([c for c in chamadas if c.startswith("npm") or c == "openspec update"], chamadas)
+
+    def test_atualizar_openspec_roda_de_novo_depois_da_recusa(self) -> None:
+        apaga = _dry_run(("delete", ".claude/skills/openspec-propose/SKILL.md"))
+        saida, _, pasta = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=apaga,
+                                                       trilha_editada=True)
+        self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
+        saida, chamadas = self._de_novo(pasta, "--openspec", dry_run=_dry_run())
+        texto = saida.stdout + saida.stderr
+        self.assertEqual(saida.returncode, 0, texto)
+        self.assertNotIn("não commitado", texto)
+        self.assertIn("openspec update", chamadas)
+        self.assertNotIn("# editado", (pasta / "trilha/verifica.sh").read_text(encoding="utf-8"))
+
+    def test_atualizar_openspec_aceita_os_apagados(self) -> None:
+        apaga = _dry_run(("delete", ".claude/skills/openspec-propose/SKILL.md"))
+        saida, chamadas, _ = self._atualizar_com_openspec("--openspec", "--aceitar-apagados", versao=self.PIN_DO_KIT,
+                                                          dry_run=apaga)
+        texto = saida.stdout + saida.stderr
+        self.assertEqual(saida.returncode, 0, texto)
+        aviso = next((l for l in texto.splitlines() if l.startswith("aviso") and "openspec-propose" in l), "")
+        self.assertIn("no projeto", aviso, texto)
+        self.assertIn("openspec update", chamadas)
+
+    def test_atualizar_openspec_sem_a_pasta_openspec_recusa(self) -> None:
+        saida, chamadas, pasta = self._atualizar_com_openspec("--openspec", versao="1.14.1", sem_openspec=True,
+                                                              trilha_editada=True)
+        texto = saida.stdout + saida.stderr
+        self.assertEqual(saida.returncode, 1, texto)
+        recusa = self._recusa(texto, "openspec/")
+        self.assertIn("sem --openspec", recusa, texto)
+        self.assertIn("commit", recusa)
+        self.assertFalse([c for c in chamadas if c.startswith("npm") or c.startswith("openspec update")], chamadas)
+        self._limpo(pasta)
+
+    def test_aceitar_apagados_sem_openspec_e_erro_de_uso(self) -> None:
+        saida, chamadas, pasta = self._atualizar_com_openspec("--aceitar-apagados", versao="1.14.1",
+                                                              trilha_editada=True)
+        self.assertEqual(saida.returncode, 2, saida.stdout + saida.stderr)
+        self.assertIn("o --aceitar-apagados só vale com o --openspec", saida.stderr)
+        self.assertNotIn("unrecognized arguments", saida.stderr)
+        self.assertFalse([c for c in chamadas if c.startswith("npm") or c.startswith("openspec update")], chamadas)
+        self._limpo(pasta)
+
+    def test_atualizar_openspec_nao_roda_com_a_chamada_que_sobra(self) -> None:
+        """A troca do bloco antigo dá certo, mas sobra outra chamada aos scripts/confere_*: a
+        migração falha, e a previsão dela tem de responder igual, sem o npm nem o update."""
+        spec = importlib.util.spec_from_file_location("kit_sobra", RAIZ / "ferramentas/kit.py")
+        kit = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(kit)
+        extra = kit.BLOCO_ANTIGO + kit.CHAMADA_ANTIGA + "\npython3 -I scripts/confere_outro.py .\n"
+        saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao="1.14.1", check_extra=extra)
+        self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
+        self.assertIn("FALHA: o scripts/check.sh ainda chama", saida.stdout)
+        self.assertFalse([c for c in chamadas if c.startswith("npm") or c.startswith("openspec update")], chamadas)
 
     def test_atualizar_avisa_o_ci_do_projeto_atras_do_kit(self) -> None:
         """Revisão da change 16, R1: a conferência cita a versão do CI do projeto até ela ser trocada."""
