@@ -16,7 +16,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 ## 3. Integração
 
 - [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
-- [ ] 3.2 A execução manual, por último, só no scratchpad, com o `TRILHA_AI` apontando para o kit: um projeto feito pelo `kit.py` da tag `v2.18`, com um `--vizinho` no `check.sh` e um documento que cita `trilha/`, commitado; antes da atualização, o `bash scripts/check.sh` dele termina com 0 com o kit novo ao lado (o link de transição); o `kit.py atualizar` atual o leva à `trilha-ai/`, avisa o documento e a sessão a reabrir, sugere o commit da cópia, e o `bash scripts/check.sh` termina com 0 de novo; o resultado vai a "Verificação", no `design.md`
+- [x] 3.2 A execução manual, por último, só no scratchpad, com o `TRILHA_AI` apontando para o kit: um projeto feito pelo `kit.py` da tag `v2.18`, com um `--vizinho` no `check.sh` e um documento que cita `trilha/`, commitado; antes da atualização, o `bash scripts/check.sh` dele termina com 0 com o kit novo ao lado (o link de transição); o `kit.py atualizar` atual o leva à `trilha-ai/`, avisa o documento e a sessão a reabrir, sugere o commit da cópia, e o `bash scripts/check.sh` termina com 0 de novo; o resultado vai a "Verificação", no `design.md`
 
 ## Os cenários e os testes
 

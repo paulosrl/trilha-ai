@@ -59,6 +59,15 @@ A linha "Versão 2.19, de 2026-10-24." no comum e o `plugin.json` na 2.19.0; a t
 - [A sessão do Claude Code aberta no projeto antes da migração continua chamando a trava em `trilha/guarda.py`, que não existe mais, e o Python sai com 2, que bloqueia todo comando Bash] → O aviso do D6 manda reabrir a sessão.
 - [Os outros clones do projeto ficam com o `core.hooksPath` em `trilha/hooks`, e o git não roda hook nenhum] → O aviso do D6 dá o comando, e a conferência das regras já avisa a trava do commit desligada.
 
+## Verificação
+
+**Os testes antes do código (tarefas 1.1 e 1.2):** com os caminhos trocados nos testes e a pasta ainda em `modelo/trilha/`, o módulo dos testes nem carregou (ele importa o `modelo/trilha-ai/confere_regras.py`): todos falharam. Depois do código, o conjunto passou.
+
+**Execução manual (tarefa 3.2), em 2026-10-24,** no scratchpad, com o `TRILHA_AI` no kit e o `HOME` e o `XDG_CONFIG_HOME` isolados: um projeto feito pelo `kit.py` da tag `v2.18` (extraída por `git archive`), com `--vizinho outro` no `check.sh` e um `docs/como.md` que cita `trilha/tempo.py`, commitado.
+- Antes da atualização, o `bash scripts/check.sh` terminou com 0 com o kit 2.19 ao lado, pelo link de transição, com o aviso "o kit está na 2.19 e o projeto na 2.18: a pasta trilha/ foi comparada com a v2.18".
+- O `kit.py atualizar` terminou com 0: saiu a `trilha/`, entrou a `trilha-ai/`; o `CLAUDE.md` (a importação e as duas linhas de texto) e o `check.sh` (`bash trilha-ai/verifica.sh --vizinho outro`) passaram a citar a `trilha-ai/`; o `core.hooksPath` é `trilha-ai/hooks` e o `settings.json` liga a `trilha-ai/guarda.py`; os avisos citaram o `docs/como.md` e a sessão a reabrir; a sugestão foi "chore(metodo): cópia do kit Trilha AI, comum 2.18 → 2.19".
+- Depois, o `bash scripts/check.sh` terminou com 0; o commit da cópia passou pela trava em `trilha-ai/hooks`, e um commit com a importação antiga foi barrado por ela ("CLAUDE.md não importa o comum (falta a linha @trilha-ai/CLAUDE-comum.md)").
+
 ## Respostas à revisão
 
 ### Revisão dos artefatos
