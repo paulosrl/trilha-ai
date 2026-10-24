@@ -39,7 +39,7 @@ O Xavier e o HubIA não têm hook próprio nem conferem citações; neles, a có
 - **Antes:**
   - o repositório na branch principal atualizada, sem nada por commitar e com o `ANDAMENTO.md` em "nada em andamento";
   - o kit atualizado (`git -C /home/pl/projetos/trilha-ai pull --tags`);
-  - o ensaio num clone descartável, quando a etapa muda arquivos do método;
+  - o ensaio num clone descartável, quando a etapa muda arquivos do método, com a verificação própria do projeto também (o `.githooks/pre-push` e os testes dele, com um envio a um remoto local descartável), e não só o `check.sh`: foi o `pre-push` do Heimdall que mostrou, em 2026-10-24, o que a cópia da 2.19 quebrava;
   - a linha de base dos testes do código, anotada (o que passou, falhou e foi pulado), para comparar no fim.
 - **Prova de que o código não quebrou:**
   - `git diff --stat <antes>..HEAD` sem nenhum arquivo de código da aplicação;
@@ -228,3 +228,5 @@ O comando de cada um, rodado da raiz do kit, com o nome da pasta em minúsculas:
 - **Nos que esperam a vez:** a máquina já está na 1.15.0, então o `check.sh` deles avisa que a máquina e o CI divergem e que o `openspec update` mudaria arquivos gerados. O aviso sugere voltar a máquina à 1.14.1: não volte, porque os já atualizados passariam a divergir e um `openspec update` neles geraria de novo os arquivos da 1.14.1. E não rode o `openspec update` neles antes da vez: ele geraria os arquivos da 1.15.0 com o CI ainda na 1.14.1. Os avisos somem quando cada um for atualizado, com o CI trocado, salvo se o perfil mudar depois: aí os já atualizados pedem um `openspec update` de novo.
 
 O modelo-interface-heimdall fica fora, na 2.6, e a etapa 7 (os dados pessoais) continua como acima.
+
+**Em 2026-10-24, a 2.20:** o ensaio do Heimdall com a 2.19 mostrou que o código próprio dele cita a `trilha/` (o `scripts/lib/common.sh` grava `core.hooksPath=trilha/hooks`, e o `pre-push` dele reprovava). A change 21 do kit (PR #22, tag `v2.20`) pôs o link de transição `trilha` → `trilha-ai` nos projetos que ainda citam a pasta antiga. Com ele, o ensaio do Heimdall passou inteiro: o `check.sh`, a trava do commit e o envio pelo `pre-push`, com os 49 testes pareados. O comando de cada projeto continua o mesmo.
