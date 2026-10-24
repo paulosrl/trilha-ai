@@ -1118,7 +1118,7 @@ class Kit(unittest.TestCase):
         subprocess.run(["git", "add", "-A"], cwd=destino, check=True)
         return destino
 
-    def _openspec_falso(self, falsos: Path, versao: str = "1.14.1", config: bool = True,
+    def _openspec_falso(self, falsos: Path, versao: str = "1.15.0", config: bool = True,
                         update: str = "exit 0") -> Path:
         """Um `openspec` de mentira em falsos/, que grava cada chamada num registro e responde ao
         `config path` (um arquivo que existe, ou não), ao `--version` e ao `update <pasta>` (o corpo
@@ -1292,16 +1292,16 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             destino = self._projeto_com_gerados(tmp)
             ci = destino / ".github/workflows/verificacao.yml"
-            self.assertIn("@fission-ai/openspec@1.14.1", ci.read_text(encoding="utf-8"))
+            self.assertIn("@fission-ai/openspec@1.15.0", ci.read_text(encoding="utf-8"))
             saida, _ = self._metodo_com_openspec(destino, versao="1.14.3")
         self.assertEqual(saida.returncode, 0, saida.stderr)
         aviso = next((l for l in saida.stderr.splitlines() if "1.14.3" in l), "")
-        self.assertIn("1.14.1", aviso, saida.stderr)
-        self.assertIn("npm install -g @fission-ai/openspec@1.14.1", aviso)
+        self.assertIn("1.15.0", aviso, saida.stderr)
+        self.assertIn("npm install -g @fission-ai/openspec@1.15.0", aviso)
 
     def test_openspec_versao_igual_a_do_ci_nao_avisa(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp), versao="1.14.1")
+            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp), versao="1.15.0")
         self.assertEqual(saida.returncode, 0, saida.stderr)
         self.assertIn("--version", registro)
         self.assertNotIn("npm install -g", saida.stderr)
@@ -1310,7 +1310,7 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             destino = self._projeto_com_gerados(tmp)
             ci = destino / ".github/workflows/verificacao.yml"
-            ci.write_text(ci.read_text(encoding="utf-8").replace("@fission-ai/openspec@1.14.1", "@fission-ai/openspec"),
+            ci.write_text(ci.read_text(encoding="utf-8").replace("@fission-ai/openspec@1.15.0", "@fission-ai/openspec"),
                           encoding="utf-8")
             sem_pin, _ = self._metodo_com_openspec(destino, versao="1.14.3")
             ci.write_text(ci.read_text(encoding="utf-8").replace("@fission-ai/openspec", "@fission-ai/openspec@latest"),

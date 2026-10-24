@@ -10,7 +10,7 @@ A ordem:
 
 1. **Instale as ferramentas,** uma vez por máquina, em Linux ou WSL:
    - o **Claude Code**: `curl -fsSL https://claude.ai/install.sh | bash` (a documentação oficial, com os requisitos, está em https://code.claude.com/docs/en/setup);
-   - o **OpenSpec**, com o Node 20.19 ou mais novo: `npm install -g @fission-ai/openspec@1.14.1`, a versão que a verificação do GitHub usa;
+   - o **OpenSpec**, com o Node 20.19 ou mais novo: `npm install -g @fission-ai/openspec@1.15.0`, a versão que a verificação do GitHub usa;
    - o **Python 3**, porque os verificadores de `trilha/` são programas Python sem dependências; no Ubuntu e no WSL ele costuma vir instalado: confira com `python3 --version`;
    - uma **conta no GitHub** e o GitHub CLI (`gh`, instalação em https://cli.github.com), autenticado uma vez com `gh auth login`: todo repositório do método tem um remoto privado no GitHub;
    - o marketplace do plugin `sdd`, publicado por este repositório: `claude plugin marketplace add paulosrl/trilha-ai`. O plugin vale por projeto e se instala no passo 4; o que ele faz está em `plugins/sdd/README.md`;

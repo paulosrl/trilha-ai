@@ -4,8 +4,8 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 1. A versão
 
-- [ ] 1.1 "Versão 2.16, de 2026-10-24." no `modelo/trilha/CLAUDE-comum.md` e `2.16.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar (D4). Os testes `test_kit_sem_mudanca_depois_da_tag`, `test_versao_no_comum` e o da versão do plugin passam
-- [ ] 1.2 A 1.15.0 no `modelo/.github/workflows/verificacao.yml`, no `.github/workflows/testes.yml` e no `README.md`; o `test_openspec_versao_diferente_da_do_ci_avisa` e o `openspec` falso dos testes passam à 1.15.0 como a versão do CI (`-k test_openspec_versao`)
+- [x] 1.1 "Versão 2.16, de 2026-10-24." no `modelo/trilha/CLAUDE-comum.md` e `2.16.0` no `plugins/sdd/.claude-plugin/plugin.json`, antes de qualquer outro arquivo de `modelo/` mudar (D4). Os testes `test_kit_sem_mudanca_depois_da_tag`, `test_versao_no_comum` e o da versão do plugin passam
+- [x] 1.2 A 1.15.0 no `modelo/.github/workflows/verificacao.yml`, no `.github/workflows/testes.yml` e no `README.md`; o `test_openspec_versao_diferente_da_do_ci_avisa` e o `openspec` falso dos testes passam à 1.15.0 como a versão do CI (`-k test_openspec_versao`)
 
 ## 2. O dry-run do OpenSpec
 
