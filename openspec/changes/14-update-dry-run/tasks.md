@@ -18,6 +18,13 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 - [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
 - [x] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade: num projeto de teste feito pelo `kit.py novo`, com um comando gerado alterado e outro apagado, a conferência do método avisa os dois em "trocaria" e "criaria", e o projeto fica igual; com a configuração global sem o perfil (num `XDG_CONFIG_HOME` à parte), o aviso não a cita e ela fica igual; o resultado vai a "Verificação", no `design.md`
 
+## 4. As respostas ao verify e ao code review
+
+Do `/opsx:verify` e do `/code-review high 15`, de 2026-10-24; a decisão de cada ponto fica em "Respostas à revisão", no `design.md`.
+
+- [x] 4.1 O `test_openspec_caminho_fora_do_projeto_fica_fora_do_aviso` comprova, no cenário "Configuração da máquina intacta", que o `~/`, o `../` e o absoluto ficam fora do aviso, e o `openspec` falso sem o `--dry-run` escreve no projeto e na configuração; o teste novo falha antes do código, e a mutação que tira o `--dry-run` faz falhar o `test_openspec_ensaio_nao_toca_o_projeto` e o `test_openspec_ensaio_nao_muda_a_configuracao_da_maquina` (`-k test_openspec`)
+- [x] 4.2 O `_do_projeto`, o `isinstance` da ação, o `RecursionError` e o docstring (V1, V4, V5, C4); os testes, o ruff e a execução manual com o XDG padrão passam, e o resultado vai a "Verificação"
+
 ## Workflow follow-up
 
 - O `/opsx:verify` e o `/code-review` do pull request, por um agente sem o contexto da sessão; as respostas vão a "Respostas à revisão", no `design.md`.

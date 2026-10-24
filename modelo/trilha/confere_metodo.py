@@ -12,10 +12,10 @@ Confere, na raiz do repositório:
   a declara, instalada no projeto; só aviso, nunca falha, e
   nada sem o Claude Code (o CI), sem a resposta dele no prazo ou com --sem-plugin, que a trava do
   commit usa para não esperar a cada commit;
-- o OpenSpec da máquina: o que o `openspec update` mudaria nos arquivos gerados que o projeto
-  versiona, pelo dry-run dele, sem a rede, e a versão instalada diante da
-  fixada no CI do projeto; só aviso, e nada sem o openspec, sem a configuração global dele (o CI),
-  sem resposta no prazo ou com --sem-plugin, que pula tudo o que depende da máquina.
+- o OpenSpec da máquina: o que o `openspec update` mudaria nos arquivos do projeto, pelo dry-run
+  dele, sem a rede, e a versão instalada diante da fixada no CI do projeto; só aviso, e nada sem
+  o openspec, sem a configuração global dele (o CI), sem resposta no prazo ou com --sem-plugin,
+  que pula tudo o que depende da máquina.
 
 Roda no check.sh (e, por ele, no CI) e na trava do commit (trilha/hooks/pre-commit): documento do
 método fora do formato barra o commit e o merge; o que depende da máquina (o plugin e o OpenSpec)
@@ -300,10 +300,16 @@ def _nomes(nomes: list[str]) -> str:
     return ", ".join(nomes[:MOSTRADOS]) + (f" e mais {resto}" if resto > 0 else "")
 
 
+def _do_projeto(nome: str) -> bool:
+    """O caminho que o dry-run lista fica dentro da raiz: nem no HOME, que ele mostra como `~/...`
+    (a configuração global, no lugar padrão), nem absoluto, nem fora dela por `..`."""
+    return not nome.startswith("~") and Path(os.path.normpath(RAIZ / nome)).is_relative_to(RAIZ)
+
+
 def _aviso_do_update() -> list[str]:
     """O que o `openspec update` mudaria nos arquivos do projeto, pelo `--dry-run --json` dele, que
     não escreve nada; só com a configuração global e com arquivos gerados no índice do git. O que
-    ele lista fora do projeto (a configuração global, pelo caminho absoluto) fica fora do aviso."""
+    ele lista fora do projeto (a configuração global) fica fora do aviso."""
     configuracao = _saida(["openspec", "config", "path"])
     if configuracao is None or not Path(configuracao.strip()).is_file():
         return []
@@ -312,7 +318,7 @@ def _aviso_do_update() -> list[str]:
         return []
     try:
         plano = json.loads(_saida(["openspec", "update", "--dry-run", "--json"]) or "")
-    except ValueError:
+    except (ValueError, RecursionError):  # a saída aninhada fundo demais também não é a dele
         return []
     mudancas = plano.get("changes") if isinstance(plano, dict) else None
     if not isinstance(mudancas, list) or plano.get("failures"):
@@ -320,8 +326,8 @@ def _aviso_do_update() -> list[str]:
     grupos: dict[str, list[str]] = {verbo: [] for verbo in VERBOS.values()}
     for mudanca in (item for item in mudancas if isinstance(item, dict)):
         nome, acao = mudanca.get("path"), mudanca.get("action")
-        if isinstance(nome, str) and str(acao) in VERBOS and not Path(nome).is_absolute():
-            grupos[VERBOS[str(acao)]].append(nome)
+        if isinstance(nome, str) and isinstance(acao, str) and acao in VERBOS and _do_projeto(nome):
+            grupos[VERBOS[acao]].append(nome)
     partes = [f"{verbo}: {_nomes(sorted(nomes))}" for verbo, nomes in grupos.items() if nomes]
     if not partes:
         return []

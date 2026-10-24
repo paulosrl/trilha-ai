@@ -43,11 +43,16 @@ def _claude_falso(pasta: Path, corpo: str) -> None:
     falso.chmod(0o755)
 
 
+def _responde(saida: object) -> str:
+    """O corpo de um comando falso que imprime a saída dada em JSON."""
+    return "printf '%s\\n' " + shlex.quote(json.dumps(saida))
+
+
 def _dry_run(*mudancas: tuple[str, str], failures: tuple[str, ...] = ()) -> str:
     """O corpo do `openspec update` falso: imprime o JSON do `--dry-run --json` com as mudanças
     dadas, cada uma como (ação, caminho)."""
     changes = [{"path": caminho, "action": acao, "tool": "claude"} for acao, caminho in mudancas]
-    return "printf '%s\\n' " + shlex.quote(json.dumps({"changes": changes, "notes": [], "failures": list(failures)}))
+    return _responde({"changes": changes, "notes": [], "failures": list(failures)})
 
 
 _SEM_CLAUDE = tempfile.TemporaryDirectory()
@@ -1129,7 +1134,9 @@ class Kit(unittest.TestCase):
                         update: str = "exit 0") -> Path:
         """Um `openspec` de mentira em falsos/, que grava cada chamada num registro e responde ao
         `config path` (um arquivo que existe, ou não), ao `--version` e ao `update` (o corpo dado;
-        o `_dry_run` monta a resposta do `--dry-run --json`). Devolve o registro."""
+        o `_dry_run` monta a resposta do `--dry-run --json`). O `update` sem o `--dry-run` escreve,
+        como o de verdade: regrava a configuração global e um comando do projeto. Devolve o
+        registro."""
         registro = falsos / "registro"
         registro.touch()
         if config:  # a configuração global da máquina, em <falsos>/xdg, salvo outro XDG_CONFIG_HOME
@@ -1142,6 +1149,9 @@ class Kit(unittest.TestCase):
             f'configuracao="${{XDG_CONFIG_HOME:-{falsos}/xdg}}/openspec/config.json"\n'
             'if [ "$1 $2" = "config path" ]; then echo "$configuracao"; exit 0; fi\n'
             f'if [ "$1" = "--version" ]; then echo "{versao}"; exit 0; fi\n'
+            'if [ "$1" = "update" ] && [ "$2" != "--dry-run" ]; then\n'
+            '  echo migrado > "$configuracao"; echo migrado > .claude/commands/opsx/propose.md\n'
+            'fi\n'
             f'if [ "$1" = "update" ]; then {update}; fi\n',
             encoding="utf-8",
         )
@@ -1223,12 +1233,27 @@ class Kit(unittest.TestCase):
         # Change 14: o item fora do formato do dry-run fica de fora, sem derrubar a conferência.
         estranhos = [3, {"path": 4, "action": "add"}, {"path": "x", "action": ["add"]}, {"path": "y", "action": "move"}]
         valido = {"path": ".claude/commands/opsx/propose.md", "action": "delete"}
-        lista = "printf '%s\\n' " + shlex.quote(json.dumps({"changes": [*estranhos, valido], "failures": []}))
+        lista = _responde({"changes": [*estranhos, valido], "failures": []})
         with tempfile.TemporaryDirectory() as tmp:
             saida, _ = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=lista)
         self.assertEqual(saida.returncode, 0, saida.stderr)
         aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
         self.assertIn("(apagaria: .claude/commands/opsx/propose.md)", aviso, saida.stderr)
+
+    def test_openspec_caminho_fora_do_projeto_fica_fora_do_aviso(self) -> None:
+        """Verify da change 14 (V1): o dry-run mostra o que fica no HOME com `~/` (a configuração
+        global, no XDG padrão); isso, o `../` e o absoluto ficam fora do aviso."""
+        fora = (("update", "~/.config/openspec/config.json"), ("add", "../vizinho/.claude/x.md"),
+                ("add", "/etc/openspec/x.md"), ("add", ".claude/../../fora.md"))
+        dentro = ("delete", ".claude/skills/openspec-propose/SKILL.md")
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, _ = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=_dry_run(*fora, dentro))
+        aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
+        self.assertIn("(apagaria: .claude/skills/openspec-propose/SKILL.md)", aviso, saida.stderr)
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, _ = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=_dry_run(*fora))
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertNotIn("openspec update mudaria", saida.stderr)
 
     def test_openspec_nome_fora_do_utf8_nao_derruba(self) -> None:
         """Revisão da change 09, achado 3: o aviso nunca vira falha, nem com um nome em Latin-1."""
@@ -1304,7 +1329,7 @@ class Kit(unittest.TestCase):
     def test_openspec_dry_run_com_falhas_nao_avisa(self) -> None:
         """Change 14: o dry-run com failures, a saída que não é JSON e o JSON sem a lista changes."""
         com_falha = _dry_run(("delete", ".claude/skills/openspec-propose/SKILL.md"), failures=("claude",))
-        for resposta in (com_falha, "echo nada", "printf '%s\\n' '{\"changes\": 3}'", "printf '[]\\n'"):
+        for resposta in (com_falha, "echo nada", _responde({"changes": 3}), _responde([])):
             with self.subTest(resposta=resposta), tempfile.TemporaryDirectory() as tmp:
                 saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=resposta)
                 self.assertEqual(saida.returncode, 0, saida.stderr)
