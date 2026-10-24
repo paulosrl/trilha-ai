@@ -7,7 +7,7 @@ Define o que o `trilha-ai/tempo.py` faz: apurar, sob demanda e sem nada rodar a 
 ## Requirements
 
 ### Requirement: Só sob demanda
-O `trilha/tempo.py` SHALL rodar só quando chamado, de dentro de um repositório git. O modelo do `.claude/settings.json` do kit MUST NOT ligar o `tempo.py` a nenhum gancho do Claude Code. Fora de um repositório git, o comando MUST terminar com código diferente de 0 e dizer por quê, sem escrever nada.
+O `trilha-ai/tempo.py` SHALL rodar só quando chamado, de dentro de um repositório git. O modelo do `.claude/settings.json` do kit MUST NOT ligar o `tempo.py` a nenhum gancho do Claude Code. Fora de um repositório git, o comando MUST terminar com código diferente de 0 e dizer por quê, sem escrever nada.
 
 #### Scenario: Nenhum gancho no modelo
 - **WHEN** o `modelo/claude-settings.json` do kit é lido
