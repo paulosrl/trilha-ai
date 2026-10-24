@@ -4,12 +4,12 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 1. Os testes
 
-- [ ] 1.1 Um `npm` e um `openspec` falsos num PATH só deles (com o `git` e o `claude` falso): o `openspec` responde ao `--version` com a versão gravada num arquivo, ao dry-run com o JSON dado e ao `update` gravando a chamada; o `npm install` grava a versão nova nesse arquivo. Os testes, que falham antes do código: `test_atualizar_openspec_instala_a_versao_do_kit` ("Versão da máquina diferente da do kit"), `test_atualizar_openspec_na_versao_igual_nao_instala` ("Versão da máquina igual à do kit"), `test_atualizar_sem_a_opcao_nao_mexe_no_openspec` ("Sem a opção"), `test_atualizar_openspec_recusa_o_update_que_apagaria` ("Perfil da máquina sem o que o projeto versiona"), `test_atualizar_openspec_sem_npm_falha` ("Máquina sem o npm"), `test_atualizar_openspec_update_com_erro_falha` ("Update com erro"), `test_atualizar_avisa_a_versao_diferente_do_kit` ("Versão diferente sem a opção") e `test_atualizar_versao_igual_sem_aviso_da_opcao` ("Versão igual sem a opção") (`python3 -m unittest discover -s testes -k test_atualizar_openspec -k test_atualizar_sem_a_opcao -k test_atualizar_avisa_a_versao -k test_atualizar_versao_igual`)
+- [x] 1.1 Um `npm` e um `openspec` falsos num PATH só deles (com o `git` e o `claude` falso): o `openspec` responde ao `--version` com a versão gravada num arquivo, ao dry-run com o JSON dado e ao `update` gravando a chamada; o `npm install` grava a versão nova nesse arquivo. Os testes, que falham antes do código: `test_atualizar_openspec_instala_a_versao_do_kit` ("Versão da máquina diferente da do kit"), `test_atualizar_openspec_na_versao_igual_nao_instala` ("Versão da máquina igual à do kit"), `test_atualizar_sem_a_opcao_nao_mexe_no_openspec` ("Sem a opção"), `test_atualizar_openspec_recusa_o_update_que_apagaria` ("Perfil da máquina sem o que o projeto versiona"), `test_atualizar_openspec_sem_npm_falha` ("Máquina sem o npm"), `test_atualizar_openspec_update_com_erro_falha` ("Update com erro"), `test_atualizar_avisa_a_versao_diferente_do_kit` ("Versão diferente sem a opção") e `test_atualizar_versao_igual_sem_aviso_da_opcao` ("Versão igual sem a opção") (`python3 -m unittest discover -s testes -k test_atualizar_openspec -k test_atualizar_sem_a_opcao -k test_atualizar_avisa_a_versao -k test_atualizar_versao_igual`)
 
 ## 2. O código e o texto
 
-- [ ] 2.1 O `kit.py atualizar` com a opção `--openspec` (D1 a D4) e o aviso sem ela (D5); os testes da tarefa 1.1 e os do `atualizar` passam (`python3 -m unittest discover -s testes -k test_atualizar`)
-- [ ] 2.2 O uso no docstring do `kit.py` e a atualização de um projeto no `README.md` citam a opção; o `python3 ferramentas/kit.py --help` mostra a opção
+- [x] 2.1 O `kit.py atualizar` com a opção `--openspec` (D1 a D4) e o aviso sem ela (D5); os testes da tarefa 1.1 e os do `atualizar` passam (`python3 -m unittest discover -s testes -k test_atualizar`)
+- [x] 2.2 O uso no docstring do `kit.py` e a atualização de um projeto no `README.md` citam a opção; o `python3 ferramentas/kit.py --help` mostra a opção
 
 ## 3. Integração
 

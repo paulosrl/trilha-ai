@@ -1996,6 +1996,115 @@ class Kit(unittest.TestCase):
 
     # A pasta trilha/ (change 02): as conferências, a verificação fixa e a ferramenta.
 
+    # O --openspec do kit.py atualizar (change 16).
+
+    PIN_DO_KIT = re.search(r"@fission-ai/openspec@([\d.]+)",
+                           (MODELO / ".github/workflows/verificacao.yml").read_text(encoding="utf-8")).group(1)
+
+    def _atualizar_com_openspec(self, *opcoes: str, versao: str = "1.14.1", dry_run: str | None = None,
+                                update: str = "exit 0", npm: bool = True) -> tuple[subprocess.CompletedProcess, list[str], Path]:
+        """O kit.py atualizar num projeto novo (com uma skill gerada no índice), com um `openspec` e
+        um `npm` falsos num PATH só deles: o `openspec` responde ao `--version` com a versão gravada
+        em <falsos>/versao, ao dry-run com o corpo dado e ao `update` com o outro; o `npm install`
+        grava a versão que instala. Devolve a saída, as chamadas e a pasta do projeto."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        pasta = self._projeto_novo(tmp.name)
+        skill = pasta / ".claude/skills/openspec-propose/SKILL.md"
+        skill.parent.mkdir(parents=True)
+        skill.write_text("gerado\n", encoding="utf-8")
+        subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
+        subprocess.run(["git", "commit", "-qm", "gerados"], cwd=pasta, check=True, env={**os.environ, **GIT_TESTE})
+        falsos = Path(tmp.name) / "falsos"
+        falsos.mkdir()
+        registro = falsos / "registro"
+        registro.touch()
+        (falsos / "versao").write_text(f"{versao}\n", encoding="utf-8")
+        falso = falsos / "openspec"
+        falso.write_text(
+            "#!/bin/sh\n"
+            f'echo "openspec $*" >> "{registro}"\n'
+            f'if [ "$1" = "--version" ]; then cat "{falsos}/versao"; exit 0; fi\n'
+            'if [ "$1 $2" = "config path" ]; then echo /nao/existe/config.json; exit 0; fi\n'
+            f'if [ "$1 $2" = "update --dry-run" ]; then {dry_run or _dry_run()}; exit; fi\n'
+            f'if [ "$1" = "update" ]; then {update}; fi\n',
+            encoding="utf-8",
+        )
+        falso.chmod(0o755)
+        if npm:
+            (falsos / "npm").write_text(
+                "#!/bin/sh\n"
+                f'echo "npm $*" >> "{registro}"\n'
+                f'echo "${{3##*@}}" > "{falsos}/versao"\n',
+                encoding="utf-8",
+            )
+            (falsos / "npm").chmod(0o755)
+        _claude_falso(falsos, "exit 1")
+        for ferramenta in ("git", "cat"):
+            (falsos / ferramenta).symlink_to(shutil.which(ferramenta))
+        saida = self._ferramenta("atualizar", str(pasta), *opcoes, env={**os.environ, "PATH": str(falsos)})
+        return saida, registro.read_text(encoding="utf-8").splitlines(), pasta
+
+    def test_atualizar_openspec_instala_a_versao_do_kit(self) -> None:
+        saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao="1.14.1")
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        instalar = f"npm install -g @fission-ai/openspec@{self.PIN_DO_KIT}"
+        self.assertIn(instalar, chamadas)
+        self.assertIn("openspec update --dry-run --json", chamadas)
+        self.assertIn("openspec update", chamadas)
+        self.assertLess(chamadas.index(instalar), chamadas.index("openspec update"))
+
+    def test_atualizar_openspec_na_versao_igual_nao_instala(self) -> None:
+        saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT)
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        self.assertFalse([c for c in chamadas if c.startswith("npm")], chamadas)
+        self.assertIn("openspec update", chamadas)
+
+    def test_atualizar_sem_a_opcao_nao_mexe_no_openspec(self) -> None:
+        saida, chamadas, _ = self._atualizar_com_openspec(versao="1.14.1")
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        self.assertFalse([c for c in chamadas if c.startswith("npm")], chamadas)
+        self.assertNotIn("openspec update", chamadas)
+
+    def test_atualizar_openspec_recusa_o_update_que_apagaria(self) -> None:
+        apaga = _dry_run(("delete", ".claude/skills/openspec-propose/SKILL.md"), ("update", "~/.config/openspec/config.json"))
+        saida, chamadas, pasta = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, dry_run=apaga)
+        texto = saida.stdout + saida.stderr
+        self.assertEqual(saida.returncode, 1, texto)
+        falha = next((l for l in texto.splitlines() if l.startswith("FALHA") and "openspec-propose" in l), "")
+        self.assertIn("openspec config list", falha, texto)
+        self.assertNotIn("config.json", falha)
+        self.assertNotIn("openspec update", chamadas)
+        self.assertTrue((pasta / ".claude/skills/openspec-propose/SKILL.md").is_file())
+        self.assertNotIn("commit sugerido", texto)
+
+    def test_atualizar_openspec_sem_npm_falha(self) -> None:
+        saida, chamadas, _ = self._atualizar_com_openspec("--openspec", versao="1.14.1", npm=False)
+        texto = saida.stdout + saida.stderr
+        self.assertEqual(saida.returncode, 1, texto)
+        falha = next((l for l in texto.splitlines() if l.startswith("FALHA") and "npm" in l), "")
+        self.assertIn(f"npm install -g @fission-ai/openspec@{self.PIN_DO_KIT}", falha, texto)
+        self.assertNotIn("openspec update", chamadas)
+        self.assertNotIn("commit sugerido", texto)
+
+    def test_atualizar_openspec_update_com_erro_falha(self) -> None:
+        saida, _, _ = self._atualizar_com_openspec("--openspec", versao=self.PIN_DO_KIT, update="exit 1")
+        texto = saida.stdout + saida.stderr
+        self.assertEqual(saida.returncode, 1, texto)
+        self.assertTrue([l for l in texto.splitlines() if l.startswith("FALHA") and "openspec update" in l], texto)
+        self.assertNotIn("commit sugerido", texto)
+
+    def test_atualizar_avisa_a_versao_diferente_do_kit(self) -> None:
+        saida, _, _ = self._atualizar_com_openspec(versao="1.14.1")
+        aviso = next((l for l in saida.stdout.splitlines() if "--openspec" in l), "")
+        self.assertIn("1.14.1", aviso, saida.stdout)
+        self.assertIn(self.PIN_DO_KIT, aviso)
+
+    def test_atualizar_versao_igual_sem_aviso_da_opcao(self) -> None:
+        saida, _, _ = self._atualizar_com_openspec(versao=self.PIN_DO_KIT)
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        self.assertNotIn("--openspec", saida.stdout + saida.stderr)
+
     def _projeto_novo(self, tmp: str) -> Path:
         """Um projeto feito pela ferramenta atual, com o primeiro commit."""
         pasta = Path(tmp) / "proj"

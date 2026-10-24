@@ -3,6 +3,7 @@
 Uso (Python 3 puro, sem dependências), de qualquer pasta:
     python3 ferramentas/kit.py novo <pasta>        # a pasta, o git e os arquivos do kit
     python3 ferramentas/kit.py atualizar <pasta>   # a cópia nova do que se copia sem mudar
+    python3 ferramentas/kit.py atualizar <pasta> --openspec   # e o OpenSpec na versão do kit
 
 Nenhum dos dois faz commit nem envia: o commit segue o CLAUDE-comum.md (a mensagem, a coautoria)
 e o envio pede o "sim" do usuário. O que vai aos projetos está em modelo/; esta pasta,
@@ -14,6 +15,7 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -112,6 +114,11 @@ LINGUA = (
 INSTALAR_NO_PROJETO = "claude plugin install sdd@trilha-ai --scope project"
 # A trava do Claude Code em cada versão do kit: antes da 2.0, em scripts/; depois, em trilha/.
 GUARDAS = ("scripts/guarda.py", "trilha/guarda.py")
+# O OpenSpec que o kit espera, o do CI do modelo, e o ambiente dos comandos dele: sem a consulta da
+# versão nova (que, no openspec update, pergunta se a instala) e sem a telemetria.
+PIN_DO_OPENSPEC = re.compile(r"@fission-ai/openspec@(\d+\.\d+\.\d+[^\s\"']*)")
+SEM_CONSULTA = {"OPENSPEC_NO_UPDATE_CHECK": "1", "OPENSPEC_TELEMETRY": "0", "DO_NOT_TRACK": "1"}
+PRAZO_DO_OPENSPEC = 60
 
 
 class Recusa(Exception):
@@ -201,7 +208,7 @@ def _aviso_do_perfil() -> str:
     )
 
 
-def atualizar(pasta: Path) -> int:
+def atualizar(pasta: Path, openspec: bool = False) -> int:
     if not (pasta / ".git").exists():
         raise Recusa(f"{pasta} não é a raiz de um repositório git")
     if pasta.resolve() == KIT:
@@ -240,6 +247,9 @@ def atualizar(pasta: Path) -> int:
     # A página nasce ao fechar uma etapa (o comum); aqui, só a que já existe ganha o modelo novo.
     if (pasta / "sdd" / "documentacao.html").is_file():
         _rodar(pasta, [sys.executable, "-I", "trilha/gerar_pagina_sdd.py"])
+    falha_do_openspec = _atualizar_o_openspec(pasta) if openspec else ""
+    if not openspec:
+        _avisar_o_openspec()
 
     regras = ["trilha/confere_regras.py", ".", "--fonte", str(KIT)]
     ok = _rodar(pasta, [sys.executable, "-I", *regras])
@@ -252,12 +262,102 @@ def atualizar(pasta: Path) -> int:
     if not migrou:
         print("FALHA: o scripts/check.sh ainda chama os scripts/confere_*, que saíram; troque-os")
         return 1
+    if falha_do_openspec:
+        print(f"FALHA: {falha_do_openspec}; os arquivos ficaram copiados, sem commit")
+        return 1
     if not ok:
         print("FALHA: a conferência reprovou; os arquivos ficaram copiados, sem commit")
         return 1
     if mudou:
         print(f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {antes} → {depois}")
     return 0
+
+
+def _openspec_do_kit() -> str:
+    texto = (MODELO / ".github" / "workflows" / "verificacao.yml").read_text(encoding="utf-8")
+    achado = PIN_DO_OPENSPEC.search(texto)
+    return achado.group(1) if achado else ""
+
+
+def _versao_do_openspec() -> str:
+    """A versão do openspec da máquina; vazia sem ele ou sem resposta."""
+    try:
+        saida = subprocess.run(
+            ["openspec", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=PRAZO_DO_OPENSPEC,
+            check=False,
+            env={**os.environ, **SEM_CONSULTA},
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    achado = re.search(r"\d+\.\d+\.\d+\S*", saida.stdout) if saida.returncode == 0 else None
+    return achado.group(0) if achado else ""
+
+
+def _avisar_o_openspec() -> None:
+    """Sem o --openspec, a versão da máquina diferente da do kit; sem o openspec, nada."""
+    instalada, alvo = _versao_do_openspec(), _openspec_do_kit()
+    if instalada and alvo and instalada != alvo:
+        print(
+            f"aviso: o OpenSpec da máquina está na {instalada} e o kit usa a {alvo}: rode de novo "
+            "com --openspec para instalá-la e rodar o openspec update no projeto"
+        )
+
+
+def _no_projeto(pasta: Path, nome: str) -> bool:
+    """O caminho do dry-run fica dentro da pasta: nem no HOME (`~/...`), nem absoluto, nem fora
+    dela por `..`."""
+    raiz = pasta.resolve()
+    return not nome.startswith("~") and Path(os.path.normpath(raiz / nome)).is_relative_to(raiz)
+
+
+def _atualizar_o_openspec(pasta: Path) -> str:
+    """O OpenSpec da máquina na versão do kit (o npm, só quando ela é outra ou falta) e o openspec
+    update no projeto, depois do dry-run, que recusa o update que apagaria arquivos dele; devolve a
+    falha, ou vazio."""
+    alvo = _openspec_do_kit()
+    if not alvo:
+        return "o CI do modelo do kit não fixa a versão do OpenSpec"
+    instalar = f"npm install -g @fission-ai/openspec@{alvo}"
+    na_versao = _versao_do_openspec() == alvo
+    if not na_versao and not (
+        _rodar(pasta, instalar.split(), SEM_CONSULTA) and _versao_do_openspec() == alvo
+    ):
+        return f"o OpenSpec da máquina não ficou na {alvo}: rode {instalar}"
+    try:
+        saida = subprocess.run(
+            ["openspec", "update", "--dry-run", "--json"],
+            cwd=pasta,
+            capture_output=True,
+            text=True,
+            timeout=PRAZO_DO_OPENSPEC,
+            check=False,
+            env={**os.environ, **SEM_CONSULTA},
+        )
+        plano = json.loads(saida.stdout) if saida.returncode == 0 else None
+    except (OSError, subprocess.TimeoutExpired, ValueError, RecursionError):
+        plano = None
+    mudancas = plano.get("changes") if isinstance(plano, dict) else None
+    if not isinstance(mudancas, list) or plano.get("failures"):
+        return "o openspec update --dry-run --json falhou no projeto; rode-o lá e confira a saída"
+    apagaria = sorted(
+        mudanca["path"]
+        for mudanca in mudancas
+        if isinstance(mudanca, dict)
+        and mudanca.get("action") == "delete"
+        and isinstance(mudanca.get("path"), str)
+        and _no_projeto(pasta, mudanca["path"])
+    )
+    if apagaria:
+        return (
+            f"o openspec update apagaria {', '.join(apagaria)}, e não rodou: confira o perfil com "
+            "openspec config list"
+        )
+    if not _rodar(pasta, ["openspec", "update"], SEM_CONSULTA):
+        return "o openspec update falhou no projeto (a saída está acima)"
+    return ""
 
 
 def _conferir_o_kit(antes: str) -> None:
@@ -614,8 +714,19 @@ def _com_lingua(cabeca: str) -> str:
     return cabeca.replace("\ncontext: |\n", "\ncontext: |\n" + bloco, 1)
 
 
-def _rodar(pasta: Path, comando: list[str]) -> bool:
-    saida = subprocess.run(comando, cwd=pasta, capture_output=True, text=True, check=False)
+def _rodar(pasta: Path, comando: list[str], ambiente: dict[str, str] | None = None) -> bool:
+    try:
+        saida = subprocess.run(
+            comando,
+            cwd=pasta,
+            capture_output=True,
+            text=True,
+            check=False,
+            env={**os.environ, **(ambiente or {})},
+        )
+    except OSError as erro:  # o comando que falta na máquina (o npm, o openspec)
+        print(f"  {comando[0]}: {erro.strerror}")
+        return False
     for linha in (saida.stdout + saida.stderr).splitlines():
         print(f"  {linha}")
     return saida.returncode == 0
@@ -627,12 +738,19 @@ def main() -> int:
     )
     parser.add_argument("acao", choices=("novo", "atualizar"))
     parser.add_argument("pasta", type=Path)
+    parser.add_argument(
+        "--openspec",
+        action="store_true",
+        help="no atualizar: instala o OpenSpec na versão do kit e roda o openspec update",
+    )
     args = parser.parse_args()
+    if args.openspec and args.acao != "atualizar":
+        parser.error("o --openspec só vale no atualizar")
     try:
         if args.acao == "novo":
             novo(args.pasta)
             return 0
-        return atualizar(args.pasta)
+        return atualizar(args.pasta, openspec=args.openspec)
     except Recusa as recusa:
         print(f"recusado: {recusa}", file=sys.stderr)
         return 1
