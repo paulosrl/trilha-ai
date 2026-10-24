@@ -17,7 +17,7 @@ A conferência do método SHALL perguntar ao próprio OpenSpec, pelo `openspec u
 - **THEN** os arquivos do projeto continuam como estavam antes da conferência
 
 #### Scenario: Configuração da máquina intacta
-- **WHEN** o dry-run lista a configuração global da máquina para trocar (a migração que o OpenSpec faz quando ela não tem o perfil), pelo caminho absoluto dela
+- **WHEN** o dry-run lista a configuração global da máquina para trocar (a migração que o OpenSpec faz quando ela não tem o perfil), pelo caminho dela: com `~/` no HOME, o lugar padrão, ou o absoluto fora dele
 - **THEN** o aviso não cita a configuração global
 - **AND** a configuração global da máquina continua como estava antes da conferência
 
