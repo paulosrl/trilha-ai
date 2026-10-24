@@ -42,3 +42,10 @@ A 1.15.0 no `modelo/.github/workflows/verificacao.yml`, no `.github/workflows/te
 - [Numa máquina com o OpenSpec anterior à 1.15, o aviso dos gerados some] → O aviso da versão diferente da do CI aparece no mesmo `check.sh` e manda instalar a 1.15.0; com ela, o aviso volta.
 - [A promessa de não escrever nada passa a ser do OpenSpec] → Conferida na 1.15.0 (o projeto e a configuração global intactos); o teste do projeto intacto continua, com o `openspec` falso.
 - [O formato do JSON muda numa versão futura] → A saída fora do esperado é silêncio, nunca falha; a troca de versão do OpenSpec passa por uma change do kit, que roda o dry-run de verdade na execução manual.
+
+## Verificação
+
+**Execução manual (tarefa 3.2), em 2026-10-24,** com o OpenSpec 1.15.0, num projeto de teste feito pelo `kit.py novo` e inicializado com `openspec init --tools claude`, com o `verify.md` alterado e o `sync.md` apagado (os dois no índice do git):
+- a conferência do método avisou "criaria: .claude/commands/opsx/sync.md; trocaria: .claude/commands/opsx/verify.md", e os arquivos do projeto e a configuração global da máquina ficaram iguais (md5 antes e depois);
+- com a configuração global sem o perfil, num `XDG_CONFIG_HOME` à parte, o dry-run listou também essa configuração pelo caminho absoluto; o aviso foi o mesmo, sem citá-la, e ela ficou igual;
+- a 1.14.1, pelo `npx`, recusou a opção com "error: unknown option '--dry-run'" e o código 1, que é o caso do silêncio.

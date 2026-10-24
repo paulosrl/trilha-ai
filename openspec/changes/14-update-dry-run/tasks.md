@@ -15,8 +15,8 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 3. Integração
 
-- [ ] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
-- [ ] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade: num projeto de teste feito pelo `kit.py novo`, com um comando gerado alterado e outro apagado, a conferência do método avisa os dois em "trocaria" e "criaria", e o projeto fica igual; com a configuração global sem o perfil (num `XDG_CONFIG_HOME` à parte), o aviso não a cita e ela fica igual; o resultado vai a "Verificação", no `design.md`
+- [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
+- [x] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade: num projeto de teste feito pelo `kit.py novo`, com um comando gerado alterado e outro apagado, a conferência do método avisa os dois em "trocaria" e "criaria", e o projeto fica igual; com a configuração global sem o perfil (num `XDG_CONFIG_HOME` à parte), o aviso não a cita e ela fica igual; o resultado vai a "Verificação", no `design.md`
 
 ## Workflow follow-up
 
