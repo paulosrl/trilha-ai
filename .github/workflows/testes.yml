@@ -22,7 +22,7 @@ jobs:
           node-version: "22"
       # Pelo npx, sem instalar: os testes abaixo seguem rodando sem o openspec no PATH.
       - name: Os specs do kit (openspec validate, na versão do modelo/.github/workflows/verificacao.yml)
-        run: npx --yes @fission-ai/openspec@1.14.1 validate --all --no-interactive
+        run: npx --yes @fission-ai/openspec@1.15.0 validate --all --no-interactive
       - name: Os testes do kit (Python 3 puro, sem dependências)
         run: python3 -m unittest discover -s testes -v
       - name: Os scripts que os projetos copiam passam no ruff (lint e formato, limite de 100)

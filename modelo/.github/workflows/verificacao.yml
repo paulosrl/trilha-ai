@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: "22"
       - name: OpenSpec, na versão do kit
-        run: npm install -g @fission-ai/openspec@1.14.1
+        run: npm install -g @fission-ai/openspec@1.15.0
       # Parte da stack, decidida no TDD e posta na change 01: o que o check.sh precisa para rodar o lint,
       # os tipos e os testes. Troque o comentário pelos passos reais. Exemplo para Python com uv:
       #   - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7  # v10.2.0
