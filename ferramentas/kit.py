@@ -4,6 +4,8 @@ Uso (Python 3 puro, sem dependências), de qualquer pasta:
     python3 ferramentas/kit.py novo <pasta>        # a pasta, o git e os arquivos do kit
     python3 ferramentas/kit.py atualizar <pasta>   # a cópia nova do que se copia sem mudar
     python3 ferramentas/kit.py atualizar <pasta> --openspec   # e o OpenSpec na versão do kit
+    python3 ferramentas/kit.py atualizar <pasta> --openspec --aceitar-apagados
+        # e deixa o openspec update apagar os arquivos do projeto que o dry-run lista
 
 Nenhum dos dois faz commit nem envia: o commit segue o CLAUDE-comum.md (a mensagem, a coautoria)
 e o envio pede o "sim" do usuário. O que vai aos projetos está em modelo/; esta pasta,
