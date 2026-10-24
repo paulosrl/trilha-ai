@@ -18,6 +18,13 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 - [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
 - [x] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade e só num projeto descartável no scratchpad, nunca num projeto real, com o `XDG_CONFIG_HOME` (e o `HOME`, se preciso) apontando para o scratchpad, para não tocar a configuração global: o projeto feito pelo `kit.py novo`, inicializado com `openspec init --tools claude`, com a `trilha/` editada e uma skill fora do perfil (um `SKILL.md` gerado copiado para `.claude/skills/openspec-onboard/`), tudo commitado; o `openspec update --dry-run --json` lista essa skill para apagar. O `kit.py atualizar --openspec` recusa, nomeia a skill e deixa o `git status` vazio; com `--aceitar-apagados`, termina com 0, a skill sai e a `trilha/` volta à do kit. O resultado vai a "Verificação", no `design.md`
 
+## 4. As respostas ao verify e ao code review
+
+Do `/opsx:verify` e do `/code-review` da branch, de 2026-10-24; a decisão de cada ponto fica em "Respostas à revisão", no `design.md`.
+
+- [x] 4.1 Os testes dos achados, escritos antes do código: `test_atualizar_openspec_recusa_depois_da_saida_que_cita` ("Dry-run com erro", a ordem), `test_atualizar_openspec_sem_a_pasta_openspec_e_check_antigo_recusa` ("Projeto sem a pasta openspec"), o aviso no `test_atualizar_openspec_nao_roda_com_a_migracao_que_falha` ("Migração do check.sh que falha") e a frase nova no `test_aceitar_apagados_sem_openspec_e_erro_de_uso` ("Opção sem o --openspec"), que falharam antes; e o `test_atualizar_openspec_ci_do_modelo_sem_a_versao_recusa` ("CI do modelo sem a versão do OpenSpec"), que passou antes porque a recusa já estava no código (`python3 -m unittest discover -s testes -k test_atualizar_openspec -k test_aceitar_apagados`)
+- [x] 4.2 O `kit.py` (a pasta `openspec/` antes da previsão, o aviso do `--openspec` que não roda, a saída comum esvaziada antes da recusa, a frase do erro de uso, a ajuda e o docstring) e o `README.md`; o conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam, e a execução manual da tarefa 3.2 é refeita com as duas saídas juntas
+
 ## Workflow follow-up
 
 - O `/opsx:verify` e o `/code-review` do pull request, por um agente sem o contexto da sessão; as respostas vão a "Respostas à revisão", no `design.md`.

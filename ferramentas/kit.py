@@ -6,6 +6,8 @@ Uso (Python 3 puro, sem dependências), de qualquer pasta:
     python3 ferramentas/kit.py atualizar <pasta> --openspec   # e o OpenSpec na versão do kit
     python3 ferramentas/kit.py atualizar <pasta> --openspec --aceitar-apagados
         # e deixa o openspec update apagar os arquivos do projeto que o dry-run lista
+    O que falha no OpenSpec antes da cópia recusa com o projeto como estava; a máquina pode já
+    ter ficado na versão do kit.
 
 Nenhum dos dois faz commit nem envia: o commit segue o CLAUDE-comum.md (a mensagem, a coautoria)
 e o envio pede o "sim" do usuário. O que vai aos projetos está em modelo/; esta pasta,
@@ -240,9 +242,19 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
     _conferir_o_kit(antes)  # antes de mudar qualquer arquivo do projeto
     # O que pode recusar o OpenSpec vem antes de mudar o projeto (a máquina já pode mudar); sem a
     # migração do check.sh, a atualização falha, e o OpenSpec não muda a máquina à toa.
+    if openspec and not (pasta / "openspec").is_dir():
+        raise Recusa(
+            "o projeto não tem a pasta openspec/, sem a qual o openspec update não roda: rode o "
+            "atualizar sem --openspec, faça o commit e rode de novo com --openspec"
+        )
     preparado = openspec and _check_migra(pasta)
     if preparado:
         _preparar_o_openspec(pasta, aceitar_apagados)
+    elif openspec:
+        print(
+            "aviso: o --openspec não roda: o scripts/check.sh ainda chama os scripts/confere_*, "
+            "que a migração não sabe trocar"
+        )
     migrou = _migrar(pasta)
     _copiar_trilha(pasta)
     for nome, origem in A_PREENCHER.items():
@@ -354,12 +366,7 @@ def _no_projeto(pasta: Path, nome: str) -> bool:
 def _preparar_o_openspec(pasta: Path, aceitar_apagados: bool) -> None:
     """O OpenSpec da máquina na versão do kit (o npm, só quando ela é outra ou falta) e o dry-run
     do update no projeto, antes de mudar qualquer arquivo dele: recusa o que falha e o update que
-    apagaria arquivos do projeto, salvo com o aceite deles."""
-    if not (pasta / "openspec").is_dir():
-        raise Recusa(
-            "o projeto não tem a pasta openspec/, sem a qual o openspec update não roda: rode o "
-            "atualizar sem --openspec, faça o commit e rode de novo com --openspec"
-        )
+    apagaria arquivos do projeto, salvo com o aceite deles. A pasta openspec/ já foi conferida."""
     alvo = _openspec_do_kit()
     if not alvo:
         raise Recusa("o CI do modelo do kit não fixa a versão do OpenSpec")
@@ -823,8 +830,10 @@ def main() -> int:
     parser.add_argument(
         "--openspec",
         action="store_true",
-        help="no atualizar: instala o OpenSpec na versão do kit e, se o dry-run não apagar arquivo "
-        "do projeto, roda o openspec update; o que falha recusa antes de mudar o projeto",
+        help="no atualizar: instala o OpenSpec na versão do kit e roda o dry-run do openspec "
+        "update antes de mudar o projeto (o que falha ali recusa, com o projeto como estava); o "
+        "update roda depois da cópia, se o dry-run não apagar arquivo do projeto ou com o "
+        "--aceitar-apagados",
     )
     parser.add_argument(
         "--aceitar-apagados",
@@ -836,13 +845,14 @@ def main() -> int:
     if args.openspec and args.acao != "atualizar":
         parser.error("o --openspec só vale no atualizar")
     if args.aceitar_apagados and not args.openspec:
-        parser.error("o --aceitar-apagados só vale com o --openspec")
+        parser.error("o --aceitar-apagados só vale no atualizar, com o --openspec")
     try:
         if args.acao == "novo":
             novo(args.pasta)
             return 0
         return atualizar(args.pasta, openspec=args.openspec, aceitar_apagados=args.aceitar_apagados)
     except Recusa as recusa:
+        sys.stdout.flush()  # a recusa vem depois da saída que ela cita, mesmo com as duas juntas
         print(f"recusado: {recusa}", file=sys.stderr)
         return 1
 
