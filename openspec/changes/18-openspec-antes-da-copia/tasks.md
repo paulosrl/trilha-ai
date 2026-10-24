@@ -16,7 +16,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 ## 3. Integração
 
 - [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
-- [ ] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade e só num projeto descartável no scratchpad, nunca num projeto real, com o `XDG_CONFIG_HOME` (e o `HOME`, se preciso) apontando para o scratchpad, para não tocar a configuração global: o projeto feito pelo `kit.py novo`, inicializado com `openspec init --tools claude`, com a `trilha/` editada e uma skill fora do perfil (um `SKILL.md` gerado copiado para `.claude/skills/openspec-onboard/`), tudo commitado; o `openspec update --dry-run --json` lista essa skill para apagar. O `kit.py atualizar --openspec` recusa, nomeia a skill e deixa o `git status` vazio; com `--aceitar-apagados`, termina com 0, a skill sai e a `trilha/` volta à do kit. O resultado vai a "Verificação", no `design.md`
+- [x] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade e só num projeto descartável no scratchpad, nunca num projeto real, com o `XDG_CONFIG_HOME` (e o `HOME`, se preciso) apontando para o scratchpad, para não tocar a configuração global: o projeto feito pelo `kit.py novo`, inicializado com `openspec init --tools claude`, com a `trilha/` editada e uma skill fora do perfil (um `SKILL.md` gerado copiado para `.claude/skills/openspec-onboard/`), tudo commitado; o `openspec update --dry-run --json` lista essa skill para apagar. O `kit.py atualizar --openspec` recusa, nomeia a skill e deixa o `git status` vazio; com `--aceitar-apagados`, termina com 0, a skill sai e a `trilha/` volta à do kit. O resultado vai a "Verificação", no `design.md`
 
 ## Workflow follow-up
 

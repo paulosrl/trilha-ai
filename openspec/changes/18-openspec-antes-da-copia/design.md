@@ -45,6 +45,17 @@ Um `store_true` do `argparse`. Sem o `--openspec`, o `parser.error` a recusa ant
 - [O plano do dry-run e o update ficam separados pela cópia] → A cópia não toca o perfil nem os arquivos gerados (D1); um perfil mudado à mão nesse intervalo, de segundos, é o único caso, e o `git status` do fim mostraria o efeito.
 - [A cópia cria a pasta `openspec/` que falta, e o dry-run feito antes dela falharia sempre] → A preparação confere a pasta antes de tudo e recusa com o caminho de saída (D1).
 
+## Verificação
+
+**Os testes antes do código (tarefas 1.1 a 1.3):** os quatro testes ajustados à recusa e os quatro novos da 1.2 falharam antes do código, pelo motivo esperado (a FALHA com a cópia feita no lugar da recusa; a opção desconhecida). O `test_atualizar_openspec_nao_roda_com_a_chamada_que_sobra` passou antes, como previsto: ele protege a previsão da D2, num comportamento que o código de antes já tinha.
+
+**Execução manual (tarefa 3.2), em 2026-10-24,** com o OpenSpec 1.15.0 de verdade, num projeto descartável no scratchpad feito pelo `kit.py novo` e pelo `openspec init --tools claude`, com o `XDG_CONFIG_HOME` e o `HOME` no scratchpad e um perfil próprio sem o `onboard` (o `core` padrão o traz), a `trilha/verifica.sh` editada e uma skill `openspec-onboard` commitadas; o dry-run listava essa skill para apagar:
+- o `kit.py atualizar --openspec` terminou com 1: "recusado: o openspec update apagaria .claude/skills/openspec-onboard/SKILL.md: confira o perfil com openspec config list e ajuste-o com openspec config profile, ou rode de novo com --aceitar-apagados para deixá-los sair; o projeto não mudou"; o `git status` ficou vazio e a edição da `trilha/` continuou lá;
+- de novo, com `--aceitar-apagados`, terminou com 0, com o aviso "o openspec update vai apagar, no projeto: .claude/skills/openspec-onboard/SKILL.md"; a skill saiu e a `trilha/verifica.sh` voltou à do kit;
+- com `--aceitar-apagados` sem `--openspec`: "kit.py: error: o --aceitar-apagados só vale com o --openspec", código 2.
+
+Fora do escopo, visto aqui: com a versão do comum igual à do kit, o commit sugerido é o "dos arquivos gerados pelo OpenSpec" (change 16), mesmo quando a cópia também trocou um arquivo da `trilha/`, como neste teste, que a editou de propósito.
+
 ## Respostas à revisão
 
 ### Revisão dos artefatos, antes do apply
