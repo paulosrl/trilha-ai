@@ -47,3 +47,25 @@ Sem `--openspec`, o `atualizar` pergunta só o `openspec --version`; com a vers�
 - o `kit.py atualizar --openspec` terminou com 0, sem chamar o `npm` (a máquina já estava na 1.15.0), rodou o `openspec update`, e o `verify.md` voltou ao que o OpenSpec gera (o `git status` o mostrou, e o commit sugerido apareceu);
 - com o PATH sem o `npm` e um `openspec` falso que responde 1.14.1, terminou com 1: "npm: No such file or directory" e "FALHA: o OpenSpec da máquina não ficou na 1.15.0: rode npm install -g @fission-ai/openspec@1.15.0", sem o commit sugerido;
 - no mesmo PATH, sem a opção, avisou "o OpenSpec da máquina está na 1.14.1 e o kit usa a 1.15.0: rode de novo com --openspec".
+
+**Depois das respostas à revisão, em 2026-10-24,** no mesmo projeto de teste, com o `verify.md` alterado de novo: o `kit.py atualizar --openspec` terminou com 0, o update rodou com a entrada do terminal fechada, o `verify.md` voltou ao que o OpenSpec gera, e o commit sugerido passou a ser "chore(metodo): os arquivos gerados pelo OpenSpec 1.15.0".
+
+## Respostas à revisão
+
+Do `/opsx:verify` (achados V1 a V6) e do `/code-review high 17` (achados R1 a R10), de 2026-10-24, rodados por um agente sem o contexto da sessão.
+
+- **V1 (a saída do dry-run que falha não aparecia):** aplicado. Ela sai recuada antes da FALHA; o `test_atualizar_openspec_dry_run_com_erro_falha` confere a mensagem do OpenSpec na saída.
+- **V2 (o filtro dos caminhos fora do projeto sem teste):** aplicado. O dry-run falso do `test_atualizar_openspec_recusa_o_update_que_apagaria` traz um `delete` no HOME e um absoluto, que não entram na FALHA.
+- **V3 (os ramos da falha sem teste):** aplicado para o dry-run com erro e para o `npm` que falha (`test_atualizar_openspec_npm_com_erro_falha`).
+- **V4 (o `surrogateescape`):** aplicado, no `_openspec`, como na conferência.
+- **V5 (o D3 recusa até o que não está no índice do git):** recusado. Um arquivo fora do índice que o update apagasse não se recupera pelo git, o que é pior do que perder um versionado; a recusa vale para os dois.
+- **V6, R8 (os tempos e o `subprocess.run` repetidos):** aplicados em parte. O `_openspec` chama o OpenSpec com o prazo, o ambiente e a entrada fechada, para o `--version` e o dry-run; o `_aviso_do_perfil` do `kit.py novo` fica como está, fora desta change.
+- **R1 (a conferência manda voltar à versão do CI do projeto):** aplicado. O `atualizar` avisa, com ou sem a opção, quando o CI do projeto fixa outra versão que a do kit, com o arquivo e que a conferência cita a do projeto até a troca (requisito "Aviso do CI do projeto atrás do kit"). A conferência do método fica como está: ela é do projeto e roda também fora do `atualizar`.
+- **R2 (uma pergunta do npm ou do OpenSpec travaria calada):** aplicado. O `_rodar` passa a fechar a entrada do terminal e aceita um prazo, de 600 segundos no `npm install` e no `openspec update`.
+- **R3 (dois avisos de versão sem a opção):** recusado. Com o CI do projeto igual ao do kit, os dois dizem a mesma versão, e só o do `atualizar` cita a opção; com o CI atrás, o aviso do R1 explica a diferença.
+- **R4 (o OpenSpec roda mesmo com a migração do `check.sh` que falha):** aplicado. Sem a migração, o `--openspec` não chama o `npm` nem o update (cenário "Migração do check.sh que falha").
+- **R5 (os deletes fora do projeto passam calados):** aplicado como aviso, sem recusar (cenário "Apagados fora do projeto"): são arquivos de outras ferramentas, que o perfil da máquina governa.
+- **R6 (outro `openspec` antes no PATH):** aplicado. Com o `npm` que termina bem e a versão igual a de antes, a FALHA cita o `openspec` do PATH e diz que outro vem antes dele.
+- **R7 (as constantes copiadas da conferência):** aplicado como teste: o `test_atualizar_openspec_com_as_constantes_da_conferencia` compara o padrão da versão, o ambiente e o filtro dos caminhos. Importar o `confere_metodo.py` do `modelo/` amarraria a ferramenta do kit a um arquivo que é dos projetos.
+- **R9 (o commit sugerido com "comum 2.16 → 2.16"):** aplicado. Com a opção e o comum na mesma versão, a sugestão é "chore(metodo): os arquivos gerados pelo OpenSpec X".
+- **R10 (a recusa não diz como corrigir):** aplicado: "confira o perfil com openspec config list e ajuste-o com openspec config profile".

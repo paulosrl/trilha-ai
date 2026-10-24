@@ -16,6 +16,13 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 - [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
 - [x] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade: num projeto de teste feito pelo `kit.py novo` e inicializado com `openspec init --tools claude`, com um comando gerado alterado e commitado, o `kit.py atualizar --openspec` não chama o `npm` (a versão é a do kit), roda o update, e o comando volta ao que o OpenSpec gera; com o `npm` fora do PATH e um `openspec` falso que responde outra versão, a falha cita o `npm install`; o resultado vai a "Verificação", no `design.md`
 
+## 4. As respostas ao verify e ao code review
+
+Do `/opsx:verify` e do `/code-review high 17`, de 2026-10-24; a decisão de cada ponto fica em "Respostas à revisão", no `design.md`.
+
+- [x] 4.1 Os testes dos cenários novos e dos achados, que falharam antes do código: `test_atualizar_openspec_avisa_os_apagados_fora_do_projeto` ("Apagados fora do projeto"), `test_atualizar_openspec_dry_run_com_erro_falha` ("Dry-run com erro"), `test_atualizar_openspec_nao_roda_com_a_migracao_que_falha` ("Migração do check.sh que falha"), `test_atualizar_avisa_o_ci_do_projeto_atras_do_kit` ("CI do projeto na versão anterior"), `test_atualizar_openspec_npm_com_erro_falha` e o `test_atualizar_openspec_recusa_o_update_que_apagaria` ajustado; o `test_atualizar_openspec_com_as_constantes_da_conferencia` protege as cópias (`python3 -m unittest discover -s testes -k test_atualizar_openspec -k test_atualizar_avisa_o_ci`)
+- [x] 4.2 O `kit.py` com o `_openspec`, o `_avisar_o_ci_do_projeto`, o `_rodar` sem a entrada do terminal e com o prazo, e as mensagens novas; o conjunto dos testes, o ruff e a execução manual com o OpenSpec real passam, e o resultado vai a "Verificação"
+
 ## Workflow follow-up
 
 - O `/opsx:verify` e o `/code-review` do pull request, por um agente sem o contexto da sessão; as respostas vão a "Respostas à revisão", no `design.md`.
