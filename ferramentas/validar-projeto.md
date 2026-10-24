@@ -10,10 +10,10 @@ Antes de qualquer outra coisa, pergunte o nome da pasta do projeto a validar e e
 
 Valide o repositório <pasta> contra o kit Trilha AI que está em /home/pl/projetos/trilha-ai. É uma auditoria: não corrija nada, não commite e não mexa no ANDAMENTO.md. O único arquivo que você grava é o relatório.
 
-A pasta do método é a trilha-ai/ desde a 2.19. Num projeto da 2.0 à 2.18, ela é a trilha/ (a que tem o trilha/CLAUDE-comum.md): nos itens 1 a 5, use trilha/ no lugar de trilha-ai/ (os verificadores, o core.hooksPath em trilha/hooks e a trava em trilha/guarda.py) e recomende o python3 ferramentas/kit.py atualizar <pasta>, que leva o projeto à trilha-ai/.
+A pasta do método é a trilha-ai/ desde a 2.19. Num projeto da 2.0 à 2.18, ela é a trilha/ (a que tem o trilha/CLAUDE-comum.md): nos itens 1 a 5, use trilha/ no lugar de trilha-ai/ (os verificadores, o core.hooksPath em trilha/hooks e a trava em trilha/guarda.py) e recomende o python3 ferramentas/kit.py atualizar <pasta>, que leva o projeto à trilha-ai/. Se o projeto tiver as duas com o CLAUDE-comum.md, é uma migração pela metade: a versão e os itens 1 a 5 são os da trilha-ai/, e a trilha/ que sobrou é falha, corrigida pelo mesmo kit.py atualizar, que a tira. Num projeto noutra versão que a do kit, os itens 6 e 9 comparam com o modelo da tag vX.Y do projeto (git -C /home/pl/projetos/trilha-ai show vX.Y:modelo/<arquivo>), e o que só a versão nova do kit muda vai à recomendação do kit.py atualizar, não às falhas.
 
 Confira, rodando os comandos e lendo o código de saída de cada um:
-1. A cópia do kit: a pasta do método existe e é igual à do kit na versão do projeto (diff -r, ignorando __pycache__): a modelo/trilha-ai/ da cópia de trabalho, na mesma versão; noutra, a da tag vX.Y (git -C /home/pl/projetos/trilha-ai archive vX.Y, que tem a modelo/trilha-ai/ desde a 2.19 e a modelo/trilha/ antes). Anote a versão do CLAUDE-comum.md do projeto e a do kit.
+1. A cópia do kit: a pasta do método existe; anote a versão do CLAUDE-comum.md do projeto e a do kit. A comparação dela com a do kit, na mesma versão ou na tag vX.Y, é a do item 2 (o --fonte), que lê pelo git e não extrai nada.
 2. As regras: python3 -I trilha-ai/confere_regras.py . --fonte /home/pl/projetos/trilha-ai
 3. O método: python3 -I trilha-ai/confere_metodo.py, com os --vizinho que o scripts/check.sh do projeto usa.
 4. A verificação completa: bash scripts/check.sh, sozinho, sem filtro.

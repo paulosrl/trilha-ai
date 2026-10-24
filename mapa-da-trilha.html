@@ -191,7 +191,7 @@ a { color: var(--pinho); }
         </tbody>
       </table>
     </div>
-    <p><strong>Por que o método usa o pull request:</strong> nada entra na versão oficial sem ser visto, revisado e testado antes. E, se algo der errado depois, o pull request fica como o registro do que mudou, quando e por quê.</p>
+    <p><strong>Por que o método usa o pull request:</strong> nenhuma change entra na versão oficial sem ser vista, revisada e testada antes; o trabalho fora de change e o fechamento do <code>ANDAMENTO.md</code> vão direto à main, e a verificação roda depois do envio. E, se algo der errado depois, o pull request fica como o registro do que mudou, quando e por quê.</p>
   </section>
 
   <section class="secao">
@@ -205,7 +205,7 @@ a { color: var(--pinho); }
           <tr><td>O método</td><td>Diz quando fazer commit: em cada passo do ciclo da change, a cada parada do apply e ao fechar cada etapa.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change" e "Trabalho interrompível"</td></tr>
           <tr><td>Claude</td><td>Escreve a mensagem (Conventional Commits, em português, com coautoria) e faz o commit no momento certo.</td><td><code>CLAUDE-comum.md</code>, "Convenções"</td></tr>
           <tr><td>Você</td><td>Autoriza os envios com um "sim": um por etapa e um só para toda a branch de cada change. Autoriza também o merge, que só é pedido com a verificação verde.</td><td><code>CLAUDE-comum.md</code>, "Como trabalhar com o usuário"</td></tr>
-          <tr><td>As travas do kit</td><td>Não fazem commit: conferem. No git, valem para quem fizer o commit ou o envio: antes de cada commit, conferem as regras e o método; antes de cada envio, rodam o hook próprio do projeto (<code>.githooks/pre-push</code>), quando ele existe, e recusam o envio se ele não pode rodar. Nos comandos que o Claude roda (não nos que você digita no terminal), a trava do Claude Code barra o envio forçado, o <code>--no-verify</code>, o desligamento da trava do commit, o <code>pkill -f</code> e o <code>pgrep -f</code>, e o merge sem <code>--merge</code> (o squash e o rebase) ou sem a verificação verde.</td><td><code>trilha-ai/hooks/</code> e <code>trilha-ai/guarda.py</code>; <code>CLAUDE-comum.md</code>, "Armadilhas"</td></tr>
+          <tr><td>As travas do kit</td><td>Não fazem commit: conferem. No git, valem no clone onde o <code>core.hooksPath</code> aponta para <code>trilha-ai/hooks</code> (o kit liga no clone que cria ou atualiza; num clone novo, rode <code>git config core.hooksPath trilha-ai/hooks</code>): antes de cada commit, conferem as regras e o método; antes de cada envio, rodam o hook próprio do projeto (<code>.githooks/pre-push</code>), quando ele existe, e recusam o envio se ele não pode rodar. Nos comandos que o Claude roda (não nos que você digita no terminal), a trava do Claude Code barra o envio forçado, o <code>--no-verify</code>, o desligamento da trava do commit, o <code>pkill -f</code> e o <code>pgrep -f</code>, e o merge sem <code>--merge</code> (o squash e o rebase) ou sem a verificação verde.</td><td><code>trilha-ai/hooks/</code> e <code>trilha-ai/guarda.py</code>; <code>CLAUDE-comum.md</code>, "Armadilhas"</td></tr>
           <tr><td>GitHub</td><td>Guarda a cópia fora da máquina, mostra o plano e o código no pull request e roda a verificação (CI) a cada envio à main e a cada envio de um pull request. Não faz commit: recebe o que o Claude envia.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change", e <code>.github/workflows/verificacao.yml</code></td></tr>
         </tbody>
       </table>
@@ -249,61 +249,61 @@ a { color: var(--pinho); }
       claude: "Escreve sdd/prd-<nome>.md com a skill sdd:prd. Nenhuma palavra de tecnologia.",
       git: "Commit na main com o PRD aprovado e o ANDAMENTO.md.",
       gh: "Envio da main com o seu \"sim\". A cópia no GitHub é o backup: se a máquina morrer, o PRD sobrevive.",
-      cmd: "git commit -m \"docs(prd): …\"\ngit push" },
+      cmd: "git add -A && git commit -m \"docs(prd): …\"\ngit push" },
     { id: "tdd", nome: "TDD", titulo: "As decisões técnicas (TDD)", gate: "gate 2",
       voce: "Aprova cada decisão técnica, com a consequência de cada opção.",
       claude: "Escreve sdd/tdd-<nome>.md com a skill sdd:tdd (os ADRs) e leva a stack ao Dependabot, ao .gitignore e ao contexto do config.yaml; a do check.sh e do CI entra na change 01, que cria o código.",
       git: "Commit na main com o TDD aprovado.",
       gh: "Envio com \"sim\". O lint e os testes da stack entram no CI com a change 01.",
-      cmd: "git commit -m \"docs(tdd): …\"\ngit push" },
+      cmd: "git add -A && git commit -m \"docs(tdd): …\"\ngit push" },
     { id: "decomp", nome: "Decompor", titulo: "A decomposição em changes", gate: "aprovação",
       voce: "Aprova as changes e a ordem de execução.",
       claude: "Escreve sdd/decomposicao-<nome>.md com a skill sdd:briefing, com a tabela Ciclo.",
       git: "Commit na main com a decomposição.",
       gh: "Envio com \"sim\". Dali em diante, cada change chega à main por pull request, com a verificação verde; o trabalho fora de change e o fechamento do ANDAMENTO.md continuam indo direto à main. Com o GitHub Pro, a proteção da main pode exigir a verificação, deixando o dono passar.",
-      cmd: "git commit -m \"docs(decomposicao): …\"\ngit push" },
+      cmd: "git add -A && git commit -m \"docs(decomposicao): …\"\ngit push" },
     { id: "briefing", nome: "Briefing", titulo: "O briefing da change", gate: "aprovação", ciclo: true,
       voce: "Aprova o briefing da change.",
       claude: "Escreve sdd/briefing-openspec/briefing-change-NN-<nome>.md: requisitos, critérios de aceite e ADRs na íntegra.",
       git: "Abre a branch change/NN-nome a partir da main atualizada. O briefing é o primeiro commit dela.",
       gh: "Nada ainda: a branch existe só no seu computador. Aqui você dá o \"sim\" único que vale para todos os envios desta branch.",
-      cmd: "git switch main && git pull\ngit switch -c change/NN-nome\ngit commit -m \"docs(briefing): change NN\"" },
+      cmd: "git switch main && git pull\ngit switch -c change/NN-nome\ngit add -A && git commit -m \"docs(briefing): change NN\"" },
     { id: "propose", nome: "Propose", titulo: "O plano da change (propose)", gate: "", ciclo: true,
       voce: "Espera. Nenhum código é escrito nesta estação.",
       claude: "Roda /opsx:propose com o briefing: proposal, specs (o delta), design e tasks em openspec/changes/NN-nome/.",
       git: "Commit ao fim do propose, na branch.",
       gh: "Envio da branch e PR em rascunho. O CI roda o openspec validate. O PR mostra o plano antes do código.",
-      cmd: "/opsx:propose @sdd/briefing-openspec/briefing-change-NN-….md\ngit commit -m \"docs(openspec): propose da change NN\"\ngit push -u origin change/NN-nome\ngh pr create --draft" },
+      cmd: "/opsx:propose @sdd/briefing-openspec/briefing-change-NN-….md\ngit add -A && git commit -m \"docs(openspec): propose da change NN\"\ngit push -u origin change/NN-nome\ngh pr create --draft" },
     { id: "revisao", nome: "Revisão", titulo: "A revisão do plano", gate: "gate 3", ciclo: true,
       voce: "Escolhe o que corrigir e aprova a auditoria.",
       claude: "Audita pelo checklist da skill sdd:briefing e corrige com /opsx:update, depois da sua escolha.",
       git: "Commit da auditoria aprovada, com a tabela Ciclo atualizada, na branch.",
       gh: "Envio da branch. O PR passa a mostrar o plano já auditado.",
-      cmd: "git commit -m \"docs(openspec): gate 3 da change NN\"\ngit push" },
+      cmd: "git add -A && git commit -m \"docs(openspec): gate 3 da change NN\"\ngit push" },
     { id: "apply", nome: "Apply", titulo: "O código (apply)", gate: "", ciclo: true,
       voce: "Acompanha. Na última tarefa, olha a execução manual, em dado descartável.",
       claude: "Roda /opsx:apply: o código, tarefa a tarefa. A tarefa de um cenário só é marcada quando o teste que o comprova passa, e a evidência vai à seção Verificação do design.md.",
       git: "Um commit a cada parada, na branch.",
       gh: "Envio da branch a cada parada: backup fora da máquina. O CI roda os testes a cada envio.",
-      cmd: "/opsx:apply\ngit commit -m \"feat(...): tarefas 1.1 a 2.3\"\ngit push" },
+      cmd: "/opsx:apply\ngit add -A && git commit -m \"feat(...): tarefas 1.1 a 2.3\"\ngit push" },
     { id: "verify", nome: "Verify", titulo: "A conferência (verify)", gate: "", ciclo: true,
       voce: "Decide cada sugestão: aplicar ou recusar.",
       claude: "Roda /opsx:verify e o /code-review high do PR (max em change de login, deploy, apagar dados ou configuração de produção), sem --fix nem --comment, rodado por um agente sem o contexto da sessão, ou numa sessão nova, depois do /clear. Cada sugestão dos dois vai ao design.md, aplicada ou recusada, com o motivo.",
       git: "Commit, na branch.",
       gh: "Envio da branch. CI verde.",
-      cmd: "/opsx:verify\n/code-review high <número do PR>\ngit commit -m \"fix(...): sugestões do verify e da revisão\"\ngit push" },
+      cmd: "/opsx:verify\n/code-review high <número do PR>\ngit add -A && git commit -m \"fix(...): sugestões do verify e da revisão\"\ngit push" },
     { id: "archive", nome: "Archive", titulo: "O arquivamento (archive)", gate: "", ciclo: true,
       voce: "Confirma o archive.",
       claude: "Roda /opsx:archive: o delta entra em openspec/specs/ e a change vai para archive/. Depois valida os specs, confere o diff de openspec/specs/, atualiza a tabela Ciclo com o número do pull request e gera de novo sdd/documentacao.html.",
       git: "Commit do archive, na branch. O ANDAMENTO.md aponta o próximo passo: o merge.",
       gh: "Envio da branch e o PR sai do rascunho. Código, specs e página chegam juntos à main.",
-      cmd: "/opsx:archive\nopenspec validate --all --no-interactive\ngit diff -- openspec/specs/\n# a tabela Ciclo da decomposição, com \"PR #N\" na célula do archive\npython3 trilha-ai/gerar_pagina_sdd.py\ngit commit -m \"docs(openspec): archive da change NN\"\ngit push\ngh pr ready" },
+      cmd: "/opsx:archive\nopenspec validate --all --no-interactive\ngit add -A openspec/\ngit diff --cached -- openspec/specs/\n# a tabela Ciclo da decomposição, com \"PR #N\" na célula do archive\npython3 trilha-ai/gerar_pagina_sdd.py\ngit add -A && git commit -m \"docs(openspec): archive da change NN\"\ngit push\ngh pr ready" },
     { id: "merge", nome: "Merge", titulo: "O merge", gate: "seu sim", ciclo: true,
       voce: "Lê o PR na ordem que o OpenSpec sugere (proposal, delta, código) e diz \"sim\" ao merge, que só é pedido com a verificação verde.",
       claude: "Faz o merge, apaga a branch, volta à main atualizada e põe o ANDAMENTO.md em \"nada em andamento\". A change fecha aqui, não no archive.",
       git: "A main recebe a change inteira num merge commit, e os commits de retomada continuam na história. Um último commit na main fecha o ANDAMENTO.md.",
       gh: "PR fechado, branch apagada, main com specs e código de acordo.",
-      cmd: "gh pr checks\ngh pr merge --merge --delete-branch\ngit switch main && git pull\ngit commit -m \"docs(andamento): change NN fechada\" && git push" },
+      cmd: "gh pr checks\ngh pr merge --merge --delete-branch\ngit switch main && git pull\ngit add -A && git commit -m \"docs(andamento): change NN fechada\" && git push" },
   ];
 
   const svg = document.getElementById("svg");
