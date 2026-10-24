@@ -30,13 +30,14 @@ No `_migrar`, antes da cópia: se existe o `trilha/CLAUDE-comum.md`, a pasta é 
 O `antes` sai do `trilha-ai/CLAUDE-comum.md`, depois do `trilha/CLAUDE-comum.md`, depois do `CLAUDE-comum.md` da raiz.
 
 ### D5. A importação, o check.sh, a trava e o hooksPath
-- A importação: a linha `@CLAUDE-comum.md` ou `@trilha/CLAUDE-comum.md` (com espaço no fim ou não) vira `@trilha-ai/CLAUDE-comum.md`.
-- O `check.sh`: o `_check_migrado` troca o `trilha/verifica.sh` (o caminho, onde estiver na linha, com os argumentos depois) por `trilha-ai/verifica.sh`, depois da troca da parte fixa de antes da 1.37, que já escreve o nome novo. A previsão da migração continua a mesma função.
+- A importação: a linha `@CLAUDE-comum.md` ou `@trilha/CLAUDE-comum.md` (com espaço no fim ou não) vira `@trilha-ai/CLAUDE-comum.md`, em toda atualização, como hoje.
+- O `CLAUDE.md` e o `scripts/check.sh`, na migração da pasta (D3) e só nela: todo `trilha/` que não seja parte de outro nome vira `trilha-ai/`. O esqueleto da 2.18 cita a pasta em duas linhas de texto do `CLAUDE.md`, e o `check.sh` a chama pelo `verifica.sh`, com os argumentos depois; como a pasta era a do método, toda citação nesses dois arquivos fala dela. Fora da migração, um `trilha/` do próprio projeto nesses arquivos não muda.
+- A troca da parte fixa de antes da 1.37 (o `_check_migrado`) passa a escrever `bash trilha-ai/verifica.sh`; a previsão da migração continua a mesma função.
 - A trava do Claude Code: o `GUARDAS` ganha o `trilha-ai/guarda.py`; a de `trilha/guarda.py` sai pelo `_sem_guardas_antigas`, que a acha pelo nome (`trilha/guarda.py` não é parte de `trilha-ai/guarda.py`), e a soma põe a do modelo.
 - O `core.hooksPath`: o `_ligar_travas` já o grava sempre; passa a `trilha-ai/hooks`.
 
 ### D6. As citações que sobram no projeto
-Depois da migração da pasta, e só nela, a ferramenta procura nos arquivos versionados do projeto, fora da `trilha-ai/`, o `trilha/` que não seja parte de outro nome (`git grep -l` com a palavra inteira) e avisa a lista, para a troca à mão. O que já foi trocado (a importação, o `check.sh`) não aparece.
+Depois da migração da pasta, e só nela, a ferramenta procura nos arquivos versionados do projeto, fora da `trilha-ai/` (o `CLAUDE.md` e o `check.sh` já foram trocados), o `trilha/` que não seja parte de outro nome (`git grep -l` com a palavra inteira) e avisa a lista, para a troca à mão. O que já foi trocado (a importação, o `check.sh`) não aparece.
 
 ### D7. A recusa
 A pasta `trilha-ai/` sem o `trilha-ai/CLAUDE-comum.md` recusa, como a `trilha/` recusava. A `trilha/` sem o comum deixa de ser obstáculo.

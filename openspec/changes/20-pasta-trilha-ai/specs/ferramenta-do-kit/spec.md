@@ -216,12 +216,12 @@ Quando o `kit.py atualizar` termina com o código 0 e o projeto mudou, ele SHALL
 ## ADDED Requirements
 
 ### Requirement: Migração da pasta trilha para trilha-ai
-Num projeto com a pasta `trilha/` do método (com o `trilha/CLAUDE-comum.md`), o `kit.py atualizar` SHALL tirá-la e criar a `trilha-ai/` do kit, e trocar a importação do `CLAUDE.md` para `@trilha-ai/CLAUDE-comum.md`, o `bash trilha/verifica.sh` do `scripts/check.sh` por `bash trilha-ai/verifica.sh`, com os mesmos argumentos, o hook do Claude Code e o `core.hooksPath`. Uma pasta `trilha/` sem o comum MUST ficar como está.
+Num projeto com a pasta `trilha/` do método (com o `trilha/CLAUDE-comum.md`), o `kit.py atualizar` SHALL tirá-la, criar a `trilha-ai/` do kit, trocar `trilha/` por `trilha-ai/` no `CLAUDE.md` (a importação e as citações) e no `scripts/check.sh` (a chamada do `verifica.sh`, com os argumentos), e ligar a trava do Claude Code e o `core.hooksPath` pela pasta nova. Uma pasta `trilha/` sem o comum MUST ficar como está.
 
 #### Scenario: Projeto da versão 2.18 migrado
 - **WHEN** o `kit.py atualizar` roda num projeto feito pelo kit na versão 2.18, com um `--vizinho` no `scripts/check.sh`
 - **THEN** a pasta `trilha/` não existe mais, e a `trilha-ai/` é igual à `modelo/trilha-ai/` do kit
-- **AND** o `CLAUDE.md` importa `@trilha-ai/CLAUDE-comum.md`, o `scripts/check.sh` chama `bash trilha-ai/verifica.sh` com o mesmo `--vizinho`, o `.claude/settings.json` liga só `trilha-ai/guarda.py`, uma vez, e o `core.hooksPath` é `trilha-ai/hooks`
+- **AND** o `CLAUDE.md` importa `@trilha-ai/CLAUDE-comum.md` e não cita mais `trilha/`, o `scripts/check.sh` chama `bash trilha-ai/verifica.sh` com o mesmo `--vizinho`, o `.claude/settings.json` liga só `trilha-ai/guarda.py`, uma vez, e o `core.hooksPath` é `trilha-ai/hooks`
 - **AND** a conferência das regras e a do método passam, e a saída sugere o commit da cópia, com as duas versões
 
 #### Scenario: Arquivo a mais na pasta trilha do método
@@ -234,5 +234,6 @@ Num projeto com a pasta `trilha/` do método (com o `trilha/CLAUDE-comum.md`), o
 - **THEN** depois do `kit.py atualizar` a pasta `trilha/` continua lá, sem mudança
 
 #### Scenario: Arquivo do projeto que ainda cita a pasta trilha
-- **WHEN** um arquivo versionado do projeto fora da `trilha-ai/` (por exemplo, um `docs/` qualquer) cita `trilha/`
+- **WHEN** um arquivo versionado do projeto fora da `trilha-ai/`, do `CLAUDE.md` e do `scripts/check.sh` (por exemplo, um `docs/` qualquer) cita `trilha/`
 - **THEN** a saída do `kit.py atualizar` traz um aviso que cita esse arquivo, para a troca à mão
+- **AND** o aviso não cita um arquivo em que `trilha/` só aparece dentro de outro nome (`minhatrilha/`, `trilha-ai/`)
