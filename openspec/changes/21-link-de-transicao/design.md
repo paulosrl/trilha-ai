@@ -50,3 +50,11 @@ O método vai à 2.20: o comum, o `plugin.json` na 2.20.0 e a tag `v2.20`. O rot
 ## Migration Plan
 
 Nada a migrar no kit. Nos projetos, o próximo `kit.py atualizar` cria o link onde houver citação. Para voltar atrás antes do commit, `git reset --hard` e `git clean` no projeto, como em toda atualização.
+
+## Revisão dos artefatos
+
+Feita antes do apply, em 2026-10-24, pela coerência entre a proposta, os deltas, o design e as tarefas, e diante do código do `atualizar`.
+
+- **A1 (a busca de hoje não acha `"$ROOT_DIR/trilha/hooks"`, a forma do `teste-pre-push` do Heimdall):** achada ao escrever o design e aplicada antes do commit do propose: o D2 alarga a busca, e o cenário "Arquivo do projeto que ainda cita a pasta trilha" ganhou a linha que a comprova.
+- **A2 (o link nasce e sai antes do `_mudados` que separa a cópia do update do OpenSpec):** sem mudança: o D1 e o D4 põem o link no ponto do aviso das citações, que já roda antes dele, e assim a criação e a remoção contam como parte da cópia no commit sugerido.
+- **A3 (no `atualizar` que só tira o link, o commit sugerido diz "cópia do kit, comum 2.20 → 2.20"):** recusado: é o texto de hoje para toda cópia que muda arquivo sem mudar a versão, e o link é parte da cópia.
