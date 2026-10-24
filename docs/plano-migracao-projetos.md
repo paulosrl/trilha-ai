@@ -1,8 +1,8 @@
 # Plano: Heimdall, Xavier e HubIA na versão atual do kit
 
-De 2026-10-16. Ordem pedida pelo usuário: Heimdall, depois Xavier, depois HubIA. Cada repositório só muda sob ordem do usuário nomeando-o; cada envio ao GitHub, só com "sim".
+De 2026-10-16, com a ordem pedida então: Heimdall, depois Xavier, depois HubIA. Até a etapa 6, é o histórico; a etapa 7 (os dados pessoais) segue aberta, e a ordem que vale agora é a da [fila de 2026-10-24](#a-fila-de-2026-10-24-a-que-vale-agora). Cada repositório só muda sob ordem do usuário nomeando-o; cada envio ao GitHub, só com "sim".
 
-## Onde cada um está
+## Onde cada um estava em 2026-10-16
 
 | Repositório | Comum | Formato | Situação |
 |---|---|---|---|
@@ -32,7 +32,7 @@ O Xavier e o HubIA não têm hook próprio nem conferem citações; neles, a có
 | 6 | HubIA | a cópia do kit 2.6 e as pendências do relatório (feita em 2026-10-19, `468576c`, `bbd71a7` e `b24802a`) | não |
 | 7 | os quatro | os dados pessoais: decidir o que fazer | a decidir |
 
-**Os dados pessoais ficam para o fim (decisão do usuário, 2026-10-16).** Só se tratam depois que os três estiverem de acordo com o kit. Até lá, só se anota quem os tem, na etapa 6.
+**Os dados pessoais ficam para o fim (decisão do usuário, 2026-10-16).** Só se tratam depois das etapas 0 a 6. Até lá, só se anota quem os tem, na etapa 7.
 
 ## Em todas as etapas
 
@@ -178,7 +178,7 @@ Acrescentada em 2026-10-19, a pedido do usuário. Ensaiada num clone: a cópia s
 
 ## Etapa 6. HubIA: a cópia do kit 2.6 e as pendências
 
-O HubIA já está no formato atual. A cópia da 2.6 só troca a `trilha/`, e ele não tem `.githooks/pre-push`. Os dados pessoais dele ficam para a etapa 6.
+O HubIA já está no formato atual. A cópia da 2.6 só troca a `trilha/`, e ele não tem `.githooks/pre-push`. Os dados pessoais dele ficam para a etapa 7.
 
 1. A cópia: `python3 ferramentas/kit.py atualizar /home/pl/projetos/hubia` e o commit sugerido.
 2. **Pequenos ajustes de texto:**
@@ -193,13 +193,14 @@ O HubIA já está no formato atual. A cópia da 2.6 só troca a `trilha/`, e ele
 
 ## Etapa 7. Os dados pessoais (no fim de tudo)
 
-Só depois das etapas 0 a 5, com os três de acordo com o kit. Aqui, o que já se sabe; a decisão do que fazer é do usuário, nesta etapa.
+Só depois das etapas 0 a 6, já feitas. Aqui, o que já se sabe; a decisão do que fazer é do usuário, nesta etapa.
 
 | Repositório | Situação | Achado |
 |---|---|---|
 | HubIA | **tem dados pessoais no git** | `prompts-importados/064-PRM-20260520-68369-autorelatormp.md`: dados reais de um inquérito policial (nomes, CPF, nascimento e endereços de vítima, investigado e testemunha), no git desde o `e027e0c` e já no GitHub (repositório privado); conferido: está no git e tem dois CPFs. `autores.csv` e `autresoriginais.csv`: nomes e e-mails de servidores; `afazer.txt` na raiz (os três já anotados no `ANDAMENTO.md` do HubIA). |
 | Xavier | nada achado | busca de 2026-10-16: nenhum `.env`, chave, PDF, CSV nem `entrada/`, `saida*/` e `logs/` no git, e nenhuma chave, token ou CPF pelo `git grep`. Só os `.env.example`, com senhas de exemplo, e a senha do usuário de teste do e2e. |
-| Heimdall | **ainda não conferido** | fazer a mesma busca nesta etapa. |
+| Heimdall | **tem dados pessoais no git** | levantamento de 2026-10-21: nome completo e e-mail de dois colegas no `infra/azure/staging.admins.txt` (apagado, mas no histórico) e do usuário no `infra/azure/producao.admins.txt`; o e-mail pessoal do usuário no CHANGELOG e num doc. Os outros e-mails @mppa são de teste. |
+| modelo-interface-heimdall | nada achado | levantamento de 2026-10-21: nada, nem no histórico. |
 
 As opções para levar à decisão do usuário:
 - trocar os dados por marcadores (`[NOME]`, `[CPF]`), como nos outros prompts do HubIA;
@@ -210,10 +211,22 @@ Apagar os dados do histórico pede reescrever a história e enviar com força. O
 
 ## A fila de 2026-10-24 (a que vale agora)
 
-O kit foi à 2.18 (o OpenSpec 1.15.0, o `kit.py atualizar --openspec`, os requisitos curtos e o aviso do resumo sem a raiz). Os projetos seguem na 2.12. A atualização é um a um, e cada um só começa quando o usuário o nomear:
+O kit foi à 2.18 (o OpenSpec 1.15.0, o `kit.py atualizar --openspec`, os requisitos curtos e o aviso do resumo sem a raiz). O Xavier e o Heimdall estão na 2.15 (`760574a` e `1fd4cc5`, de 2026-10-23), o HubIA na 2.12, e os três fixam o OpenSpec 1.14.1 no CI. A atualização é um a um, e cada um só começa quando o usuário o nomear:
 
 1. Xavier;
 2. Heimdall;
 3. HubIA.
 
-O comando de cada um: `python3 ferramentas/kit.py atualizar ../<projeto> --openspec`. Ele põe o OpenSpec da máquina na versão do kit e roda o `openspec update` no projeto. A versão do OpenSpec no CI de cada projeto se troca à mão, como o kit avisa. O modelo-interface-heimdall fica fora, na 2.6, e a etapa 7 (os dados pessoais) continua como acima.
+O comando de cada um, rodado da raiz do kit, com o nome da pasta em minúsculas: `python3 ferramentas/kit.py atualizar ../xavier --openspec` (e `../heimdall`, `../hubia`).
+
+- **Antes:** o projeto na branch principal, sem nada por commitar (o `docs/validacao-trilha-ai.md` da validação, com commit ou descartado) e com o "Estado" do `ANDAMENTO.md` em "nada em andamento"; fora disso (com trabalho por commitar, noutra branch ou "em andamento"), o comando recusa sem mudar nada. Confira na hora (`git status -sb` e o `ANDAMENTO.md`): os projetos seguem com as changes deles, e o estado muda de um dia para o outro.
+- **O que ele faz:** copia o kit; põe o OpenSpec da máquina na versão do kit, pelo `npm install -g`, quando ela é outra (vale para todos os projetos, e não só para este; hoje a máquina já está na 1.15.0); e roda o `openspec update` no projeto, se o dry-run não listar arquivo dele a apagar.
+- **Se o dry-run listar arquivos a apagar** (por exemplo, os de um workflow instalado que o perfil não tem; no HubIA, em 2026-10-24, os seis do `onboard`): o update não roda, o comando sai com 1 e a cópia fica sem commit; rodá-lo de novo é recusado, porque há trabalho não commitado. O perfil é da máquina (`openspec config path`), não do projeto, e a saída é escolha do usuário: deixar os arquivos saírem, ou pôr o workflow no perfil (`openspec config profile`, que pede o terminal do usuário; responda não a "Apply changes to this project now?", para o update esperar o passo 1), sabendo que o próximo `openspec update` dos outros projetos também o cria neles. Depois da escolha:
+  1. ver o que o update faria, com `openspec update --dry-run --force --json` no projeto, que só lê e mostra também a limpeza do legado, que o dry-run do kit não lista;
+  2. rodar `OPENSPEC_NO_UPDATE_CHECK=1 openspec update --force` no projeto: ele não pergunta nada, nem pede terminal, e faz o que o passo 1 mostrou, a limpeza do legado inclusive;
+  3. rodar o `bash scripts/check.sh`, com código 0: as conferências do comando rodaram antes deste update, e o comando não valida os specs nem roda a parte da stack;
+  4. fazer o commit, com a mensagem `chore(metodo): cópia do kit Trilha AI, comum <antes> → 2.18`.
+- **O CI do projeto não muda:** a versão do OpenSpec no `.github/workflows/verificacao.yml` se troca à mão, num commit à parte, como os outros ajustes à mão; o comando avisa. Até lá, a conferência do método, que o próprio comando roda, avisa que a máquina e o CI divergem e sugere `npm install -g @fission-ai/openspec@1.14.1`: não rode, troque a versão no CI.
+- **Nos que esperam a vez:** a máquina já está na 1.15.0, então o `check.sh` deles avisa que a máquina e o CI divergem e que o `openspec update` mudaria arquivos gerados. O aviso sugere voltar a máquina à 1.14.1: não volte, porque os já atualizados passariam a divergir e um `openspec update` neles geraria de novo os arquivos da 1.14.1. E não rode o `openspec update` neles antes da vez: ele geraria os arquivos da 1.15.0 com o CI ainda na 1.14.1. Os avisos somem quando cada um for atualizado, com o CI trocado, salvo se o perfil mudar depois: aí os já atualizados pedem um `openspec update` de novo.
+
+O modelo-interface-heimdall fica fora, na 2.6, e a etapa 7 (os dados pessoais) continua como acima.
