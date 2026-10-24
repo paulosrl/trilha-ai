@@ -27,7 +27,7 @@ _spec = importlib.util.spec_from_file_location("kit", RAIZ / "ferramentas" / "ki
 FERRAMENTA = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(FERRAMENTA)
 # A conferência das regras, pelas tabelas dela (os campos e os marcadores da stack) e pelo teto.
-_spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha" / "confere_regras.py")
+_spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha-ai" / "confere_regras.py")
 REGRAS = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(REGRAS)
 DO_KIT = (*FERRAMENTA.SEM_MUDAR, *FERRAMENTA.A_PREENCHER)
@@ -94,7 +94,7 @@ def _divergencia_de_versao(kit: str, manifesto: dict) -> str:
 def _mudou_desde_a_tag(raiz: Path) -> list[str]:
     """Os arquivos de modelo/ e plugins/ que mudaram desde a tag da versão atual do comum; vazio
     se a tag ainda não existe (a versão nova em preparo)."""
-    tag = f"v{FERRAMENTA._versao(raiz / 'modelo' / 'trilha' / 'CLAUDE-comum.md')}"
+    tag = f"v{FERRAMENTA._versao(raiz / 'modelo' / 'trilha-ai' / 'CLAUDE-comum.md')}"
     existe = subprocess.run(["git", "-C", str(raiz), "rev-parse", "-q", "--verify", f"refs/tags/{tag}"],
                             capture_output=True, text=True, check=False)
     if existe.returncode != 0:
@@ -113,7 +113,7 @@ class Kit(unittest.TestCase):
         """O que vai aos projetos fica em modelo/, com nomes que não valem dentro do kit."""
         for inerte in ("CLAUDE.md", ".gitignore", ".claude"):
             self.assertFalse((MODELO / inerte).exists(), inerte)
-        # O atalho CLAUDE-comum.md da raiz saiu na 2.0: o --fonte compara a pasta modelo/trilha/.
+        # O atalho CLAUDE-comum.md da raiz saiu na 2.0: o --fonte compara a pasta modelo/trilha-ai/.
         self.assertFalse((RAIZ / "CLAUDE-comum.md").exists() or (RAIZ / "CLAUDE-comum.md").is_symlink())
 
     def test_marketplace_lido_da_raiz_do_kit(self) -> None:
@@ -153,7 +153,7 @@ class Kit(unittest.TestCase):
 
     def test_versao_do_plugin_igual_a_do_kit(self) -> None:
         """Uma versão para o método: o plugin é X.Y.0 da "Versão X.Y" do comum."""
-        kit = FERRAMENTA._versao(MODELO / "trilha/CLAUDE-comum.md")
+        kit = FERRAMENTA._versao(MODELO / "trilha-ai/CLAUDE-comum.md")
         manifesto = json.loads((PLUGIN / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
         self.assertEqual(_divergencia_de_versao(kit, manifesto), "")
 
@@ -235,7 +235,7 @@ class Kit(unittest.TestCase):
 
     def test_gate_2_fecha_a_stack(self) -> None:
         """F04: ao fechar o gate 2, o comum nomeia os lugares da stack; a skill tdd remete a ele."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         regra = next(l for l in comum.splitlines() if l.startswith("- Ao fechar o gate 2"))
         for lugar in ("`scripts/check.sh`", "`.github/workflows/verificacao.yml`", "`.github/dependabot.yml`",
                       "`.gitignore`", "`openspec/config.yaml`"):
@@ -248,8 +248,8 @@ class Kit(unittest.TestCase):
         env = {**os.environ, **GIT_TESTE}
         with tempfile.TemporaryDirectory() as tmp:
             raiz = Path(tmp)
-            (raiz / "modelo/trilha").mkdir(parents=True)
-            (raiz / "modelo/trilha/CLAUDE-comum.md").write_text("Versão 1.0, de 2026-10-15.\n", encoding="utf-8")
+            (raiz / "modelo/trilha-ai").mkdir(parents=True)
+            (raiz / "modelo/trilha-ai/CLAUDE-comum.md").write_text("Versão 1.0, de 2026-10-15.\n", encoding="utf-8")
             (raiz / "plugins").mkdir()
             (raiz / "plugins/skill.md").write_text("antes\n", encoding="utf-8")
             for comando in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "kit"]):
@@ -264,71 +264,71 @@ class Kit(unittest.TestCase):
         self.assertEqual(_mudou_desde_a_tag(RAIZ), [])
 
     def test_versao_no_comum(self) -> None:
-        for arquivo in ("trilha/CLAUDE-comum.md",):
+        for arquivo in ("trilha-ai/CLAUDE-comum.md",):
             texto = (MODELO / arquivo).read_text(encoding="utf-8")
             self.assertIsNotNone(re.search(r"^Versão \d+\.\d+, de \d{4}-\d\d-\d\d\.", texto, re.M), arquivo)
 
     def test_comum_cabe_em_metade_do_teto(self) -> None:
         """F09: o comum fica em 16 KB, metade do teto que a conferência cobra; a outra é do projeto."""
-        tamanho = len((MODELO / "trilha/CLAUDE-comum.md").read_bytes())
+        tamanho = len((MODELO / "trilha-ai/CLAUDE-comum.md").read_bytes())
         self.assertLessEqual(tamanho, REGRAS.LIMITE_DE_BYTES // 2)
 
     def test_comum_nao_cita_curso(self) -> None:
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("curso", comum.lower().replace("em curso", ""))
         # O config.yaml vai a todo projeto: também não cita um.
         self.assertNotIn("Consulta Pública", (MODELO / "openspec/config.yaml").read_text(encoding="utf-8"))
 
     def test_clear_com_o_comando_da_proxima_sessao(self) -> None:
         """v1.34: quem sugere o /clear mostra o comando exato a dar ao voltar, pronto para copiar."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("e mostre, num bloco de código, o comando exato a dar na próxima sessão", comum)
         self.assertIn("nunca no meio de uma tarefa", comum)
 
     def test_comum_sem_repetir_o_openspec_nem_a_si_mesmo(self) -> None:
         """v1.32: a instrução do propose já manda ler o projeto e os specs; o pkill -f num lugar só."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         briefing = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("Antes de propor, rode `openspec list`", briefing)  # v2.12: só na skill
         self.assertNotIn("rode `openspec list`", comum)
         self.assertEqual(comum.count("`pkill -f`"), 1)
         # A trava confere o --merge e a verificação verde, não o passo em que se está.
         self.assertIn("o merge sem `--merge` ou sem a verificação verde", comum)
-        self.assertIn("a cópia nova do kit (a pasta `trilha/` e o que o `kit.py atualizar` escreve) dispensam change", comum)
+        self.assertIn("a cópia nova do kit (a pasta `trilha-ai/` e o que o `kit.py atualizar` escreve) dispensam change", comum)
 
     def test_comum_fecha_a_porta_do_briefing_curto(self) -> None:
         """v1.8: sem decomposição, o passo do ciclo fica no ANDAMENTO.md; com PRD e TDD, a decomposição vem antes."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         briefing = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("o passo do ciclo de cada change fica no `ANDAMENTO.md`", briefing)
         self.assertIn("nasce do briefing curto da skill `sdd:briefing`", comum)
         self.assertIn("Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.", comum)
 
     def test_comum_preve_o_registro_de_processo_opcional(self) -> None:
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("registro de processo", comum)
         self.assertIn("é opcional; quem o mantém declara no `CLAUDE.md`", comum)
 
     def test_comum_cita_o_hook_de_envio_proprio(self) -> None:
-        """Change 08: o hook de envio do projeto fica em .githooks/pre-push e roda pela trilha/hooks."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        """Change 08: o hook de envio do projeto fica em .githooks/pre-push e roda pela trilha-ai/hooks."""
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("`.githooks/pre-push`", comum)
-        self.assertIn("`trilha/hooks/pre-push`", comum)
+        self.assertIn("`trilha-ai/hooks/pre-push`", comum)
 
     def test_comum_cita_a_skill_briefing(self) -> None:
         """A skill do plugin chama-se sdd:briefing, para não colidir com a openspec-propose nativa do OpenSpec."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("`sdd:briefing`", comum)
         self.assertNotIn("openspec-propose", comum)
 
     def test_comum_poe_a_auditoria_na_revisao_do_openspec(self) -> None:
         """v1.9: a auditoria do gate 3 é a revisão que o OpenSpec pede ao fim do propose, não um passo à parte."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("a revisão dos artefatos, que o OpenSpec pede ao fim do propose, antes do apply, feita como a auditoria do gate 3", comum)
 
     def test_metodo_nao_forca_o_apply(self) -> None:
         """v1.10: o apply segue o fluxo do OpenSpec; nem commit por tarefa nem parada forçada."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("4. `/opsx:apply`, no fluxo do OpenSpec;", comum)
         self.assertIn("Durante o apply, o ponto de retomada é o `tasks.md`", comum)
@@ -339,30 +339,30 @@ class Kit(unittest.TestCase):
 
     def test_specs_com_o_nome_do_openspec(self) -> None:
         """v1.11: só as changes levam número e data; os specs seguem o nome que o OpenSpec dá."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("os specs seguem o nome que o OpenSpec dá", comum)
 
     def test_auditoria_nao_e_unidade_de_trabalho(self) -> None:
         """v1.12: até a escolha do usuário, a auditoria não muda o ANDAMENTO.md nem o registro de processo."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Até a escolha, a auditoria não é unidade de trabalho", comum)
 
     def test_correcao_de_texto_nao_sobe_versao(self) -> None:
         """v1.14: só a mudança de sentido sobe a versão do PRD, do TDD ou da decomposição. v2.13: no
         comum, porque a correção de texto acontece fora das sessões das skills."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Só a mudança de sentido é versão nova, aprovada pelo usuário", comum)
         self.assertIn("não sobe a versão dele nem a linha \"de origem\" de quem o cita", comum)
 
     def test_prd_e_spec_em_desacordo(self) -> None:
         """v1.15: o PRD aprovado manda sobre o spec; se o certo for o spec, o PRD ganha versão nova."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("PRD e spec em desacordo: vale o PRD aprovado", comum)
         self.assertIn("se o certo for o spec, o PRD ganha versão nova", comum)
 
     def test_regras_gerais_vindas_dos_repositorios(self) -> None:
         """v1.16: o "sim" isolado, o que ler antes do propose e a mutação desfeita saem dos CLAUDE.md."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Um \"sim\" isolado responde só à pergunta principal da mensagem", comum)
         briefing = (PLUGIN / "skills/briefing/SKILL.md").read_text(encoding="utf-8")
         self.assertIn("rode `openspec list`", briefing)
@@ -371,7 +371,7 @@ class Kit(unittest.TestCase):
 
     def test_remoto_privado_no_github(self) -> None:
         """v1.20: todo repositório do método tem um remoto privado no GitHub, criado na etapa 0."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         readme = (RAIZ / "README.md").read_text(encoding="utf-8")
         self.assertIn("desde a etapa 0, um remoto privado no GitHub (`origin`)", comum)
         self.assertIn("`gh repo create <nome> --private --source . --push`", comum)
@@ -380,7 +380,7 @@ class Kit(unittest.TestCase):
 
     def test_branch_e_pull_request_por_change(self) -> None:
         """v1.21: cada change numa branch; PR em rascunho ao fim do propose; um "sim" para os envios, outro para o merge."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("numa branch `change/NN-nome` aberta a partir da main atualizada", comum)
         self.assertIn("pull request em rascunho (`gh pr create --draft`)", comum)
         self.assertIn("um só \"sim\" para todos os envios da branch até o merge", comum)
@@ -389,18 +389,18 @@ class Kit(unittest.TestCase):
 
     def test_archive_dentro_do_pull_request(self) -> None:
         """v1.22: o archive e os passos seguintes na branch, antes do merge; depois, o PR sai do rascunho."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("o PR sai do rascunho (`gh pr ready`): código, specs e página chegam juntos à main", comum)
         self.assertIn("7. o merge", comum)
 
     def test_ci_no_kit_e_merge_so_com_ele_verde(self) -> None:
         """v1.23: o GitHub roda o check.sh e o openspec validate; o merge só é pedido com tudo verde."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         ci = (MODELO / ".github/workflows/verificacao.yml").read_text(encoding="utf-8")
         self.assertIn("o merge, só com a verificação do GitHub verde no PR (`gh pr checks`)", comum)
         self.assertIn("run: bash scripts/check.sh", ci)
-        self.assertIn("bash scripts/check.sh", ci)  # que roda o trilha/verifica.sh, com o openspec validate
-        self.assertIn("openspec validate --all --no-interactive", (MODELO / "trilha/verifica.sh").read_text())
+        self.assertIn("bash scripts/check.sh", ci)  # que roda o trilha-ai/verifica.sh, com o openspec validate
+        self.assertIn("openspec validate --all --no-interactive", (MODELO / "trilha-ai/verifica.sh").read_text())
         self.assertNotIn("--strict", ci)  # o estrito reprova os avisos que o check.sh aceita
         self.assertRegex(ci, r"@fission-ai/openspec@\d+\.\d+\.\d+")
         # Fora de .github/workflows/ no kit: aqui o check.sh reprovaria, porque o kit não segue o método.
@@ -423,7 +423,7 @@ class Kit(unittest.TestCase):
     def test_revisao_de_texto_da_auditoria(self) -> None:
         """Item 8 da auditoria: a precedência inteira no comum, o Purpose só do spec novo, a revisão
         de código numa sessão nova e o design dispensado no archive."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         ordem = ["as travas do kit", "a escolha do usuário", "o OpenSpec", '"Exceções ao comum"',
                  "este arquivo", "o `openspec/config.yaml`", "as skills `sdd:*`"]
         linha = next(l for l in comum.splitlines() if l.startswith("Regras comuns"))
@@ -453,7 +453,7 @@ class Kit(unittest.TestCase):
         readme = (RAIZ / "README.md").read_text(encoding="utf-8")
         tabela = {re.match(r"\s*\| `([^`]+)`", l).group(1) for l in readme.splitlines()
                   if re.match(r"\s*\| `[^`]+` \|", l) and "modelo/" not in l.split("|")[1]}
-        self.assertEqual(tabela, {"trilha/", *FERRAMENTA.A_PREENCHER.values()})
+        self.assertEqual(tabela, {"trilha-ai/", *FERRAMENTA.A_PREENCHER.values()})
 
     def test_readme_e_mapa_sem_curso_nem_projeto(self) -> None:
         """F03 e F14: o kit se instala sozinho, e o mapa explica o método sem histórico."""
@@ -486,12 +486,12 @@ class Kit(unittest.TestCase):
 
     def test_confere_metodo_se_declara_trava(self) -> None:
         """Desde a 1.27 ele roda na trava do commit e no CI; o texto dele diz isso."""
-        texto = (MODELO / "trilha" / "confere_metodo.py").read_text(encoding="utf-8")
-        self.assertIn("na trava do commit (trilha/hooks/pre-commit)", texto)
+        texto = (MODELO / "trilha-ai" / "confere_metodo.py").read_text(encoding="utf-8")
+        self.assertIn("na trava do commit (trilha-ai/hooks/pre-commit)", texto)
 
     def test_ci_com_acoes_fixadas_e_busca_de_segredos(self) -> None:
         """v1.29: ações pelo commit, gitleaks conferido pela soma, Dependabot e a regra dos segredos."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         for arquivo in (MODELO / ".github/workflows/verificacao.yml", RAIZ / ".github/workflows/testes.yml"):
             texto = arquivo.read_text(encoding="utf-8")
             # Também os exemplos comentados: quem os descomenta herda a fixação.
@@ -512,7 +512,7 @@ class Kit(unittest.TestCase):
         """v1.28: no passo 5, o /code-review, desde a 2.3 numa sessão nova, depois do /clear. v2.15:
         no nível high (max nas changes de risco), sem --fix nem --comment, por um agente sem o
         contexto da sessão: o mesmo rigor em toda change, sem parar e retomar a sessão."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         # Com o alvo: sem ele, o /code-review revisa só o que não foi commitado, vazio depois do commit.
         self.assertIn(
             "5. `/opsx:verify` e a revisão independente do código, o `/code-review high <número do PR>`",
@@ -527,7 +527,7 @@ class Kit(unittest.TestCase):
 
     def test_a_change_fecha_no_merge(self) -> None:
         """v1.25: a change fecha no merge; a retomada olha o PR; um só lugar para a regra dos envios."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         readme = (RAIZ / "README.md").read_text(encoding="utf-8")
         self.assertIn("A change fecha aqui, não no archive", comum)
         self.assertIn("numa branch `change/…`, `gh pr view` e `gh pr checks`", comum)
@@ -539,24 +539,24 @@ class Kit(unittest.TestCase):
 
     def test_versao_nova_atualiza_a_origem_sem_versao(self) -> None:
         """v1.16: a versão nova de sentido muda a linha "de origem" de quem cita, sem versão nova dele."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("atualiza a linha \"de origem\" de quem o cita, sem versão nova dele", comum)
 
     def test_ciclo_guarda_os_marcos_e_o_andamento_o_passo(self) -> None:
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Os marcos de cada change (briefing, auditoria, archive): a tabela \"Ciclo\"", comum)
 
     def test_auditoria_tem_criterio_de_fechamento(self) -> None:
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("Uma auditoria fecha com a verificação do repositório verde e sem contradição", comum)
 
     def test_hora_do_andamento_lida_do_relogio(self) -> None:
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("a hora, lida do relógio (`date`) e nunca estimada", comum)
 
     def test_archive_gera_a_pagina(self) -> None:
         """v1.13: os passos depois do archive vivem só no config.yaml; o comum aponta para lá."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         esqueleto = (MODELO / "esqueleto-CLAUDE.md").read_text(encoding="utf-8")
         self.assertIn("os passos que o `operations.archive` do `openspec/config.yaml` lista", comum)
@@ -565,19 +565,19 @@ class Kit(unittest.TestCase):
 
     def test_regras_do_metodo_num_lugar_so(self) -> None:
         """v1.13: o teste por cenário fica no config.yaml e os 8 itens da auditoria, na skill."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("pelo checklist da skill `sdd:briefing`", comum)
 
     def test_andamento_sem_o_envio_e_com_trabalho_fora_de_change(self) -> None:
         """v1.13: o envio ao remoto não vai ao ANDAMENTO.md; a etapa admite trabalho fora de change."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("não guarda o estado do envio ao remoto", comum)
         self.assertIn("ou o trabalho fora de change)", comum)
         self.assertIn("a revisão termina com a auditoria aprovada, em commit e envio", comum)
 
     def test_gates_aprovados_como_as_skills_pedem(self) -> None:
         """v1.17: PRD e TDD são aprovados bloco a bloco, como as skills pedem; a restrição imposta é exceção."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("aprovado bloco a bloco pelo usuário, como a skill pede (gate 1)", comum)
         self.assertIn("aprovado bloco a bloco pelo usuário, como a skill pede (gate 2)", comum)
         self.assertIn("salvo a restrição que o usuário declara imposta de fora", comum)
@@ -585,7 +585,7 @@ class Kit(unittest.TestCase):
     def test_ciclo_sem_repetir_o_config_e_com_o_lugar_do_verify(self) -> None:
         """v1.17: a execução manual fica só no config.yaml; o verify responde no design.md; a sugestão
         de um comando do OpenSpec que pule passo não vale; a aprovação do gate 3 é unidade de trabalho."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("execução manual, em dado descartável, com o usuário olhando", comum)
         self.assertIn("recusada por escrito no `design.md` da change, com o motivo", comum)
         self.assertIn("a tabela \"Ciclo\" da decomposição, atualizada no commit do passo de cada marco", comum)
@@ -594,11 +594,11 @@ class Kit(unittest.TestCase):
         """v1.18: a escolha do usuário, com ou sem correção, leva o relatório ao registro; a cópia nova
         dos arquivos do método dispensa change; o OpenSpec comanda, e o método nunca se sobrepõe a ele:
         quando um comando oferece pular um passo, quem escolhe é o usuário."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("A escolha, com ou sem correção, é unidade de trabalho", comum)
         self.assertIn("leva o relatório ao registro", comum)
         self.assertIn("se corrige quando o arquivo mudar por outro motivo", comum)
-        self.assertIn("a cópia nova do kit (a pasta `trilha/`", comum)
+        self.assertIn("a cópia nova do kit (a pasta `trilha-ai/`", comum)
         self.assertIn("O OpenSpec comanda: o método nunca se sobrepõe ao fluxo dele", comum)
         self.assertIn("quem escolhe é o usuário, com a recomendação de não pular", comum)
 
@@ -610,7 +610,7 @@ class Kit(unittest.TestCase):
         self.assertNotIn("Documentos que mandam", config)
         self.assertIn("CLAUDE-comum.md e no CLAUDE.md, que o agente já carrega; este contexto não as repete", config)
         # v2.13: o config diz que o nome das pastas está no comum; ele precisa estar lá.
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertIn("o nome das pastas", config)
         self.assertIn("Nome das pastas: a change ativa nasce como `NN-nome`", comum)
 
@@ -618,7 +618,7 @@ class Kit(unittest.TestCase):
         """v1.19: o design.md é do OpenSpec, que o cria só quando cabe (o notas.md o substitui); os specs
         mudam também pela edição que o OpenSpec pede; o gate 3 aceita o caminho que o update indicar;
         as regras do config.yaml sem o MAY e com os títulos do OpenSpec em inglês."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         config = (MODELO / "openspec" / "config.yaml").read_text(encoding="utf-8")
         self.assertIn("o OpenSpec o cria só quando cabe", comum)
         self.assertIn("o `notas.md` da pasta da change faz as vezes dele", comum)
@@ -665,7 +665,7 @@ class Kit(unittest.TestCase):
         self.assertEqual(soltos, [])
 
     def test_regras_falam_do_usuario(self) -> None:
-        for arquivo in ("trilha/CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
+        for arquivo in ("trilha-ai/CLAUDE-comum.md", "esqueleto-CLAUDE.md"):
             texto = (MODELO / arquivo).read_text(encoding="utf-8")
             self.assertNotRegex(texto, r"\b[àa] pessoa\b", arquivo)
 
@@ -687,8 +687,8 @@ class Kit(unittest.TestCase):
             destino = Path(tmp)
             _copia_do_kit(destino)
             saida = subprocess.run(
-                # A raiz do kit, como o trilha/verifica.sh dos projetos a passa (../trilha-ai).
-                [sys.executable, "-I", str(destino / "trilha/confere_regras.py"), tmp, "--fonte", str(RAIZ)],
+                # A raiz do kit, como o trilha-ai/verifica.sh dos projetos a passa (../trilha-ai).
+                [sys.executable, "-I", str(destino / "trilha-ai/confere_regras.py"), tmp, "--fonte", str(RAIZ)],
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(saida.returncode, 0, saida.stderr)
@@ -703,7 +703,7 @@ class Kit(unittest.TestCase):
             self.assertIn(de, texto, f"{arquivo} do kit sem o trecho {de!r}")
             alvo.write_text(texto.replace(de, para), encoding="utf-8")
             saida = subprocess.run(
-                [sys.executable, "-I", str(destino / "trilha/confere_regras.py"), tmp],
+                [sys.executable, "-I", str(destino / "trilha-ai/confere_regras.py"), tmp],
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
@@ -743,7 +743,7 @@ class Kit(unittest.TestCase):
         self.assertIn("openspec/config.yaml", erro)
 
     def test_verificador_reprova_passo_numerado_do_comum_repetido(self) -> None:
-        passo = next(linha for linha in (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8").splitlines()
+        passo = next(linha for linha in (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8").splitlines()
                      if linha.startswith("2. "))
         erro = self._verifica_com_defeito("CLAUDE.md", "- Nenhuma.", f"- Nenhuma.\n\n{passo}")
         self.assertIn("repete regra do comum: 2. ", erro)
@@ -753,7 +753,7 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             destino = Path(tmp)
             _copia_do_kit(destino)
-            regras = [sys.executable, "-I", str(destino / "trilha/confere_regras.py"), tmp]
+            regras = [sys.executable, "-I", str(destino / "trilha-ai/confere_regras.py"), tmp]
             saida = subprocess.run(regras, capture_output=True, text=True, check=False)
             self.assertEqual(saida.returncode, 0, saida.stderr)  # aviso: a stack só vem na etapa 2
             for nome in ("CLAUDE.md", "ANDAMENTO.md", "openspec/config.yaml"):
@@ -783,7 +783,7 @@ class Kit(unittest.TestCase):
 
     def test_marcadores_da_stack_sao_os_dos_modelos(self) -> None:
         """F04: um marcador por lugar da stack que o comum nomeia no gate 2, e cada um está no modelo."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         gate_2 = next(l for l in comum.splitlines() if l.startswith("- Ao fechar o gate 2"))
         lugares = sorted(c for c in re.findall(r"`([^`]+)`", gate_2.split("Até lá")[0]) if "." in c)
         self.assertEqual(sorted(REGRAS.STACK_DO_MODELO), lugares)
@@ -808,7 +808,7 @@ class Kit(unittest.TestCase):
                     alvo = destino / nome
                     linhas = alvo.read_text(encoding="utf-8").splitlines(keepends=True)
                     alvo.write_text("".join(l for l in linhas if marcador not in l), encoding="utf-8")
-            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_regras.py"), tmp],
+            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha-ai/confere_regras.py"), tmp],
                                    capture_output=True, text=True, check=False)
         self.assertEqual(saida.returncode, 0, saida.stderr)
         return [l for l in saida.stderr.splitlines() if l.startswith("aviso:") and "parte da stack" in l]
@@ -847,7 +847,7 @@ class Kit(unittest.TestCase):
             dependabot = destino / ".github/dependabot.yml"  # os exemplos viram o bloco real
             texto = dependabot.read_text(encoding="utf-8").replace("  #   ", "  ")
             dependabot.write_text("".join(l for l in texto.splitlines(True) if "este comentário" not in l))
-            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_regras.py"), tmp],
+            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha-ai/confere_regras.py"), tmp],
                                    capture_output=True, text=True, check=False)
         self.assertEqual(saida.returncode, 0, saida.stderr)
         aviso = next(l for l in saida.stderr.splitlines() if "parte da stack" in l)
@@ -866,7 +866,7 @@ class Kit(unittest.TestCase):
             if claude is not None:
                 _claude_falso(Path(falsos), claude)
             return subprocess.run(
-                [sys.executable, "-I", str(destino / "trilha/confere_metodo.py"), *args],
+                [sys.executable, "-I", str(destino / "trilha-ai/confere_metodo.py"), *args],
                 capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos},
             )
 
@@ -885,7 +885,7 @@ class Kit(unittest.TestCase):
                     (destino / nome).unlink()
                 else:
                     (destino / nome).write_text(json.dumps(conteudo), encoding="utf-8")
-            comum = destino / "trilha/CLAUDE-comum.md"
+            comum = destino / "trilha-ai/CLAUDE-comum.md"
             comum.write_text(re.sub(r"^Versão [\d.]+,", f"Versão {versao_do_comum},",
                                     comum.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
             if vizinho:
@@ -1096,7 +1096,7 @@ class Kit(unittest.TestCase):
 
     def test_lista_de_plugins_sem_resposta_no_prazo_nao_avisa(self) -> None:
         """Um `claude` que não responde no prazo: a conferência não espera mais, sem aviso nem falha."""
-        spec = importlib.util.spec_from_file_location("metodo", MODELO / "trilha/confere_metodo.py")
+        spec = importlib.util.spec_from_file_location("metodo", MODELO / "trilha-ai/confere_metodo.py")
         metodo = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(metodo)
         metodo.PRAZO_DO_CLAUDE = 0.3  # o de verdade é de segundos; o teste não espera por ele
@@ -1168,7 +1168,7 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as falsos:
             registro = self._openspec_falso(Path(falsos), **falso)
             saida = subprocess.run(
-                [sys.executable, "-I", str(destino / "trilha/confere_metodo.py"), *args],
+                [sys.executable, "-I", str(destino / "trilha-ai/confere_metodo.py"), *args],
                 capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos},
             )
             return saida, registro.read_text(encoding="utf-8")
@@ -1190,7 +1190,7 @@ class Kit(unittest.TestCase):
             with tempfile.TemporaryDirectory() as falsos:
                 grava = f'echo "$OPENSPEC_NO_UPDATE_CHECK $OPENSPEC_TELEMETRY $DO_NOT_TRACK" > "{falsos}/ambiente"'
                 self._openspec_falso(Path(falsos), update=grava)
-                subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_metodo.py")],
+                subprocess.run([sys.executable, "-I", str(destino / "trilha-ai/confere_metodo.py")],
                                capture_output=True, check=False, env={**os.environ, "PATH": falsos})
                 ambiente = (Path(falsos) / "ambiente").read_text(encoding="utf-8").split()
         self.assertEqual(ambiente, ["1", "0", "1"])
@@ -1213,7 +1213,7 @@ class Kit(unittest.TestCase):
             global_ = f"{falsos}/xdg/openspec/config.json"
             lista = _dry_run(("update", global_), ("delete", ".claude/skills/openspec-propose/SKILL.md"))
             self._openspec_falso(Path(falsos), update=lista)
-            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_metodo.py")],
+            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha-ai/confere_metodo.py")],
                                    capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos})
             maquina = (Path(falsos) / "xdg/openspec/config.json").read_text(encoding="utf-8")
         self.assertEqual(maquina, '{"profile": "custom"}')
@@ -1287,7 +1287,7 @@ class Kit(unittest.TestCase):
             destino = self._projeto_com_gerados(tmp)
             _claude_falso(Path(falsos), "exit 1")
             (Path(falsos) / "git").symlink_to(shutil.which("git"))
-            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_metodo.py")],
+            saida = subprocess.run([sys.executable, "-I", str(destino / "trilha-ai/confere_metodo.py")],
                                    capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos})
         self.assertEqual(saida.returncode, 0, saida.stderr)
         self.assertNotIn("openspec", saida.stderr.lower())
@@ -1312,7 +1312,7 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as falsos:
             destino = self._projeto_com_gerados(tmp)
             self._openspec_falso(Path(falsos), update="exec sleep 5")
-            spec = importlib.util.spec_from_file_location("metodo_do_projeto", destino / "trilha/confere_metodo.py")
+            spec = importlib.util.spec_from_file_location("metodo_do_projeto", destino / "trilha-ai/confere_metodo.py")
             metodo = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(metodo)
             metodo.PRAZO_DO_OPENSPEC = 0.5
@@ -1402,10 +1402,10 @@ class Kit(unittest.TestCase):
                 if caminho and not (Path(falsos) / ferramenta).exists():
                     (Path(falsos) / ferramenta).symlink_to(caminho)
             env = {**os.environ, "PATH": falsos}
-            trava = subprocess.run(["bash", str(pasta / "trilha/hooks/pre-commit")], cwd=pasta, env=env,
+            trava = subprocess.run(["bash", str(pasta / "trilha-ai/hooks/pre-commit")], cwd=pasta, env=env,
                                    capture_output=True, text=True, check=False)
             sem_consulta = registro.read_text(encoding="utf-8")
-            subprocess.run([sys.executable, "-I", str(pasta / "trilha/confere_metodo.py")], cwd=pasta, env=env,
+            subprocess.run([sys.executable, "-I", str(pasta / "trilha-ai/confere_metodo.py")], cwd=pasta, env=env,
                            capture_output=True, check=False)
             com_consulta = registro.read_text(encoding="utf-8")
         self.assertEqual(trava.returncode, 0, trava.stderr)
@@ -1462,7 +1462,7 @@ class Kit(unittest.TestCase):
             destino = Path(tmp)
             _copia_do_kit(destino)
             saida = subprocess.run(
-                [sys.executable, "-I", str(destino / "trilha/gerar_pagina_sdd.py")],
+                [sys.executable, "-I", str(destino / "trilha-ai/gerar_pagina_sdd.py")],
                 capture_output=True, text=True, check=False,
             )
             self.assertEqual(saida.returncode, 0, saida.stderr)
@@ -1482,7 +1482,7 @@ class Kit(unittest.TestCase):
                 encoding="utf-8",
             )
             subprocess.run(
-                [sys.executable, "-I", str(destino / "trilha/gerar_pagina_sdd.py")],
+                [sys.executable, "-I", str(destino / "trilha-ai/gerar_pagina_sdd.py")],
                 capture_output=True, text=True, check=True,
             )
             pagina = (destino / "sdd/documentacao.html").read_text(encoding="utf-8")
@@ -1503,7 +1503,7 @@ class Kit(unittest.TestCase):
             for nome, texto in arquivos.items():
                 (destino / "sdd" / nome).write_text(texto, encoding="utf-8")
             saida = subprocess.run(
-                [sys.executable, "-I", str(destino / "trilha/gerar_pagina_sdd.py")],
+                [sys.executable, "-I", str(destino / "trilha-ai/gerar_pagina_sdd.py")],
                 capture_output=True, text=True, check=True,
             )
             pagina = (destino / "sdd/documentacao.html").read_text(encoding="utf-8")
@@ -1555,9 +1555,9 @@ class Kit(unittest.TestCase):
         self.assertIn('célula do archive ("PR #N")', config)
 
     def test_pagina_funciona_sem_rede_e_se_chama_documentacao_do_projeto(self) -> None:
-        modelo = (MODELO / "trilha/pagina_sdd_modelo.html").read_text(encoding="utf-8")
-        gerador = (MODELO / "trilha/gerar_pagina_sdd.py").read_text(encoding="utf-8")
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
+        modelo = (MODELO / "trilha-ai/pagina_sdd_modelo.html").read_text(encoding="utf-8")
+        gerador = (MODELO / "trilha-ai/gerar_pagina_sdd.py").read_text(encoding="utf-8")
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
         self.assertNotIn("<script src=", modelo)
         self.assertIn("marked v12.0.2", modelo)
         self.assertNotIn("</script", modelo.split("marked v12.0.2", 1)[1].split("\n</script>", 1)[0])
@@ -1565,7 +1565,7 @@ class Kit(unittest.TestCase):
         self.assertIn("é a documentação do projeto, gerada", comum)
 
     def test_modelo_da_pagina_tem_teclado_celular_e_rodape_corretos(self) -> None:
-        modelo = (MODELO / "trilha/pagina_sdd_modelo.html").read_text(encoding="utf-8")
+        modelo = (MODELO / "trilha-ai/pagina_sdd_modelo.html").read_text(encoding="utf-8")
         self.assertIn("ArrowRight", modelo)
         self.assertIn('document.getElementById("aba-" + chave).focus()', modelo)
         self.assertIn(".briefings > li {", modelo)
@@ -1586,7 +1586,7 @@ class Kit(unittest.TestCase):
             gh.chmod(0o755)
             env = {**os.environ, "PATH": f"{tmp}:{os.environ['PATH']}"}
             return subprocess.run(
-                [sys.executable, "-I", str(trava or MODELO / "trilha/guarda.py")],
+                [sys.executable, "-I", str(trava or MODELO / "trilha-ai/guarda.py")],
                 input=json.dumps({"tool_name": "Bash", "tool_input": {"command": comando}}),
                 capture_output=True, text=True, check=False, env=env,
             )
@@ -1639,8 +1639,8 @@ class Kit(unittest.TestCase):
                         "git config --local core.hooksPath /dev/null"))
 
     def test_trava_deixa_ler_e_gravar_o_hookspath_do_metodo(self) -> None:
-        self._livres(("git config core.hooksPath", "git config core.hooksPath trilha/hooks",
-                      "git -c core.hooksPath=trilha/hooks commit -m x"))
+        self._livres(("git config core.hooksPath", "git config core.hooksPath trilha-ai/hooks",
+                      "git -c core.hooksPath=trilha-ai/hooks commit -m x"))
 
     def test_trava_barra_o_no_verify_abreviado(self) -> None:
         self._barrados(("git commit --no-veri -m y", "git commit --no-verif -m y", "git push --no-veri"))
@@ -1692,7 +1692,7 @@ class Kit(unittest.TestCase):
     def test_trava_barra_a_verificacao_que_nao_responde(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             guarda = Path(tmp) / "guarda.py"
-            texto = (MODELO / "trilha/guarda.py").read_text(encoding="utf-8")
+            texto = (MODELO / "trilha-ai/guarda.py").read_text(encoding="utf-8")
             self.assertIn("PRAZO_DO_GH = 30", texto)
             guarda.write_text(texto.replace("PRAZO_DO_GH = 30", "PRAZO_DO_GH = 1"), encoding="utf-8")
             inicio = time.monotonic()
@@ -1736,7 +1736,7 @@ class Kit(unittest.TestCase):
         """Sugestão do verify: um erro inesperado da trava barra, nunca libera."""
         with tempfile.TemporaryDirectory() as tmp:
             guarda = Path(tmp) / "guarda.py"
-            texto = (MODELO / "trilha/guarda.py").read_text(encoding="utf-8")
+            texto = (MODELO / "trilha-ai/guarda.py").read_text(encoding="utf-8")
             marca = "def _motivo(texto: str) -> str:\n"
             self.assertIn(marca, texto)
             guarda.write_text(texto.replace(marca, marca + "    raise RuntimeError('quebrada')\n"),
@@ -1747,7 +1747,7 @@ class Kit(unittest.TestCase):
 
     def test_trava_deixa_passar_a_entrada_sem_comando(self) -> None:
         for entrada in ("[]", '{"tool_input": "x"}', '{"tool_input": {"command": 3}}', "{}"):
-            saida = subprocess.run([sys.executable, "-I", str(MODELO / "trilha/guarda.py")], input=entrada,
+            saida = subprocess.run([sys.executable, "-I", str(MODELO / "trilha-ai/guarda.py")], input=entrada,
                                    capture_output=True, text=True, check=False)
             self.assertEqual(saida.returncode, 0, f"{entrada}: {saida.stderr}")
             self.assertEqual(saida.stderr, "", entrada)
@@ -1759,14 +1759,14 @@ class Kit(unittest.TestCase):
             self._ferramenta("novo", str(pasta))
             ligado = subprocess.run(["git", "config", "core.hooksPath"], cwd=pasta,
                                     capture_output=True, text=True).stdout.strip()
-            self.assertEqual(ligado, "trilha/hooks")
-            self.assertIn("trilha/guarda.py", (pasta / ".claude/settings.json").read_text())
+            self.assertEqual(ligado, "trilha-ai/hooks")
+            self.assertIn("trilha-ai/guarda.py", (pasta / ".claude/settings.json").read_text())
             subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
             ok = subprocess.run(["git", "commit", "-qm", "kit"], cwd=pasta, env=env,
                                 capture_output=True, text=True)
             self.assertEqual(ok.returncode, 0, ok.stderr)
             claude = pasta / "CLAUDE.md"
-            claude.write_text(claude.read_text(encoding="utf-8").replace("@trilha/CLAUDE-comum.md", ""))
+            claude.write_text(claude.read_text(encoding="utf-8").replace("@trilha-ai/CLAUDE-comum.md", ""))
             barrado = subprocess.run(["git", "commit", "-qam", "quebrado"], cwd=pasta, env=env,
                                      capture_output=True, text=True)
             self.assertNotEqual(barrado.returncode, 0)
@@ -1786,7 +1786,7 @@ class Kit(unittest.TestCase):
             self.assertEqual(self._ferramenta("atualizar", str(pasta)).returncode, 0)
             dados = json.loads(settings.read_text())
             self.assertEqual(dados["permissions"], {"allow": ["Bash(ls:*)"]})
-            self.assertIn("trilha/guarda.py", json.dumps(dados["hooks"]))
+            self.assertIn("trilha-ai/guarda.py", json.dumps(dados["hooks"]))
             self.assertEqual(self._ferramenta("atualizar", str(pasta)).returncode, 1)  # não commitado
             subprocess.run(["git", "commit", "-qam", "kit"], cwd=pasta, env=env, check=True)
             self._ferramenta("atualizar", str(pasta))
@@ -1800,7 +1800,7 @@ class Kit(unittest.TestCase):
         self.assertIs(dados["enabledPlugins"]["sdd@trilha-ai"], True)
         self.assertEqual(dados["extraKnownMarketplaces"]["trilha-ai"],
                          {"source": {"source": "github", "repo": "paulosrl/trilha-ai"}})
-        self.assertIn("trilha/guarda.py", json.dumps(dados["hooks"]))
+        self.assertIn("trilha-ai/guarda.py", json.dumps(dados["hooks"]))
 
     def _atualizar_com_settings(self, tmp: str, settings: dict) -> dict:
         """Um projeto com o settings.json dado, commitado, depois do kit.py atualizar."""
@@ -1947,11 +1947,11 @@ class Kit(unittest.TestCase):
         self.assertEqual(atual["permissions"], {"allow": ["Bash(ls:*)"]})  # cópia, não o do modelo
 
     def test_trava_de_outra_versao_troca_pela_do_modelo(self) -> None:
-        """A trilha/guarda.py chamada de outro jeito sai; o gancho próprio do grupo fica."""
+        """A trilha-ai/guarda.py chamada de outro jeito sai; o gancho próprio do grupo fica."""
         modelo = FERRAMENTA._modelo_do_settings()
         proprio = {"type": "command", "command": "echo do projeto"}
         atual = {"hooks": {"PreToolUse": [
-            {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 trilha/guarda.py"},
+            {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 trilha-ai/guarda.py"},
                                           proprio]},
             {"matcher": "Bash", "hooks": [{"type": "command", "command": "python3 scripts/guarda.py"}]},
         ]}}
@@ -1972,7 +1972,7 @@ class Kit(unittest.TestCase):
 
     def test_comando_de_instalacao_igual_no_kit_e_na_conferencia(self) -> None:
         """O confere_metodo.py roda no projeto, sem o kit.py: cada um tem a sua constante."""
-        metodo = (MODELO / "trilha/confere_metodo.py").read_text(encoding="utf-8")
+        metodo = (MODELO / "trilha-ai/confere_metodo.py").read_text(encoding="utf-8")
         self.assertEqual(FERRAMENTA.INSTALAR_NO_PROJETO, "claude plugin install sdd@trilha-ai --scope project")
         self.assertIn(f'f"`claude plugin install {{PLUGIN_SDD}} --scope project`"', metodo)
 
@@ -1987,7 +1987,7 @@ class Kit(unittest.TestCase):
         pasta = Path(tmp) / "proj"
         self.assertEqual(self._ferramenta("novo", str(pasta)).returncode, 0)
         env = {**os.environ, **GIT_TESTE}
-        comum = pasta / "trilha/CLAUDE-comum.md"
+        comum = pasta / "trilha-ai/CLAUDE-comum.md"
         comum.write_text(re.sub(r"^Versão [\d.]+,", "Versão 1.19,", comum.read_text(encoding="utf-8"),
                                 flags=re.M), encoding="utf-8")
         (pasta / ".github/workflows/verificacao.yml").write_text("# a parte da stack, preenchida\n")
@@ -1995,7 +1995,7 @@ class Kit(unittest.TestCase):
         subprocess.run(["git", "commit", "-qm", "kit"], cwd=pasta, check=True, env=env)
         return pasta
 
-    # A pasta trilha/ (change 02): as conferências, a verificação fixa e a ferramenta.
+    # A pasta trilha-ai/ (change 02): as conferências, a verificação fixa e a ferramenta.
 
     # O --openspec do kit.py atualizar (change 16).
 
@@ -2014,8 +2014,8 @@ class Kit(unittest.TestCase):
         dele, e None o tira). O ci troca a versão do OpenSpec no CI do projeto; o check_antigo põe
         no check.sh uma chamada aos scripts/confere_*, que a migração não sabe trocar, e o
         check_extra acrescenta o texto dado; a trilha_editada commita uma linha a mais no
-        trilha/verifica.sh, que a cópia desfaria; o sem_openspec tira a pasta openspec/; o comum
-        põe a versão dada no trilha/CLAUDE-comum.md do projeto. Devolve
+        trilha-ai/verifica.sh, que a cópia desfaria; o sem_openspec tira a pasta openspec/; o comum
+        põe a versão dada no trilha-ai/CLAUDE-comum.md do projeto. Devolve
         a saída, as chamadas e a pasta do projeto; o _de_novo roda o atualizar outra vez."""
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
@@ -2034,12 +2034,12 @@ class Kit(unittest.TestCase):
             with (pasta / "scripts/check.sh").open("a", encoding="utf-8") as check:
                 check.write(check_extra)
         if trilha_editada:
-            with (pasta / "trilha/verifica.sh").open("a", encoding="utf-8") as verifica:
+            with (pasta / "trilha-ai/verifica.sh").open("a", encoding="utf-8") as verifica:
                 verifica.write("# editado\n")
         if sem_openspec:
             shutil.rmtree(pasta / "openspec")
         if comum:
-            arquivo = pasta / "trilha/CLAUDE-comum.md"
+            arquivo = pasta / "trilha-ai/CLAUDE-comum.md"
             arquivo.write_text(re.sub(r"^Versão [\d.]+,", f"Versão {comum},", arquivo.read_text(encoding="utf-8"),
                                       flags=re.M), encoding="utf-8")
         subprocess.run(["git", "add", "-A"], cwd=pasta, check=True)
@@ -2094,10 +2094,10 @@ class Kit(unittest.TestCase):
         return saida, registro.read_text(encoding="utf-8").splitlines()
 
     def _limpo(self, pasta: Path) -> None:
-        """O projeto como estava: nada por commitar e a trilha/ editada sem a cópia do kit."""
+        """O projeto como estava: nada por commitar e a trilha-ai/ editada sem a cópia do kit."""
         estado = subprocess.run(["git", "status", "--porcelain"], cwd=pasta, capture_output=True, text=True, check=True)
         self.assertEqual(estado.stdout, "")
-        self.assertIn("# editado", (pasta / "trilha/verifica.sh").read_text(encoding="utf-8"))
+        self.assertIn("# editado", (pasta / "trilha-ai/verifica.sh").read_text(encoding="utf-8"))
 
     def _recusa(self, texto: str, trecho: str) -> str:
         """A linha da recusa que tem o trecho, ou vazio."""
@@ -2249,7 +2249,7 @@ class Kit(unittest.TestCase):
         self.assertEqual(saida.returncode, 0, texto)
         self.assertNotIn("não commitado", texto)
         self.assertIn("openspec update", chamadas)
-        self.assertNotIn("# editado", (pasta / "trilha/verifica.sh").read_text(encoding="utf-8"))
+        self.assertNotIn("# editado", (pasta / "trilha-ai/verifica.sh").read_text(encoding="utf-8"))
 
     def test_atualizar_openspec_aceita_os_apagados(self) -> None:
         apaga = _dry_run(("delete", ".claude/skills/openspec-propose/SKILL.md"))
@@ -2295,7 +2295,7 @@ class Kit(unittest.TestCase):
         return next((l for l in saida.stdout.splitlines() if l.startswith("commit sugerido:")), "")
 
     def _versao_do_comum(self) -> str:
-        return FERRAMENTA._versao(MODELO / "trilha/CLAUDE-comum.md")
+        return FERRAMENTA._versao(MODELO / "trilha-ai/CLAUDE-comum.md")
 
     SKILL_MUDA = (_dry_run(("update", ".claude/skills/openspec-propose/SKILL.md")),
                   "echo mudado >> .claude/skills/openspec-propose/SKILL.md")
@@ -2374,7 +2374,7 @@ class Kit(unittest.TestCase):
             carregado = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(carregado)
             return carregado
-        kit, metodo = modulo(RAIZ / "ferramentas/kit.py"), modulo(MODELO / "trilha/confere_metodo.py")
+        kit, metodo = modulo(RAIZ / "ferramentas/kit.py"), modulo(MODELO / "trilha-ai/confere_metodo.py")
         self.assertEqual(kit.PIN_DO_OPENSPEC.pattern, metodo.PIN_DO_OPENSPEC.pattern)
         self.assertEqual(kit.SEM_CONSULTA, metodo.SEM_REDE)
         for nome in ("~/x", "/etc/x", "../x", ".claude/../../x", ".claude/x"):
@@ -2399,17 +2399,28 @@ class Kit(unittest.TestCase):
         subprocess.run(["git", "commit", "-qm", "kit"], cwd=pasta, check=True, env={**os.environ, **GIT_TESTE})
         return pasta
 
-    def _projeto_da_1_30(self, tmp: str) -> Path:
-        """Um projeto feito pela ferramenta da 1.30 (a do layout antigo), lida da tag, com um commit."""
-        kit = Path(tmp) / "kit-1.30"
+    def _projeto_da_tag(self, tmp: str, tag: str) -> Path:
+        """Um projeto feito pela ferramenta da tag dada, lida dela, com um commit."""
+        kit = Path(tmp) / f"kit-{tag}"
         kit.mkdir()
-        arquivo = subprocess.run(["git", "-C", str(RAIZ), "archive", "v1.30"], capture_output=True, check=True)
+        arquivo = subprocess.run(["git", "-C", str(RAIZ), "archive", tag], capture_output=True, check=True)
         subprocess.run(["tar", "-x", "-C", str(kit)], input=arquivo.stdout, check=True)
         pasta = Path(tmp) / "proj"
         subprocess.run([sys.executable, "-I", str(kit / "ferramentas/kit.py"), "novo", str(pasta)],
                        capture_output=True, check=True)
+        self._commit_tudo(pasta, f"kit {tag}")
+        return pasta
+
+    def _projeto_da_1_30(self, tmp: str) -> Path:
+        """Um projeto feito pela ferramenta da 1.30 (a do layout antigo), com um commit."""
+        pasta = self._projeto_da_tag(tmp, "v1.30")
         self.assertTrue((pasta / "scripts/confere_regras.py").is_file())
-        self._commit_tudo(pasta, "kit 1.30")
+        return pasta
+
+    def _projeto_da_2_18(self, tmp: str) -> Path:
+        """Um projeto feito pela ferramenta da 2.18, a última com a pasta trilha/, com um commit."""
+        pasta = self._projeto_da_tag(tmp, "v2.18")
+        self.assertTrue((pasta / "trilha/CLAUDE-comum.md").is_file())
         return pasta
 
     def _commit_tudo(self, pasta: Path, mensagem: str) -> None:
@@ -2419,7 +2430,7 @@ class Kit(unittest.TestCase):
                        check=True, env=env)
 
     def _regras(self, pasta: Path) -> subprocess.CompletedProcess[str]:
-        return subprocess.run([sys.executable, "-I", str(pasta / "trilha/confere_regras.py"), str(pasta),
+        return subprocess.run([sys.executable, "-I", str(pasta / "trilha-ai/confere_regras.py"), str(pasta),
                                "--fonte", str(RAIZ)], capture_output=True, text=True, check=False)
 
     def test_regras_aprovam_o_projeto_com_a_pasta_trilha(self) -> None:
@@ -2428,34 +2439,34 @@ class Kit(unittest.TestCase):
         self.assertEqual(saida.returncode, 0, saida.stderr)
 
     def test_regras_reprovam_a_importacao_antiga(self) -> None:
-        erro = self._verifica_com_defeito("CLAUDE.md", "@trilha/CLAUDE-comum.md", "@CLAUDE-comum.md")
-        self.assertIn("falta a linha @trilha/CLAUDE-comum.md", erro)
+        erro = self._verifica_com_defeito("CLAUDE.md", "@trilha-ai/CLAUDE-comum.md", "@CLAUDE-comum.md")
+        self.assertIn("falta a linha @trilha-ai/CLAUDE-comum.md", erro)
 
     def test_copia_da_pasta_trilha_igual_passa(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
-            (pasta / "trilha/__pycache__").mkdir()
-            (pasta / "trilha/__pycache__/confere_regras.cpython-312.pyc").write_bytes(b"cache")
+            (pasta / "trilha-ai/__pycache__").mkdir()
+            (pasta / "trilha-ai/__pycache__/confere_regras.cpython-312.pyc").write_bytes(b"cache")
             saida = self._regras(pasta)
         self.assertEqual(saida.returncode, 0, saida.stderr)
-        self.assertNotIn("trilha/", saida.stderr.replace("trilha/hooks", ""))
+        self.assertNotIn("trilha-ai/", saida.stderr.replace("trilha-ai/hooks", ""))
 
     def test_copia_reprova_a_trava_editada(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
-            guarda = pasta / "trilha/guarda.py"
+            guarda = pasta / "trilha-ai/guarda.py"
             guarda.write_text(guarda.read_text(encoding="utf-8") + "\n# afrouxada\n", encoding="utf-8")
             saida = self._regras(pasta)
         self.assertEqual(saida.returncode, 1)
-        self.assertIn("trilha/guarda.py difere do kit", saida.stderr)
+        self.assertIn("trilha-ai/guarda.py difere do kit", saida.stderr)
         self.assertIn("kit.py atualizar", saida.stderr)  # nunca editar a pasta (C02)
 
-    def _kit_falso(self, tmp: str, com_tag: bool = True, versao: str = "9.9") -> Path:
-        """Um kit com a modelo/trilha/ de agora, commitada e com a tag da versão dela (ou sem tag
+    def _kit_falso(self, tmp: str, com_tag: bool = True, versao: str = "9.9", pasta_antiga: bool = False) -> Path:
+        """Um kit com a modelo/trilha-ai/ de agora, commitada e com a tag da versão dela (ou sem tag
         nenhuma), cuja cópia de trabalho já está noutra versão (a 9.9, à frente): o kit ao lado de
         um projeto atrasado (change 06). Sem os ganchos e a assinatura da configuração global."""
         kit = Path(tmp) / "kit"
-        shutil.copytree(MODELO / "trilha", kit / "modelo/trilha",
+        shutil.copytree(MODELO / "trilha-ai", kit / "modelo/trilha-ai",
                         ignore=shutil.ignore_patterns("__pycache__"))
         (kit / "modelo/openspec").mkdir(parents=True)
         shutil.copy(MODELO / "openspec/config.yaml", kit / "modelo/openspec/config.yaml")
@@ -2465,20 +2476,22 @@ class Kit(unittest.TestCase):
         for comando in (["init", "-q"], ["add", "-A"], ["commit", "-qm", "kit"]):
             subprocess.run([*git, *comando], check=True, env=env)
         if com_tag:
-            atual = FERRAMENTA._versao(MODELO / "trilha/CLAUDE-comum.md")
+            atual = FERRAMENTA._versao(MODELO / "trilha-ai/CLAUDE-comum.md")
             subprocess.run([*git, "tag", f"v{atual}"], check=True, env=env)
-        comum = kit / "modelo/trilha/CLAUDE-comum.md"
+        if pasta_antiga:  # a cópia de trabalho de um kit de antes da 2.19, com a pasta trilha/
+            (kit / "modelo/trilha-ai").rename(kit / "modelo/trilha")
+        comum = kit / f"modelo/{'trilha' if pasta_antiga else 'trilha-ai'}/CLAUDE-comum.md"
         texto = re.sub(r"^Versão \d+\.\d+,", f"Versão {versao},", comum.read_text(encoding="utf-8"),
                        flags=re.M)
         comum.write_text(texto, encoding="utf-8")
         return kit
 
     def _regras_no_kit(self, pasta: Path, kit: Path) -> subprocess.CompletedProcess[str]:
-        return subprocess.run([sys.executable, "-I", str(pasta / "trilha/confere_regras.py"), str(pasta),
+        return subprocess.run([sys.executable, "-I", str(pasta / "trilha-ai/confere_regras.py"), str(pasta),
                                "--fonte", str(kit)], capture_output=True, text=True, check=False)
 
     def test_kit_mais_novo_compara_pela_tag_e_avisa(self) -> None:
-        versao = FERRAMENTA._versao(MODELO / "trilha/CLAUDE-comum.md")
+        versao = FERRAMENTA._versao(MODELO / "trilha-ai/CLAUDE-comum.md")
         with tempfile.TemporaryDirectory() as tmp:
             saida = self._regras_no_kit(self._projeto_novo(tmp), self._kit_falso(tmp))
         self.assertEqual(saida.returncode, 0, saida.stderr)
@@ -2489,13 +2502,13 @@ class Kit(unittest.TestCase):
     def test_kit_mais_novo_reprova_a_copia_divergente_da_tag(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
-            guarda = pasta / "trilha/guarda.py"
+            guarda = pasta / "trilha-ai/guarda.py"
             guarda.write_text(guarda.read_text(encoding="utf-8") + "\n# afrouxada\n", encoding="utf-8")
             saida = self._regras_no_kit(pasta, self._kit_falso(tmp))
         self.assertEqual(saida.returncode, 1)
-        self.assertIn("trilha/guarda.py difere do kit", saida.stderr)
+        self.assertIn("trilha-ai/guarda.py difere do kit", saida.stderr)
         # Comparado com a tag, o comum é igual; com a cópia de trabalho (na 9.9), diferiria.
-        self.assertNotIn("trilha/CLAUDE-comum.md difere", saida.stderr)
+        self.assertNotIn("trilha-ai/CLAUDE-comum.md difere", saida.stderr)
 
     def test_kit_atras_do_projeto_avisa_sem_mandar_atualizar(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2505,12 +2518,20 @@ class Kit(unittest.TestCase):
         self.assertIn("atualize o kit ao lado", aviso, saida.stderr)
         self.assertNotIn("kit.py atualizar", aviso)  # o atualizar rebaixaria o projeto
 
+    def test_kit_atras_na_pasta_antiga_so_avisa(self) -> None:
+        """Revisão da change 20, R1: o kit ao lado ainda na trilha/ (atrás do projeto) só avisa."""
+        with tempfile.TemporaryDirectory() as tmp:
+            saida = self._regras_no_kit(self._projeto_novo(tmp), self._kit_falso(tmp, versao="2.18", pasta_antiga=True))
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next((l for l in saida.stderr.splitlines() if "2.18" in l), "")
+        self.assertIn("atualize o kit ao lado", aviso, saida.stderr)
+
     def test_versao_que_o_kit_nao_tem_reprova(self) -> None:
         """Revisão de código, ponto 1: a linha Versão trocada à mão não desliga a comparação."""
         for inventada in ("1.99", "9.98"):
             with tempfile.TemporaryDirectory() as tmp:
                 pasta = self._projeto_novo(tmp)
-                comum = pasta / "trilha/CLAUDE-comum.md"
+                comum = pasta / "trilha-ai/CLAUDE-comum.md"
                 comum.write_text(re.sub(r"^Versão \d+\.\d+,", f"Versão {inventada},",
                                         comum.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
                 saida = self._regras_no_kit(pasta, self._kit_falso(tmp))
@@ -2521,14 +2542,14 @@ class Kit(unittest.TestCase):
         """Revisão de código, ponto 4: sem a linha Versão, as outras diferenças não se escondem."""
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
-            comum = pasta / "trilha/CLAUDE-comum.md"
+            comum = pasta / "trilha-ai/CLAUDE-comum.md"
             comum.write_text(comum.read_text(encoding="utf-8").replace("Versão ", "Versao ", 1),
                              encoding="utf-8")
-            guarda = pasta / "trilha/guarda.py"
+            guarda = pasta / "trilha-ai/guarda.py"
             guarda.write_text(guarda.read_text(encoding="utf-8") + "\n# afrouxada\n", encoding="utf-8")
             saida = self._regras_no_kit(pasta, self._kit_falso(tmp))
         self.assertEqual(saida.returncode, 1)
-        self.assertIn("trilha/guarda.py difere do kit", saida.stderr)
+        self.assertIn("trilha-ai/guarda.py difere do kit", saida.stderr)
 
     # As regras por artefato do openspec/config.yaml iguais às do kit (change 09).
 
@@ -2641,16 +2662,16 @@ class Kit(unittest.TestCase):
     def test_copia_reprova_arquivo_faltando_ou_a_mais(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
-            (pasta / "trilha/verifica.sh").unlink()
-            (pasta / "trilha/meu.py").write_text("print('do projeto')\n", encoding="utf-8")
+            (pasta / "trilha-ai/verifica.sh").unlink()
+            (pasta / "trilha-ai/meu.py").write_text("print('do projeto')\n", encoding="utf-8")
             saida = self._regras(pasta)
         self.assertEqual(saida.returncode, 1)
-        self.assertIn("trilha/verifica.sh falta", saida.stderr)
-        self.assertIn("trilha/meu.py não é do kit", saida.stderr)
+        self.assertIn("trilha-ai/verifica.sh falta", saida.stderr)
+        self.assertIn("trilha-ai/meu.py não é do kit", saida.stderr)
 
     def _verifica(self, pasta: Path, *args: str, path: str | None = None,
                   check_sh: bool = False, ci: bool = False) -> subprocess.CompletedProcess[str]:
-        comando = ["bash", "scripts/check.sh"] if check_sh else ["bash", "trilha/verifica.sh", *args]
+        comando = ["bash", "scripts/check.sh"] if check_sh else ["bash", "trilha-ai/verifica.sh", *args]
         env = {k: v for k, v in os.environ.items() if k != "CI"}  # o CI do kit define CI
         env = {**env, "TRILHA_AI": str(RAIZ), **({"PATH": path} if path else {}), **({"CI": "true"} if ci else {})}
         return subprocess.run(comando, cwd=pasta, env=env, capture_output=True, text=True, check=False)
@@ -2660,7 +2681,7 @@ class Kit(unittest.TestCase):
             pasta = self._projeto_novo(tmp)
             saida = self._verifica(pasta, check_sh=True)
         self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
-        self.assertIn("ok: CLAUDE.md, trilha/ e ANDAMENTO.md conferidos", saida.stdout)
+        self.assertIn("ok: CLAUDE.md, trilha-ai/ e ANDAMENTO.md conferidos", saida.stdout)
         self.assertIn("ok: decomposição, TDD e ANDAMENTO.md conferidos", saida.stdout)
 
     def test_verifica_repassa_o_vizinho(self) -> None:
@@ -2763,27 +2784,27 @@ class Kit(unittest.TestCase):
     def test_novo_cria_a_pasta_trilha_e_liga_as_travas(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
-            kit = {str(a.relative_to(MODELO)) for a in (MODELO / "trilha").rglob("*")
+            kit = {str(a.relative_to(MODELO)) for a in (MODELO / "trilha-ai").rglob("*")
                    if a.is_file() and "__pycache__" not in a.parts}
-            nosso = {str(a.relative_to(pasta)) for a in (pasta / "trilha").rglob("*") if a.is_file()}
+            nosso = {str(a.relative_to(pasta)) for a in (pasta / "trilha-ai").rglob("*") if a.is_file()}
             self.assertEqual(nosso, kit)
             for nome in kit:
                 self.assertEqual((pasta / nome).read_bytes(), (MODELO / nome).read_bytes(), nome)
             ligado = subprocess.run(["git", "config", "core.hooksPath"], cwd=pasta, capture_output=True,
                                     text=True).stdout.strip()
-            self.assertEqual(ligado, "trilha/hooks")
-            self.assertIn("trilha/guarda.py", (pasta / ".claude/settings.json").read_text(encoding="utf-8"))
-            self.assertIn("@trilha/CLAUDE-comum.md", (pasta / "CLAUDE.md").read_text(encoding="utf-8").splitlines())
+            self.assertEqual(ligado, "trilha-ai/hooks")
+            self.assertIn("trilha-ai/guarda.py", (pasta / ".claude/settings.json").read_text(encoding="utf-8"))
+            self.assertIn("@trilha-ai/CLAUDE-comum.md", (pasta / "CLAUDE.md").read_text(encoding="utf-8").splitlines())
             self.assertEqual(self._verifica(pasta, check_sh=True).returncode, 0)
 
     def test_atualizar_apaga_da_trilha_o_que_o_kit_tirou(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
-            (pasta / "trilha/velho.py").write_text("# o kit tirou\n", encoding="utf-8")
+            (pasta / "trilha-ai/velho.py").write_text("# o kit tirou\n", encoding="utf-8")
             self._commit_tudo(pasta, "um arquivo que o kit tirou")
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
-            self.assertFalse((pasta / "trilha/velho.py").exists())
+            self.assertFalse((pasta / "trilha-ai/velho.py").exists())
             self.assertEqual(self._regras(pasta).returncode, 0)
 
     def test_migra_o_projeto_antigo(self) -> None:
@@ -2793,16 +2814,143 @@ class Kit(unittest.TestCase):
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
             for antigo in FERRAMENTA.ANTES_DA_2_0.values():
                 self.assertFalse((pasta / antigo).exists(), antigo)
-            self.assertIn("@trilha/CLAUDE-comum.md", (pasta / "CLAUDE.md").read_text(encoding="utf-8").splitlines())
+            self.assertIn("@trilha-ai/CLAUDE-comum.md", (pasta / "CLAUDE.md").read_text(encoding="utf-8").splitlines())
             ligado = subprocess.run(["git", "config", "core.hooksPath"], cwd=pasta, capture_output=True,
                                     text=True).stdout.strip()
-            self.assertEqual(ligado, "trilha/hooks")
+            self.assertEqual(ligado, "trilha-ai/hooks")
             ganchos = json.dumps(json.loads((pasta / ".claude/settings.json").read_text())["hooks"])
             self.assertEqual(ganchos.count("guarda.py"), 1)
-            self.assertIn("trilha/guarda.py", ganchos)
-            self.assertIn("bash trilha/verifica.sh", (pasta / "scripts/check.sh").read_text(encoding="utf-8"))
+            self.assertIn("trilha-ai/guarda.py", ganchos)
+            self.assertIn("bash trilha-ai/verifica.sh", (pasta / "scripts/check.sh").read_text(encoding="utf-8"))
             self.assertEqual(self._regras(pasta).returncode, 0)
             self.assertEqual(self._confere_metodo(pasta).returncode, 0)
+
+    def test_migra_a_pasta_trilha_da_2_18(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            check = pasta / "scripts/check.sh"
+            check.write_text(check.read_text(encoding="utf-8").replace(
+                "bash trilha/verifica.sh", "bash trilha/verifica.sh --vizinho outro"), encoding="utf-8")
+            self._commit_tudo(pasta, "um vizinho")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertFalse((pasta / "trilha").exists())
+            kit = {str(a.relative_to(MODELO)) for a in (MODELO / "trilha-ai").rglob("*")
+                   if a.is_file() and "__pycache__" not in a.parts}
+            nosso = {str(a.relative_to(pasta)) for a in (pasta / "trilha-ai").rglob("*") if a.is_file()}
+            self.assertEqual(nosso, kit)
+            self.assertIn("@trilha-ai/CLAUDE-comum.md", (pasta / "CLAUDE.md").read_text(encoding="utf-8").splitlines())
+            self.assertIsNone(re.search(r"(?<![\w-])trilha/", (pasta / "CLAUDE.md").read_text(encoding="utf-8")))
+            texto = check.read_text(encoding="utf-8")
+            self.assertIn("bash trilha-ai/verifica.sh --vizinho outro", texto)
+            self.assertNotIn("trilha/verifica.sh", texto)
+            ganchos = json.dumps(json.loads((pasta / ".claude/settings.json").read_text())["hooks"])
+            self.assertEqual(ganchos.count("guarda.py"), 1)
+            self.assertIn("trilha-ai/guarda.py", ganchos)
+            ligado = subprocess.run(["git", "config", "core.hooksPath"], cwd=pasta, capture_output=True,
+                                    text=True).stdout.strip()
+            self.assertEqual(ligado, "trilha-ai/hooks")
+            self.assertEqual(self._regras(pasta).returncode, 0)
+            self.assertEqual(self._confere_metodo(pasta).returncode, 0)
+            self.assertIn(f"comum 2.18 → {FERRAMENTA._versao(MODELO / 'trilha-ai/CLAUDE-comum.md')}", saida.stdout)
+            self.assertIn("reabra a sessão do Claude Code", saida.stdout)
+
+    def test_migracao_avisa_o_arquivo_a_mais_da_trilha(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            (pasta / "trilha/meu.txt").write_text("do projeto\n", encoding="utf-8")
+            self._commit_tudo(pasta, "um arquivo a mais")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertFalse((pasta / "trilha").exists())
+            aviso = next((l for l in saida.stdout.splitlines() if l.startswith("aviso") and "trilha/meu.txt" in l), "")
+            self.assertTrue(aviso, saida.stdout)
+
+    def test_atualizar_deixa_a_pasta_trilha_do_projeto(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_novo(tmp)
+            (pasta / "trilha").mkdir()
+            (pasta / "trilha/__init__.py").write_text("# um pacote do projeto\n", encoding="utf-8")
+            self._commit_tudo(pasta, "um pacote chamado trilha")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertEqual((pasta / "trilha/__init__.py").read_text(encoding="utf-8"), "# um pacote do projeto\n")
+
+    def test_migracao_avisa_as_citacoes_da_trilha(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            (pasta / "docs").mkdir()
+            (pasta / "docs/como.md").write_text("Rode `python3 trilha/tempo.py`.\n", encoding="utf-8")
+            (pasta / "docs/outro.md").write_text("A minhatrilha/, a trilha-ai/, o src/trilha/, o src\\trilha/ e o "
+                                                 "../trilha/ não contam.\n", encoding="utf-8")
+            (pasta / "docs/decisões técnicas.md").write_text("Veja trilha/verifica.sh.\n", encoding="utf-8")
+            self._commit_tudo(pasta, "documentos")
+            saida = self._ferramenta("atualizar", str(pasta))
+            aviso = next((l for l in saida.stdout.splitlines() if l.startswith("aviso") and "docs/como.md" in l), "")
+            self.assertTrue(aviso, saida.stdout)
+            self.assertNotIn("docs/outro.md", saida.stdout)
+            self.assertNotIn("CLAUDE.md", aviso)
+            self.assertNotIn("settings.json", aviso)  # revisão dos artefatos, A3: a trava já trocada
+            self.assertIn("docs/decisões técnicas.md", aviso)  # revisão da change 20, R2: o nome inteiro
+
+    def test_migracao_troca_a_importacao_com_espaco(self) -> None:
+        """Revisão da change 20, R5: a importação antiga com espaço no fim também se acerta."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            claude = pasta / "CLAUDE.md"
+            claude.write_text(claude.read_text(encoding="utf-8").replace("@trilha/CLAUDE-comum.md\n",
+                                                                         "@trilha/CLAUDE-comum.md \n"), encoding="utf-8")
+            self._commit_tudo(pasta, "importação com espaço")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertIn("@trilha-ai/CLAUDE-comum.md", claude.read_text(encoding="utf-8").splitlines())
+
+    def test_migracao_recusa_o_ignorado_na_trilha(self) -> None:
+        """Revisão da change 20, R3: um arquivo que o git ignora na trilha/ sairia sem volta."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            (pasta / "trilha/notas.log").write_text("só aqui\n", encoding="utf-8")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
+            self.assertIn("trilha/notas.log", saida.stderr)
+            self.assertTrue((pasta / "trilha/notas.log").is_file())
+            self.assertFalse((pasta / "trilha-ai").exists())
+
+    def test_migracao_recusa_a_trilha_que_e_link(self) -> None:
+        """Revisão da change 20, R6: a trilha/ que é um link simbólico recusa, sem traceback."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            (pasta / "trilha").rename(pasta / "outra")
+            (pasta / "trilha").symlink_to("outra")
+            self._commit_tudo(pasta, "a trilha como link")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
+            self.assertIn("recusado:", saida.stderr)
+            self.assertNotIn("Traceback", saida.stderr)
+            self.assertTrue((pasta / "trilha").is_symlink())
+
+    def test_migracao_nao_troca_o_caminho_do_projeto(self) -> None:
+        """Revisão dos artefatos, A-menor: um src/trilha/ do projeto no check.sh não vira trilha-ai/."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            with (pasta / "scripts/check.sh").open("a", encoding="utf-8") as check:
+                check.write("python3 -m pytest src/trilha/ ../trilha/x\n")
+            self._commit_tudo(pasta, "um pacote do projeto")
+            self.assertEqual(self._ferramenta("atualizar", str(pasta)).returncode, 0)
+            texto = (pasta / "scripts/check.sh").read_text(encoding="utf-8")
+            self.assertIn("python3 -m pytest src/trilha/ ../trilha/x", texto)
+            self.assertIn("bash trilha-ai/verifica.sh", texto)
+
+    def test_migracao_le_as_versoes_da_pasta_trilha(self) -> None:
+        """Revisão dos artefatos, A-menor: o kit lê o comum da 2.18 pelo nome novo (o _caminhos)."""
+        self.assertIn("Versão 2.18,", FERRAMENTA._na_versao("v2.18", "trilha-ai/CLAUDE-comum.md"))
+
+    def test_projeto_da_2_18_confere_com_o_kit_novo(self) -> None:
+        """A verificação de um projeto ainda na trilha/ passa com o kit novo ao lado, pelo link."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            saida = subprocess.run([sys.executable, "-I", str(pasta / "trilha/confere_regras.py"), str(pasta),
+                                    "--fonte", str(RAIZ)], capture_output=True, text=True, check=False)
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
 
     def test_migracao_preserva_e_avisa_o_hook_proprio(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2817,7 +2965,7 @@ class Kit(unittest.TestCase):
             self.assertIn(".githooks/commit-msg não roda mais", saida.stdout)
 
     def test_migracao_preserva_o_pre_push_sem_aviso(self) -> None:
-        """O .githooks/pre-push roda pelo trilha/hooks/pre-push (change 08): nada a avisar."""
+        """O .githooks/pre-push roda pelo trilha-ai/hooks/pre-push (change 08): nada a avisar."""
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_da_1_30(tmp)
             proprio = pasta / ".githooks/pre-push"
@@ -2866,7 +3014,7 @@ class Kit(unittest.TestCase):
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
             self.assertNotIn("a parte fixa de scripts/check.sh difere", saida.stdout)
             migrado = check.read_text(encoding="utf-8")
-        self.assertIn("bash trilha/verifica.sh --vizinho trilha-ai \\\n  --vizinho outro\n", migrado)
+        self.assertIn("bash trilha-ai/verifica.sh --vizinho trilha-ai \\\n  --vizinho outro\n", migrado)
         self.assertNotIn("FONTE=", migrado)
         self.assertNotIn("scripts/confere_", migrado)
         self.assertTrue(migrado.endswith("echo a-stack-do-projeto\n"))
@@ -2887,27 +3035,27 @@ class Kit(unittest.TestCase):
     def test_atualizar_recusa_a_pasta_trilha_de_outra_coisa(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_da_1_30(tmp)
-            (pasta / "trilha").mkdir()
-            (pasta / "trilha/__init__.py").write_text("# um pacote do projeto\n", encoding="utf-8")
-            self._commit_tudo(pasta, "um pacote chamado trilha")
+            (pasta / "trilha-ai").mkdir()
+            (pasta / "trilha-ai/__init__.py").write_text("# um pacote do projeto\n", encoding="utf-8")
+            self._commit_tudo(pasta, "um pacote chamado trilha-ai")
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 1)
-            self.assertIn("trilha/ já existe e não é a do método", saida.stderr)
-            self.assertTrue((pasta / "trilha/__init__.py").is_file())
+            self.assertIn("trilha-ai/ já existe e não é a do método", saida.stderr)
+            self.assertTrue((pasta / "trilha-ai/__init__.py").is_file())
             self.assertTrue((pasta / "scripts/confere_regras.py").is_file())  # nada foi mexido
 
     def test_aviso_da_parte_fixa_preciso(self) -> None:
         presente = FERRAMENTA._presente
-        self.assertTrue(presente("bash trilha/verifica.sh", {"bash trilha/verifica.sh --vizinho trilha-ai \\"}))
+        self.assertTrue(presente("bash trilha-ai/verifica.sh", {"bash trilha-ai/verifica.sh --vizinho trilha-ai \\"}))
         self.assertTrue(presente("fi", {"fi"}))
         self.assertFalse(presente("fi", {"find ."}))
         self.assertFalse(presente("run: |", {"run: |x"}))
         # Change 09: a chamada por uma função do projeto, depois de um espaço.
-        self.assertTrue(presente("bash trilha/verifica.sh",
-                                 {'etapa "regras" bash trilha/verifica.sh --vizinho trilha-ai'}))
-        self.assertTrue(presente("bash trilha/verifica.sh", {'etapa "regras" bash trilha/verifica.sh'}))
-        self.assertFalse(presente("bash trilha/verifica.sh", {"xbash trilha/verifica.sh"}))
-        self.assertFalse(presente("bash trilha/verifica.sh", {"bash trilha/verifica.sh2"}))
+        self.assertTrue(presente("bash trilha-ai/verifica.sh",
+                                 {'etapa "regras" bash trilha-ai/verifica.sh --vizinho trilha-ai'}))
+        self.assertTrue(presente("bash trilha-ai/verifica.sh", {'etapa "regras" bash trilha-ai/verifica.sh'}))
+        self.assertFalse(presente("bash trilha-ai/verifica.sh", {"xbash trilha-ai/verifica.sh"}))
+        self.assertFalse(presente("bash trilha-ai/verifica.sh", {"bash trilha-ai/verifica.sh2"}))
 
     def test_migracao_parcial_troca_a_importacao(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2920,16 +3068,16 @@ class Kit(unittest.TestCase):
             self._commit_tudo(pasta, "cópias apagadas à mão")
             self._ferramenta("atualizar", str(pasta))
             linhas = claude.read_text(encoding="utf-8").splitlines()
-        self.assertIn("@trilha/CLAUDE-comum.md", linhas)
+        self.assertIn("@trilha-ai/CLAUDE-comum.md", linhas)
         self.assertFalse(any(l.startswith("@CLAUDE-comum.md") for l in linhas))
 
     def test_copia_reprova_a_permissao_perdida(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
-            (pasta / "trilha/hooks/pre-commit").chmod(0o644)
+            (pasta / "trilha-ai/hooks/pre-commit").chmod(0o644)
             saida = self._regras(pasta)
         self.assertEqual(saida.returncode, 1)
-        self.assertIn("trilha/hooks/pre-commit perdeu a permissão de execução", saida.stderr)
+        self.assertIn("trilha-ai/hooks/pre-commit perdeu a permissão de execução", saida.stderr)
 
     # O envio pelo hook próprio do projeto (change 08).
 
@@ -2986,7 +3134,7 @@ class Kit(unittest.TestCase):
             pasta = self._projeto_novo(tmp)
             registro = Path(tmp) / "registro"
             self._hook_proprio(pasta, f"printf '%s\\n' \"$@\" > {shlex.quote(str(registro))}; cat >> {shlex.quote(str(registro))}; exit 3")
-            saida = subprocess.run([str(pasta / "trilha/hooks/pre-push"), "um remoto", "dois"],
+            saida = subprocess.run([str(pasta / "trilha-ai/hooks/pre-push"), "um remoto", "dois"],
                                    cwd=pasta, input="a linha da entrada\n", capture_output=True,
                                    text=True, check=False)
             self.assertEqual(saida.returncode, 3, saida.stderr)
@@ -3023,7 +3171,7 @@ class Kit(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             pasta, remoto = self._com_remoto(tmp)
             (pasta / ".githooks").mkdir()
-            (pasta / ".githooks/pre-push").symlink_to("../trilha/hooks/pre-push")
+            (pasta / ".githooks/pre-push").symlink_to("../trilha-ai/hooks/pre-push")
             # Num grupo de processos próprio: se o repasse rodar sem fim, o prazo encerra o grupo
             # inteiro, e o hook não sobrevive ao teste.
             envio = subprocess.Popen(["git", "push", "-q", "origem", "HEAD:refs/heads/main"], cwd=pasta,
@@ -3040,7 +3188,7 @@ class Kit(unittest.TestCase):
         self.assertIn(".githooks/pre-push", erro)
 
     def test_lista_do_metodo_pelos_arquivos_versionados(self) -> None:
-        solto = MODELO / "trilha/.rascunho.swp"
+        solto = MODELO / "trilha-ai/.rascunho.swp"
         try:
             solto.write_text("um arquivo do editor\n", encoding="utf-8")
             spec = importlib.util.spec_from_file_location("kit_de_novo", RAIZ / "ferramentas" / "kit.py")
@@ -3048,15 +3196,15 @@ class Kit(unittest.TestCase):
             spec.loader.exec_module(kit)
         finally:
             solto.unlink()
-        self.assertNotIn("trilha/.rascunho.swp", kit.SEM_MUDAR)
-        self.assertIn("trilha/verifica.sh", kit.SEM_MUDAR)
+        self.assertNotIn("trilha-ai/.rascunho.swp", kit.SEM_MUDAR)
+        self.assertIn("trilha-ai/verifica.sh", kit.SEM_MUDAR)
 
     def test_dispensa_de_change_pela_pasta_trilha(self) -> None:
         """C13: a dispensa de change aponta para a pasta e para a ferramenta, sem lista repetida."""
-        comum = (MODELO / "trilha/CLAUDE-comum.md").read_text(encoding="utf-8")
-        self.assertIn("a cópia nova do kit (a pasta `trilha/` e o que o `kit.py atualizar` escreve) "
+        comum = (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(encoding="utf-8")
+        self.assertIn("a cópia nova do kit (a pasta `trilha-ai/` e o que o `kit.py atualizar` escreve) "
                       "dispensam change", comum)
-        self.assertIn("Não edite este arquivo nem a pasta `trilha/`", comum)
+        self.assertIn("Não edite este arquivo nem a pasta `trilha-ai/`", comum)
 
     def test_ferramenta_cria_projeto_novo_e_recusa_pasta_cheia(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -3077,12 +3225,12 @@ class Kit(unittest.TestCase):
             pasta = self._projeto_velho(tmp)
             saida = self._ferramenta("atualizar", str(pasta))
             self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
-            self.assertEqual((pasta / "trilha/CLAUDE-comum.md").read_bytes(),
-                             (MODELO / "trilha/CLAUDE-comum.md").read_bytes())
+            self.assertEqual((pasta / "trilha-ai/CLAUDE-comum.md").read_bytes(),
+                             (MODELO / "trilha-ai/CLAUDE-comum.md").read_bytes())
             # O que o projeto preencheu fica como está.
             self.assertEqual((pasta / ".github/workflows/verificacao.yml").read_text(),
                              "# a parte da stack, preenchida\n")
-            versao = re.search(r"^Versão (\d+\.\d+)", (MODELO / "trilha/CLAUDE-comum.md").read_text(
+            versao = re.search(r"^Versão (\d+\.\d+)", (MODELO / "trilha-ai/CLAUDE-comum.md").read_text(
                 encoding="utf-8"), re.M).group(1)
             self.assertIn(f"comum 1.19 → {versao}", saida.stdout)
             # A ferramenta não faz commit.
@@ -3155,8 +3303,8 @@ class Kit(unittest.TestCase):
         """Change 09: o projeto que chama o verifica.sh por uma função própria (o etapa do Xavier)."""
         with tempfile.TemporaryDirectory() as tmp:
             saida = self._atualizar_com_check(
-                tmp, ("\nbash trilha/verifica.sh\n", '\netapa "regras" bash trilha/verifica.sh --vizinho trilha-ai\n'))
-        self.assertNotIn("+ bash trilha/verifica.sh", saida)
+                tmp, ("\nbash trilha-ai/verifica.sh\n", '\netapa "regras" bash trilha-ai/verifica.sh --vizinho trilha-ai\n'))
+        self.assertNotIn("+ bash trilha-ai/verifica.sh", saida)
 
     def test_parte_fixa_sem_o_bloco_da_parte_da_stack(self) -> None:
         """Change 09: o bloco "Parte da stack" trocado pelos comandos da stack não vira aviso."""
@@ -3225,7 +3373,7 @@ class Kit(unittest.TestCase):
         stack = "      - run: uv sync  # a parte da stack, preenchida\n"
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_velho(tmp)
-            comum = pasta / "trilha/CLAUDE-comum.md"
+            comum = pasta / "trilha-ai/CLAUDE-comum.md"
             comum.write_text(comum.read_text(encoding="utf-8").replace("Versão 1.19,", "Versão 1.29,"),
                              encoding="utf-8")
             ci = pasta / ".github/workflows/verificacao.yml"
@@ -3262,12 +3410,12 @@ class Kit(unittest.TestCase):
     def test_atualizar_recusa_o_kit_atras_do_projeto(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
-            comum = pasta / "trilha/CLAUDE-comum.md"
+            comum = pasta / "trilha-ai/CLAUDE-comum.md"
             comum.write_text(re.sub(r"^Versão [\d.]+,", "Versão 9.9,", comum.read_text(encoding="utf-8"),
                                     flags=re.M), encoding="utf-8")
             self._commit_tudo(pasta, "comum na 9.9")
             saida = self._atualizar_sem_mudar(RAIZ, pasta)
-        versao = FERRAMENTA._versao(MODELO / "trilha/CLAUDE-comum.md")
+        versao = FERRAMENTA._versao(MODELO / "trilha-ai/CLAUDE-comum.md")
         for trecho in ("9.9", versao, "git pull"):
             self.assertIn(trecho, saida.stderr)
 
@@ -3321,11 +3469,11 @@ class Kit(unittest.TestCase):
             self.assertEqual(self._ferramenta("atualizar", str(RAIZ)).returncode, 1)
 
 
-TEMPO = MODELO / "trilha" / "tempo.py"
+TEMPO = MODELO / "trilha-ai" / "tempo.py"
 
 
 class HorasDeTrabalho(unittest.TestCase):
-    """O trilha/tempo.py (change 10): as horas de cada dia, das conversas do Claude Code e dos
+    """O trilha-ai/tempo.py (change 10): as horas de cada dia, das conversas do Claude Code e dos
     commits, com o resumo e a página fora do repositório. Tudo em pastas temporárias, em UTC."""
 
     def setUp(self) -> None:

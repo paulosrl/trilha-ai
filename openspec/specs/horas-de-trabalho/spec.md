@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Define o que o `trilha/tempo.py` faz: apurar, sob demanda e sem nada rodar a cada interação, as horas de trabalho de cada dia num repositório, separando o tempo do usuário do tempo da IA sozinha, a partir das conversas do Claude Code e dos commits, e mostrá-las numa página fora do repositório.
+Define o que o `trilha-ai/tempo.py` faz: apurar, sob demanda e sem nada rodar a cada interação, as horas de trabalho de cada dia num repositório, separando o tempo do usuário do tempo da IA sozinha, a partir das conversas do Claude Code e dos commits, e mostrá-las numa página fora do repositório.
 
 ## Requirements
 
 ### Requirement: Só sob demanda
-O `trilha/tempo.py` SHALL rodar só quando chamado, de dentro de um repositório git. O modelo do `.claude/settings.json` do kit MUST NOT ligar o `tempo.py` a nenhum gancho do Claude Code. Fora de um repositório git, o comando MUST terminar com código diferente de 0 e dizer por quê, sem escrever nada.
+O `trilha-ai/tempo.py` SHALL rodar só quando chamado, de dentro de um repositório git. O modelo do `.claude/settings.json` do kit MUST NOT ligar o `tempo.py` a nenhum gancho do Claude Code. Fora de um repositório git, o comando MUST terminar com código diferente de 0 e dizer por quê, sem escrever nada.
 
 #### Scenario: Nenhum gancho no modelo
 - **WHEN** o `modelo/claude-settings.json` do kit é lido

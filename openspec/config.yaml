@@ -11,7 +11,7 @@ context: |
   copiam (modelo/), a ferramenta que os cria e atualiza (ferramentas/kit.py) e os testes do kit.
 
   Stack: Python 3 puro, sem dependências; testes em unittest (python3 -m unittest discover -s
-  testes); lint e formato com o ruff 0.17, limite de 100, em modelo/trilha/ e ferramentas/.
+  testes); lint e formato com o ruff 0.17, limite de 100, em modelo/trilha-ai/ e ferramentas/.
 
   Este repositório não segue o próprio kit: não tem sdd/, PRD nem TDD. Cada change nasce de uma
   descrição curta aprovada pelo usuário (a origem, o comportamento esperado e o que fica fora).

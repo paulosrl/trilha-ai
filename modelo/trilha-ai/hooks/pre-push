@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# O envio (em trilha/, copiado sem mudar; ligado por: git config core.hooksPath trilha/hooks).
+# O envio (em trilha-ai/, copiado sem mudar; ligado por: git config core.hooksPath trilha-ai/hooks).
 # Repassa ao hook de envio próprio do projeto, o .githooks/pre-push, quando ele existe: os mesmos
 # argumentos, a mesma entrada e o código de saída dele. Sem ele, o envio segue. O que não pode
 # rodar recusa o envio: o git só avisaria e seguiria, desligando a verificação do projeto.
@@ -19,7 +19,7 @@ if [ ! -x "$proprio" ]; then
 fi
 # A marca é a raiz do repositório: o hook próprio pode enviar outro repositório, não este de novo.
 if [ "${TRILHA_PRE_PUSH:-}" = "$PWD" ]; then
-  echo "envio recusado: $proprio leva de volta ao trilha/hooks/pre-push, que rodaria sem fim" >&2
+  echo "envio recusado: $proprio leva de volta ao trilha-ai/hooks/pre-push, que rodaria sem fim" >&2
   exit 1
 fi
 export TRILHA_PRE_PUSH="$PWD"

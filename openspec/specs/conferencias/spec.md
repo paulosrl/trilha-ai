@@ -105,48 +105,48 @@ Quando o Claude Code não estiver disponível, ou a lista de plugins falhar ou n
 - **AND** o código de saída não muda por causa do plugin
 
 ### Requirement: Comum importado da pasta do método
-A conferência das regras SHALL exigir que o `CLAUDE.md` do projeto importe o comum pela linha `@trilha/CLAUDE-comum.md` e que o comum exista em `trilha/CLAUDE-comum.md`, reprovando, com o motivo, o projeto que não cumprir.
+A conferência das regras SHALL exigir que o `CLAUDE.md` do projeto importe o comum pela linha `@trilha-ai/CLAUDE-comum.md` e que o comum exista em `trilha-ai/CLAUDE-comum.md`, reprovando, com o motivo, o projeto que não cumprir.
 
 #### Scenario: Projeto no layout da pasta do método
-- **WHEN** a conferência das regras roda num projeto feito do kit, com `trilha/CLAUDE-comum.md` e o `CLAUDE.md` importando `@trilha/CLAUDE-comum.md`
+- **WHEN** a conferência das regras roda num projeto feito do kit, com `trilha-ai/CLAUDE-comum.md` e o `CLAUDE.md` importando `@trilha-ai/CLAUDE-comum.md`
 - **THEN** ela termina com o código de saída 0
 
 #### Scenario: Importação antiga
-- **WHEN** o `CLAUDE.md` importa `@CLAUDE-comum.md` em vez de `@trilha/CLAUDE-comum.md`
+- **WHEN** o `CLAUDE.md` importa `@CLAUDE-comum.md` em vez de `@trilha-ai/CLAUDE-comum.md`
 - **THEN** a conferência das regras reprova, citando a linha que falta
 
 ### Requirement: Cópia idêntica da pasta do método
-Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `trilha/` do projeto com a `modelo/trilha/` da versão do projeto (a linha "Versão X.Y" do `trilha/CLAUDE-comum.md`): a cópia de trabalho do kit, na mesma versão ou sem a linha no projeto; a tag `vX.Y` do kit, noutra. Ela MUST reprovar, nomeando o arquivo e mandando rodar o `kit.py atualizar`, o arquivo diferente, faltando, a mais ou sem a permissão de execução, e a versão que um kit com as tags não tem.
+Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `trilha-ai/` do projeto com a `modelo/trilha-ai/` (a `modelo/trilha/` nas tags de antes da 2.19) da versão do projeto (a linha "Versão X.Y" do `trilha-ai/CLAUDE-comum.md`): a cópia de trabalho do kit, na mesma versão ou sem a linha no projeto; a tag `vX.Y` do kit, noutra. Ela MUST reprovar, nomeando o arquivo e mandando rodar o `kit.py atualizar`, o arquivo diferente, faltando, a mais ou sem a permissão de execução, e a versão que um kit com as tags não tem.
 
 #### Scenario: Pasta igual à do kit
-- **WHEN** a pasta `trilha/` do projeto tem os mesmos arquivos, com o mesmo conteúdo, que a `modelo/trilha/` do kit
+- **WHEN** a pasta `trilha-ai/` do projeto tem os mesmos arquivos, com o mesmo conteúdo, que a `modelo/trilha-ai/` do kit
 - **THEN** a conferência das regras não reprova pela cópia
 
 #### Scenario: Trava editada no projeto
-- **WHEN** o `trilha/guarda.py` do projeto difere do kit
-- **THEN** a conferência das regras reprova, citando `trilha/guarda.py`
+- **WHEN** o `trilha-ai/guarda.py` do projeto difere do kit
+- **THEN** a conferência das regras reprova, citando `trilha-ai/guarda.py`
 - **AND** a mensagem manda rodar o `kit.py atualizar`, e não editar a pasta
 
 #### Scenario: Arquivo faltando ou a mais
-- **WHEN** falta no projeto um arquivo que a pasta do kit tem, ou o projeto tem em `trilha/` um arquivo que o kit não tem
+- **WHEN** falta no projeto um arquivo que a pasta do kit tem, ou o projeto tem em `trilha-ai/` um arquivo que o kit não tem
 - **THEN** a conferência das regras reprova, citando o arquivo
 
 #### Scenario: Permissão de execução perdida
-- **WHEN** o `trilha/hooks/pre-commit` do projeto tem o mesmo conteúdo do kit, mas sem a permissão de execução
-- **THEN** a conferência das regras reprova, citando `trilha/hooks/pre-commit`
+- **WHEN** o `trilha-ai/hooks/pre-commit` do projeto tem o mesmo conteúdo do kit, mas sem a permissão de execução
+- **THEN** a conferência das regras reprova, citando `trilha-ai/hooks/pre-commit`
 
 #### Scenario: Kit numa versão mais nova
-- **WHEN** a cópia de trabalho do kit está numa versão mais nova que a do projeto, o kit tem a tag da versão do projeto, e a pasta `trilha/` do projeto é igual à `modelo/trilha/` dessa tag
+- **WHEN** a cópia de trabalho do kit está numa versão mais nova que a do projeto, o kit tem a tag da versão do projeto, e a pasta `trilha-ai/` do projeto é igual à `modelo/trilha-ai/` dessa tag
 - **THEN** a conferência das regras não reprova pela cópia
 - **AND** avisa, citando as duas versões e o `kit.py atualizar`
 
 #### Scenario: Cópia divergente com o kit mais novo
-- **WHEN** a cópia de trabalho do kit está numa versão mais nova, o kit tem a tag da versão do projeto, e o `trilha/guarda.py` do projeto difere do dessa tag
-- **THEN** a conferência das regras reprova, citando `trilha/guarda.py`
+- **WHEN** a cópia de trabalho do kit está numa versão mais nova, o kit tem a tag da versão do projeto, e o `trilha-ai/guarda.py` do projeto difere do dessa tag
+- **THEN** a conferência das regras reprova, citando `trilha-ai/guarda.py`
 
 #### Scenario: Kit sem as tags
 - **WHEN** o kit está noutra versão e não tem tag nenhuma (um clone raso, por exemplo)
-- **THEN** a conferência das regras avisa que a pasta `trilha/` não foi comparada
+- **THEN** a conferência das regras avisa que a pasta `trilha-ai/` não foi comparada
 - **AND** não reprova pela cópia
 
 #### Scenario: Versão que o kit não tem
@@ -158,19 +158,24 @@ Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `t
 - **THEN** a conferência das regras não reprova pela cópia
 - **AND** avisa para atualizar o kit ao lado, sem mandar rodar o `kit.py atualizar`
 
+#### Scenario: Kit atrás na pasta antiga
+- **WHEN** o projeto já está na `trilha-ai/`, e a cópia de trabalho do kit ao lado ainda é de antes da 2.19, com a `modelo/trilha/` e a tag da versão do projeto
+- **THEN** a conferência das regras não reprova pela cópia
+- **AND** avisa para atualizar o kit ao lado
+
 #### Scenario: Comum sem a linha de versão
-- **WHEN** o `trilha/CLAUDE-comum.md` do projeto não tem a linha "Versão X.Y" e o `trilha/guarda.py` difere do kit
-- **THEN** a conferência das regras compara com a cópia de trabalho do kit e reprova, citando `trilha/guarda.py`
+- **WHEN** o `trilha-ai/CLAUDE-comum.md` do projeto não tem a linha "Versão X.Y" e o `trilha-ai/guarda.py` difere do kit
+- **THEN** a conferência das regras compara com a cópia de trabalho do kit e reprova, citando `trilha-ai/guarda.py`
 
 ### Requirement: Verificação fixa do projeto
-O `trilha/verifica.sh` SHALL rodar, nesta ordem, a conferência das regras (com a pasta do kit quando ela está ao lado do projeto ou em `TRILHA_AI`, e com aviso quando não está), a conferência do método (repassando os argumentos que receber, como `--vizinho`) e o `openspec validate --all --no-interactive`, e MUST terminar com erro quando qualquer um deles falhar.
+O `trilha-ai/verifica.sh` SHALL rodar, nesta ordem, a conferência das regras (com a pasta do kit quando ela está ao lado do projeto ou em `TRILHA_AI`, e com aviso quando não está), a conferência do método (repassando os argumentos que receber, como `--vizinho`) e o `openspec validate --all --no-interactive`, e MUST terminar com erro quando qualquer um deles falhar.
 
 #### Scenario: Projeto novo
-- **WHEN** o `scripts/check.sh` de um projeto recém-criado pelo kit roda, chamando o `trilha/verifica.sh`
+- **WHEN** o `scripts/check.sh` de um projeto recém-criado pelo kit roda, chamando o `trilha-ai/verifica.sh`
 - **THEN** ele termina com o código de saída 0
 
 #### Scenario: Vizinho repassado
-- **WHEN** o `scripts/check.sh` chama `bash trilha/verifica.sh --vizinho outro` e o `ANDAMENTO.md` cita `outro`
+- **WHEN** o `scripts/check.sh` chama `bash trilha-ai/verifica.sh --vizinho outro` e o `ANDAMENTO.md` cita `outro`
 - **THEN** a verificação reprova, citando `outro`
 
 #### Scenario: Spec inválido
@@ -234,7 +239,7 @@ Quando a pasta `sdd/` tiver um `tdd-*.md`, a conferência das regras SHALL avisa
 - **THEN** a conferência das regras não imprime o aviso da stack
 
 ### Requirement: Teto de tamanho das regras carregadas
-A conferência das regras SHALL reprovar o projeto cujo `CLAUDE.md` e `trilha/CLAUDE-comum.md` somados passem de 200 linhas ou de 32.768 bytes (32 KB), citando a soma e o limite que ela passou.
+A conferência das regras SHALL reprovar o projeto cujo `CLAUDE.md` e `trilha-ai/CLAUDE-comum.md` somados passem de 200 linhas ou de 32.768 bytes (32 KB), citando a soma e o limite que ela passou.
 
 #### Scenario: Regras largas demais
 - **WHEN** o `CLAUDE.md` e o comum somam menos de 200 linhas e mais de 32.768 bytes
@@ -283,7 +288,7 @@ Das instalações do plugin `sdd` que a lista traz, a conferência do método SH
 - **THEN** a conferência imprime um só aviso de versão, que cita `2.1.0`, `2.2` e `claude plugin update sdd@trilha-ai --scope project`
 
 ### Requirement: Travas desligadas pela configuração
-A conferência das regras SHALL avisar, sem falhar, cada trava desligada: a do commit, quando o `core.hooksPath` do clone não é `trilha/hooks`; a do Claude Code, quando o `.claude/settings.json` não liga o `trilha/guarda.py` ou quando o `disableAllHooks` que vale no projeto é verdadeiro, lido do `.claude/settings.local.json`, que prevalece, e do `.claude/settings.json`.
+A conferência das regras SHALL avisar, sem falhar, cada trava desligada: a do commit, quando o `core.hooksPath` do clone não é `trilha-ai/hooks`; a do Claude Code, quando o `.claude/settings.json` não liga o `trilha-ai/guarda.py` ou quando o `disableAllHooks` que vale no projeto é verdadeiro, lido do `.claude/settings.local.json`, que prevalece, e do `.claude/settings.json`.
 
 #### Scenario: Hooks desligados pela configuração local
 - **WHEN** o `.claude/settings.local.json` do projeto tem `"disableAllHooks": true`
@@ -303,7 +308,7 @@ A conferência das regras SHALL avisar, sem falhar, cada trava desligada: a do c
 - **THEN** ela não avisa trava desligada
 
 ### Requirement: Regras por artefato iguais às do kit
-Com a pasta do kit indicada, a conferência das regras SHALL comparar o bloco `rules:` do `openspec/config.yaml` do projeto com o do modelo do kit na versão do projeto, escolhida como na pasta `trilha/`, e MUST reprovar o bloco diferente e cada linha do `operations` do kit que falte no projeto. Linhas próprias a mais no `operations`, chaves próprias no topo do arquivo e o projeto sem o `config.yaml` MUST NOT reprovar.
+Com a pasta do kit indicada, a conferência das regras SHALL comparar o bloco `rules:` do `openspec/config.yaml` do projeto com o do modelo do kit na versão do projeto, escolhida como na pasta `trilha-ai/`, e MUST reprovar o bloco diferente e cada linha do `operations` do kit que falte no projeto. Linhas próprias a mais no `operations`, chaves próprias no topo do arquivo e o projeto sem o `config.yaml` MUST NOT reprovar.
 
 #### Scenario: Regras iguais às do kit
 - **WHEN** o bloco `rules:` e o `operations` do `openspec/config.yaml` do projeto são os do modelo do kit
@@ -328,3 +333,10 @@ Com a pasta do kit indicada, a conferência das regras SHALL comparar o bloco `r
 #### Scenario: Projeto sem o config.yaml
 - **WHEN** o projeto não tem `openspec/config.yaml`
 - **THEN** a conferência das regras não reprova pelo `config.yaml`
+
+### Requirement: Link de transição da pasta antiga no kit
+O kit SHALL manter `modelo/trilha` como link simbólico para `modelo/trilha-ai`, para a conferência das regras de um projeto de antes da 2.19, que procura a pasta pelo nome antigo, achar a do kit e comparar a do projeto com a tag da versão dele.
+
+#### Scenario: Projeto da 2.18 com o kit novo ao lado
+- **WHEN** a conferência das regras de um projeto feito pelo kit na versão 2.18, ainda na `trilha/`, roda com a pasta do kit 2.19 indicada
+- **THEN** ela não reprova pela pasta do kit, e termina com o código de saída 0

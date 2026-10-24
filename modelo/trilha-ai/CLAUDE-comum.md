@@ -1,6 +1,6 @@
 # CLAUDE-comum.md
 
-Versão 2.18, de 2026-10-24. Não edite este arquivo nem a pasta `trilha/`: o que é deste repositório vai no `CLAUDE.md`.
+Versão 2.19, de 2026-10-24. Não edite este arquivo nem a pasta `trilha-ai/`: o que é deste repositório vai no `CLAUDE.md`.
 
 Regras comuns a todo repositório que segue o método Trilha AI (PRD → TDD → OpenSpec) com o Claude Code, o OpenSpec, o plugin `sdd`, o Python 3 e o GitHub, em Linux ou WSL; o que é de um projeto fica no `CLAUDE.md` dele, no esqueleto da última seção. Em conflito, vale nesta ordem: as travas do kit; a escolha do usuário; o OpenSpec (fluxo e formato); a regra do `CLAUDE.md` do repositório declarada em "Exceções ao comum", com o motivo (fora dessa seção, regra contrária a esta não vale); este arquivo, que conta como parte do `CLAUDE.md` que o importa; o `openspec/config.yaml`; as skills `sdd:*`.
 
@@ -14,14 +14,14 @@ Os documentos do método vivem na pasta `sdd/`, na raiz.
 4. `sdd/briefing-openspec/briefing-change-NN-<nome>.md`: a entrada de cada change, no formato da skill `sdd:briefing`.
 5. `openspec/specs/`: o comportamento já entregue. O `openspec/config.yaml` traz o contexto do projeto e as regras por artefato, que o OpenSpec lê ao gerar cada artefato; o briefing não repete o que está nele.
 
-- `sdd/documentacao.html` é a documentação do projeto, gerada por `python3 trilha/gerar_pagina_sdd.py` ao fechar cada etapa (PRD, TDD, decomposição, change arquivada); não se edita à mão.
+- `sdd/documentacao.html` é a documentação do projeto, gerada por `python3 trilha-ai/gerar_pagina_sdd.py` ao fechar cada etapa (PRD, TDD, decomposição, change arquivada); não se edita à mão.
 - Um registro de processo (o que foi pedido e feito em cada etapa) é opcional; quem o mantém declara no `CLAUDE.md` onde ele fica e quando é atualizado.
 - Faltou requisito: a pendência volta ao PRD. Faltou decisão técnica: volta ao TDD. Não improvise.
 - PRD e spec em desacordo: vale o PRD aprovado, e uma change corrige o comportamento e o spec; se o certo for o spec, o PRD ganha versão nova. O usuário escolhe qual dos dois está certo.
 - Para contrariar ou estender um ADR, pare e pergunte. Mudança de decisão técnica é uma nova versão do TDD, aprovada antes do código.
 - Ao fechar o gate 2, antes da decomposição, a stack decidida no TDD entra no `.github/dependabot.yml`, no bloco do `.gitignore` e na linha "Stack" do `context` do `openspec/config.yaml`. A parte da stack do `scripts/check.sh` e os passos do `.github/workflows/verificacao.yml` entram na change 01, que cria o manifesto e o primeiro teste. Até lá, o `check.sh` avisa que ela falta.
 - Projeto que nasceu sem PRD ou TDD escreve o que falta antes da próxima change que toque requisito ou tecnologia; até lá, a correção de comportamento que um spec já descreve nasce do briefing curto da skill `sdd:briefing`. Com o PRD e o TDD aprovados, a decomposição vem antes de qualquer change.
-- Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito, ajuste de teste e a cópia nova do kit (a pasta `trilha/` e o que o `kit.py atualizar` escreve) dispensam change, como o pull request do Dependabot, que vai à main com a verificação verde, merge commit e o "sim" do usuário. A mudança de infraestrutura sem requisito é change com `skip_specs: true` no `.openspec.yaml`, de briefing curto com a origem no ADR.
+- Toda mudança de requisito, comportamento observável, infraestrutura ou contrato passa por uma change. Typo, documentação, refatoração sem efeito, ajuste de teste e a cópia nova do kit (a pasta `trilha-ai/` e o que o `kit.py atualizar` escreve) dispensam change, como o pull request do Dependabot, que vai à main com a verificação verde, merge commit e o "sim" do usuário. A mudança de infraestrutura sem requisito é change com `skip_specs: true` no `.openspec.yaml`, de briefing curto com a origem no ADR.
 
 ## O ciclo de cada change (OpenSpec)
 
@@ -75,7 +75,7 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 
 ## Armadilhas
 
-- As travas do kit não se contornam: o `trilha/hooks/pre-commit` confere as regras e o método antes de cada commit; o `trilha/hooks/pre-push` roda o hook próprio do projeto em `.githooks/pre-push`, quando ele existe; o `trilha/guarda.py` barra o envio forçado, o `--no-verify`, o desligamento da trava do commit, o `pkill -f` e o `pgrep -f` (encerre processos pelo PID guardado) e o merge sem `--merge` ou sem a verificação verde. Trava que barrar algo legítimo volta ao usuário.
+- As travas do kit não se contornam: o `trilha-ai/hooks/pre-commit` confere as regras e o método antes de cada commit; o `trilha-ai/hooks/pre-push` roda o hook próprio do projeto em `.githooks/pre-push`, quando ele existe; o `trilha-ai/guarda.py` barra o envio forçado, o `--no-verify`, o desligamento da trava do commit, o `pkill -f` e o `pgrep -f` (encerre processos pelo PID guardado) e o merge sem `--merge` ou sem a verificação verde. Trava que barrar algo legítimo volta ao usuário.
 - Nunca pare, remova ou mate processo ou container de outro projeto sem ordem explícita.
 - Senha, chave ou token nunca entram no git; o CI os procura no histórico (gitleaks). Achado real: troque a chave antes de qualquer outra coisa, porque apagá-la do git não a desfaz no histórico; falso positivo vai ao `.gitleaksignore`, com a escolha do usuário.
 - Dado real nunca serve a teste manual: use uma cópia descartável e prove, antes e depois, que o real não mudou.
@@ -89,4 +89,4 @@ Uma sessão pode cair a qualquer momento (energia, créditos, erro). O que não 
 
 ## O `CLAUDE.md` de cada repositório
 
-Só o que não se deduz lendo o código, neste esqueleto: **O que é** · **Documentos** · **Comandos** (a verificação chama o `trilha/verifica.sh`) · **Regras de código** · **Dados a proteger** · **Armadilhas próprias** · **Exceções ao comum**, cada uma com o motivo. O `CLAUDE.md` e o `CLAUDE-comum.md` somados têm no máximo 200 linhas e 32 KB.
+Só o que não se deduz lendo o código, neste esqueleto: **O que é** · **Documentos** · **Comandos** (a verificação chama o `trilha-ai/verifica.sh`) · **Regras de código** · **Dados a proteger** · **Armadilhas próprias** · **Exceções ao comum**, cada uma com o motivo. O `CLAUDE.md` e o `CLAUDE-comum.md` somados têm no máximo 200 linhas e 32 KB.

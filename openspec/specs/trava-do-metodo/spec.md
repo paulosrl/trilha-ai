@@ -2,12 +2,12 @@
 
 ## Purpose
 
-Define o que a trava do Claude Code (`trilha/guarda.py`, hook antes de cada comando Bash) barra e deixa passar, para que o agente não pule a verificação, não force um envio e não faça o merge fora do método, nem por um caminho indireto.
+Define o que a trava do Claude Code (`trilha-ai/guarda.py`, hook antes de cada comando Bash) barra e deixa passar, para que o agente não pule a verificação, não force um envio e não faça o merge fora do método, nem por um caminho indireto.
 
 ## Requirements
 
 ### Requirement: Trava do commit não se desliga
-A trava SHALL barrar o comando git que desliga a trava do commit: o `core.hooksPath` com valor diferente de `trilha/hooks` passado num `-c` (separado ou colado) e o `git config` que o grava com outro valor ou o apaga. A leitura do `core.hooksPath` e a gravação de `trilha/hooks` MUST passar.
+A trava SHALL barrar o comando git que desliga a trava do commit: o `core.hooksPath` com valor diferente de `trilha-ai/hooks` passado num `-c` (separado ou colado) e o `git config` que o grava com outro valor ou o apaga. A leitura do `core.hooksPath` e a gravação de `trilha-ai/hooks` MUST passar.
 
 #### Scenario: Hooks desligados por -c
 - **WHEN** o comando é `git -c core.hooksPath=/dev/null commit -m x` ou `git -ccore.hooksPath= commit -m x`
@@ -18,7 +18,7 @@ A trava SHALL barrar o comando git que desliga a trava do commit: o `core.hooksP
 - **THEN** a trava barra
 
 #### Scenario: Leitura e valor do método
-- **WHEN** o comando é `git config core.hooksPath` ou `git config core.hooksPath trilha/hooks`
+- **WHEN** o comando é `git config core.hooksPath` ou `git config core.hooksPath trilha-ai/hooks`
 - **THEN** a trava deixa passar
 
 ### Requirement: Abreviação do --no-verify

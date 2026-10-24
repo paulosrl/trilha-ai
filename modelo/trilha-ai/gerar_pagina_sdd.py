@@ -4,11 +4,11 @@ Aba 1, o produto: sdd/prd-*.md. Aba 2, as decisões: sdd/tdd-*.md. Aba 3, as ent
 sdd/decomposicao-*.md, a faixa das changes lida da tabela "Ciclo" e os briefings de
 sdd/briefing-openspec/; o "PR #N" anotado no Ciclo vira link, pelo origin do git (local, sem
 rede). Etapa que ainda não existe aparece como tal; nada é inventado.
-O visual e o comportamento ficam em trilha/pagina_sdd_modelo.html.
+O visual e o comportamento ficam em trilha-ai/pagina_sdd_modelo.html.
 
 Uso (Python 3 puro, sem dependências):
-    python3 trilha/gerar_pagina_sdd.py              # gera sdd/documentacao.html
-    python3 trilha/gerar_pagina_sdd.py --fragmento X  # gera também X sem <head>/<body>
+    python3 trilha-ai/gerar_pagina_sdd.py              # gera sdd/documentacao.html
+    python3 trilha-ai/gerar_pagina_sdd.py --fragmento X  # gera também X sem <head>/<body>
 """
 
 from __future__ import annotations

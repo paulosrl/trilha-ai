@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Serif:wght@500;600&display=swap">
 <style>
 /* A documentação do projeto (sdd/documentacao.html): o produto, as decisões e as entregas.
-   Gerada por trilha/gerar_pagina_sdd.py a partir de sdd/; não se edita à mão. */
+   Gerada por trilha-ai/gerar_pagina_sdd.py a partir de sdd/; não se edita à mão. */
 :root {
   --papel: #f6f7f9; --folha: #ffffff; --tinta: #17212e; --tinta-suave: #4f5d6e; --linha: #d9dee5;
   --azul: #1f5f8b; --azul-fundo: #e6eef5; --ocre: #9a6412; --ocre-fundo: #f6ecd9;
@@ -182,7 +182,7 @@ footer.rodape { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(-
   document.getElementById("titulo").textContent = dados.nome;
   document.getElementById("subtitulo").textContent = dados.resumo;
   document.getElementById("rodape").innerHTML =
-    'Gerado a partir da pasta <span class="arquivo">sdd/</span> por <span class="arquivo">trilha/gerar_pagina_sdd.py</span>' +
+    'Gerado a partir da pasta <span class="arquivo">sdd/</span> por <span class="arquivo">trilha-ai/gerar_pagina_sdd.py</span>' +
     (dados.atualizado ? "; os documentos mudaram por último em " + dados.atualizado : "") + ".";
 
   var esteira = document.getElementById("esteira");

@@ -6,7 +6,7 @@ cd "$(dirname "$(readlink -f "$0")")/.."
 
 # Parte fixa: as regras, o método e os specs, pelo script do método. Acrescente um
 # --vizinho <nome> por repositório ao lado que o ANDAMENTO.md não pode citar.
-bash trilha/verifica.sh
+bash trilha-ai/verifica.sh
 
 # Parte da stack, decidida no TDD e posta na change 01. Troque as linhas abaixo pelos comandos reais e
 # apague este comentário. Exemplo para Python com uv:

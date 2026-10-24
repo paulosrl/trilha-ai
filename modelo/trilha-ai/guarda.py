@@ -19,7 +19,9 @@ import sys
 
 FORCADO = "envio forçado reescreve a história no GitHub; o método nunca o usa"
 SEM_VERIFICAR = "a verificação não se pula; se ela barrar algo legítimo, pergunte"
-SEM_TRAVA = "a trava do commit (core.hooksPath em trilha/hooks) não se desliga; se barrar, pergunte"
+SEM_TRAVA = (
+    "a trava do commit (core.hooksPath em trilha-ai/hooks) não se desliga; se barrar, pergunte"
+)
 PKILL = "pkill -f e pgrep -f casam o próprio shell; use o PID"
 MERGE = "o merge da change é com merge commit (gh pr merge --merge --delete-branch), passo 7"
 SEPARADORES = ";&|()<>\n`"
@@ -146,7 +148,7 @@ def _do_git(palavras: list[str]) -> tuple[list[str], str, list[str]] | None:
 
 def _desliga_a_trava(globais: list[str], subcomando: str, resto: list[str]) -> bool:
     """O core.hooksPath com outro valor num -c (ou --config-env), ou gravado ou apagado pelo
-    git config; a leitura e o valor trilha/hooks passam."""
+    git config; a leitura e o valor trilha-ai/hooks passam."""
     for anterior, palavra in zip(["", *globais], globais):
         if anterior in ("-c", "--config-env"):
             par = palavra
@@ -159,7 +161,7 @@ def _desliga_a_trava(globais: list[str], subcomando: str, resto: list[str]) -> b
         chave, _, valor = par.partition("=")
         # No --config-env, o valor é o nome de uma variável: qualquer um desliga.
         do_ambiente = "--config-env" in (anterior, palavra.split("=", 1)[0])
-        if chave.lower() == "core.hookspath" and (do_ambiente or valor != "trilha/hooks"):
+        if chave.lower() == "core.hookspath" and (do_ambiente or valor != "trilha-ai/hooks"):
             return True
     if subcomando != "config":
         return False
@@ -169,7 +171,7 @@ def _desliga_a_trava(globais: list[str], subcomando: str, resto: list[str]) -> b
     if {"--unset", "--unset-all", "unset"} & set(resto):
         return True
     valor = [p for p in resto[chaves[0] + 1 :] if not p.startswith("-")]
-    return bool(valor) and valor[0] != "trilha/hooks"
+    return bool(valor) and valor[0] != "trilha-ai/hooks"
 
 
 def _forcado(resto: list[str]) -> bool:

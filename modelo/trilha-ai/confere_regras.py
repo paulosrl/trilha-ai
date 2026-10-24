@@ -1,18 +1,18 @@
-"""Confere as regras de um repositório que segue o CLAUDE-comum.md (no trilha/verifica.sh).
+"""Confere as regras de um repositório que segue o CLAUDE-comum.md (no trilha-ai/verifica.sh).
 
-Uso: python3 -I trilha/confere_regras.py <raiz do repositório> [--fonte <pasta do kit>]
+Uso: python3 -I trilha-ai/confere_regras.py <raiz do repositório> [--fonte <pasta do kit>]
 
 Confere, na raiz indicada:
-- trilha/CLAUDE-comum.md existe e tem a linha de versão;
-- CLAUDE.md importa o comum (linha "@trilha/CLAUDE-comum.md"), não repete regra dele, tem o nome do
-  produto no título, cita ANDAMENTO.md e openspec/config.yaml em "Documentos" e segue o
+- trilha-ai/CLAUDE-comum.md existe e tem a linha de versão;
+- CLAUDE.md importa o comum (linha "@trilha-ai/CLAUDE-comum.md"), não repete regra dele, tem o
+  nome do produto no título, cita ANDAMENTO.md e openspec/config.yaml em "Documentos" e segue o
   esqueleto das sete seções, na ordem;
 - os dois somados têm no máximo 200 linhas e 32 KB (32.768 bytes);
 - ANDAMENTO.md existe, tem as seis linhas pedidas, com a data e a hora (nunca no futuro), e cabe
   em dez linhas;
-- com --fonte, a pasta trilha/ é igual à modelo/trilha/ da versão do projeto, arquivo a arquivo
-  (o cache do Python, __pycache__/, não conta): a cópia de trabalho do kit, na mesma versão; a tag
-  vX.Y do kit, noutra, com aviso; sem a tag, só o aviso;
+- com --fonte, a pasta trilha-ai/ é igual à modelo/trilha-ai/ da versão do projeto, arquivo a
+  arquivo (o cache do Python, __pycache__/, não conta): a cópia de trabalho do kit, na mesma
+  versão; a tag vX.Y do kit, noutra, com aviso; sem a tag, só o aviso;
 - com --fonte, o bloco rules: do openspec/config.yaml igual ao do modelo do kit na mesma versão, e
   cada linha do operations do kit presente no do projeto (as linhas próprias a mais e as chaves
   próprias no topo passam); sem o config.yaml, ou sem ler o do kit, nada;
@@ -36,7 +36,7 @@ from pathlib import Path
 
 LIMITE_DE_LINHAS = 200
 LIMITE_DE_BYTES = 32_768  # 32 KB: o comum e o CLAUDE.md vão a toda sessão
-IMPORTACAO = "@trilha/CLAUDE-comum.md"
+IMPORTACAO = "@trilha-ai/CLAUDE-comum.md"
 LIMITE_DO_ANDAMENTO = 10
 ESQUELETO = (
     "## O que é",
@@ -153,9 +153,13 @@ def _git(kit: Path, *args: str, entrada: bytes | None = None) -> bytes | None:
 
 
 def _conteudos_da_tag(kit: Path, tag: str) -> Conteudos | None:
-    """A modelo/trilha/ do kit numa tag, lida pelo git, sem extrair nada; None se ela não se lê
-    (sem a tag, sem o git, clone raso ou parcial) ou não tem a pasta (antes da 2.0)."""
-    lista = _git(kit, "ls-tree", "-r", "-z", f"refs/tags/{tag}", "--", "modelo/trilha")
+    """A pasta do método do kit numa tag (a modelo/trilha-ai/, ou a modelo/trilha/ das tags de
+    antes da 2.19), lida pelo git, sem extrair nada; None se ela não se lê (sem a tag, sem o git,
+    clone raso ou parcial) ou não tem a pasta (antes da 2.0)."""
+    for pasta in ("modelo/trilha-ai", "modelo/trilha"):
+        lista = _git(kit, "ls-tree", "-r", "-z", f"refs/tags/{tag}", "--", pasta)
+        if lista:
+            break
     itens = []
     for registro in filter(None, (lista or b"").split(b"\0")):
         info, caminho = registro.split(b"\t", 1)
@@ -172,74 +176,82 @@ def _conteudos_da_tag(kit: Path, tag: str) -> Conteudos | None:
         if len(partes) != 3 or partes[1] != b"blob":  # "<objeto> missing": o objeto falta
             return None
         tamanho = int(partes[2])
-        conteudos[caminho.removeprefix("modelo/trilha/")] = (resto[:tamanho], executavel)
+        conteudos[caminho.removeprefix(f"{pasta}/")] = (resto[:tamanho], executavel)
         resto = resto[tamanho + 1 :]
     return conteudos
 
 
 def _diferencas(deles: Conteudos, nossos: Conteudos) -> list[str]:
-    """O que impede a pasta trilha/ do projeto de ser igual à do kit na versão que vale."""
-    falhas = [f"trilha/{nome} falta; {ATUALIZAR}" for nome in deles if nome not in nossos]
+    """O que impede a pasta trilha-ai/ do projeto de ser igual à do kit na versão que vale."""
+    falhas = [f"trilha-ai/{nome} falta; {ATUALIZAR}" for nome in deles if nome not in nossos]
     falhas += [
-        f"trilha/{nome} não é do kit; a pasta é só do método: {ATUALIZAR}"
+        f"trilha-ai/{nome} não é do kit; a pasta é só do método: {ATUALIZAR}"
         for nome in nossos
         if nome not in deles
     ]
     falhas += [
-        f"trilha/{nome} difere do kit; {ATUALIZAR}"
+        f"trilha-ai/{nome} difere do kit; {ATUALIZAR}"
         for nome in deles
         if nome in nossos and deles[nome][0] != nossos[nome][0]
     ]
     # O git pula em silêncio o hook sem a permissão de execução: a cópia a mantém.
     falhas += [
-        f"trilha/{nome} perdeu a permissão de execução; {ATUALIZAR}"
+        f"trilha-ai/{nome} perdeu a permissão de execução; {ATUALIZAR}"
         for nome in deles
         if nome in nossos and deles[nome][1] and not nossos[nome][1]
     ]
     return falhas
 
 
+def _pasta_do_kit(fonte: Path) -> Path:
+    """A pasta do método no kit ao lado: a modelo/trilha-ai/ ou, num kit de antes da 2.19, a
+    modelo/trilha/."""
+    nova = fonte / "modelo" / "trilha-ai"
+    return nova if (nova / "CLAUDE-comum.md").is_file() else fonte / "modelo" / "trilha"
+
+
 def comparar_com_o_kit(raiz: Path, fonte: Path) -> tuple[list[str], list[str]]:
-    """As falhas e os avisos da pasta trilha/ comparada com a da versão do projeto: a cópia de
+    """As falhas e os avisos da pasta trilha-ai/ comparada com a da versão do projeto: a cópia de
     trabalho do kit, na mesma versão (ou sem a linha de versão no projeto); a tag vX.Y do kit,
     noutra, só com aviso. A versão que o kit não tem, num kit com as tags, reprova."""
-    original = fonte / "modelo" / "trilha"
+    original = _pasta_do_kit(fonte)
     if not (original / "CLAUDE-comum.md").is_file():
         return [f"a fonte {original} não existe ou não é a pasta do kit"], []
-    nossa = _versao(raiz / "trilha" / "CLAUDE-comum.md")
+    nossa = _versao(raiz / "trilha-ai" / "CLAUDE-comum.md")
     do_kit = _versao(original / "CLAUDE-comum.md")
     if not nossa or not do_kit or nossa == do_kit:
-        return _diferencas(_conteudos(original), _conteudos(raiz / "trilha")), []
+        return _diferencas(_conteudos(original), _conteudos(raiz / "trilha-ai")), []
     da_tag = _conteudos_da_tag(fonte, f"v{nossa}")
     if da_tag is None:
         tem_a_tag = _git(fonte, "rev-parse", "-q", "--verify", f"refs/tags/v{nossa}") is not None
         if not tem_a_tag and (_git(fonte, "tag", "--list", "v*") or b"").strip():
             falha = (
                 f"a versão {nossa} do projeto não existe no kit (falta a tag v{nossa}): confira a "
-                "linha Versão do trilha/CLAUDE-comum.md ou atualize o kit ao lado (git pull --tags)"
+                "linha Versão do trilha-ai/CLAUDE-comum.md ou atualize o kit ao lado "
+                "(git pull --tags)"
             )
             return [falha], []
         aviso = (
-            f"não foi possível ler a v{nossa} do kit pelo git; a pasta trilha/ não foi comparada"
+            f"não foi possível ler a v{nossa} do kit pelo git; a pasta trilha-ai/ não foi comparada"
         )
         return [], [aviso]
     if tuple(map(int, nossa.split("."))) > tuple(map(int, do_kit.split("."))):
         aviso = (
-            f"o kit ao lado está na {do_kit}, atrás do projeto ({nossa}): a pasta trilha/ foi "
+            f"o kit ao lado está na {do_kit}, atrás do projeto ({nossa}): a pasta trilha-ai/ foi "
             f"comparada com a v{nossa}; atualize o kit ao lado (git pull)"
         )
     else:
         aviso = (
-            f"o kit está na {do_kit} e o projeto na {nossa}: a pasta trilha/ foi comparada com a "
-            f"v{nossa}; para a versão nova, rode o kit.py atualizar do kit, com a escolha do "
+            f"o kit está na {do_kit} e o projeto na {nossa}: a pasta trilha-ai/ foi comparada com "
+            f"a v{nossa}; para a versão nova, rode o kit.py atualizar do kit, com a escolha do "
             "usuário"
         )
-    return _diferencas(da_tag, _conteudos(raiz / "trilha")), [aviso]
+    return _diferencas(da_tag, _conteudos(raiz / "trilha-ai")), [aviso]
 
 
 def conferir(raiz: Path) -> list[str]:
     falhas: list[str] = []
-    comum = raiz / "trilha" / "CLAUDE-comum.md"
+    comum = raiz / "trilha-ai" / "CLAUDE-comum.md"
     proprio, andamento = raiz / "CLAUDE.md", raiz / "ANDAMENTO.md"
     for arquivo in (comum, proprio, andamento):
         if not arquivo.is_file():
@@ -306,10 +318,12 @@ def avisos_das_travas(raiz: Path) -> list[str]:
             text=True,
             check=False,
         )
-        if saida.stdout.strip() != "trilha/hooks":
-            avisos.append("trava do commit desligada: rode git config core.hooksPath trilha/hooks")
+        if saida.stdout.strip() != "trilha-ai/hooks":
+            avisos.append(
+                "trava do commit desligada: rode git config core.hooksPath trilha-ai/hooks"
+            )
     settings = raiz / ".claude" / "settings.json"
-    ligada = settings.is_file() and "trilha/guarda.py" in settings.read_text(encoding="utf-8")
+    ligada = settings.is_file() and "trilha-ai/guarda.py" in settings.read_text(encoding="utf-8")
     if not ligada:
         avisos.append("trava do Claude Code desligada: .claude/settings.json sem o guarda.py")
     # O disableAllHooks segue a precedência do Claude Code: o local prevalece sobre o do projeto.
@@ -376,10 +390,10 @@ def _blocos(texto: str) -> dict[str, list[str]]:
 
 
 def _config_do_kit(raiz: Path, fonte: Path) -> str | None:
-    """O modelo do config.yaml na versão do projeto, escolhida como a da pasta trilha/: a cópia de
-    trabalho do kit, na mesma versão; a tag vX.Y, noutra. None se não se lê."""
-    nossa = _versao(raiz / "trilha" / "CLAUDE-comum.md")
-    do_kit = _versao(fonte / "modelo" / "trilha" / "CLAUDE-comum.md")
+    """O modelo do config.yaml na versão do projeto, escolhida como a da pasta trilha-ai/: a cópia
+    de trabalho do kit, na mesma versão; a tag vX.Y, noutra. None se não se lê."""
+    nossa = _versao(raiz / "trilha-ai" / "CLAUDE-comum.md")
+    do_kit = _versao(_pasta_do_kit(fonte) / "CLAUDE-comum.md")
     modelo = fonte / "modelo" / "openspec" / "config.yaml"
     if not nossa or not do_kit or nossa == do_kit:
         return modelo.read_text(encoding="utf-8") if modelo.is_file() else None
@@ -426,7 +440,7 @@ def main(argv: list[str]) -> int:
     for falha in falhas:
         print(f"FALHA: {falha}", file=sys.stderr)
     if not falhas:
-        print("ok: CLAUDE.md, trilha/ e ANDAMENTO.md conferidos")
+        print("ok: CLAUDE.md, trilha-ai/ e ANDAMENTO.md conferidos")
     return 1 if falhas else 0
 
 

@@ -1,6 +1,6 @@
-"""Confere os documentos do método de um repositório que segue o kit (no trilha/verifica.sh).
+"""Confere os documentos do método de um repositório que segue o kit (no trilha-ai/verifica.sh).
 
-Uso: python3 -I trilha/confere_metodo.py [--sem-plugin] [--vizinho <nome>]...
+Uso: python3 -I trilha-ai/confere_metodo.py [--sem-plugin] [--vizinho <nome>]...
 
 Confere, na raiz do repositório:
 - a decomposição tem os títulos do esqueleto da skill (`## 1.`, `## 2.`, `## Ciclo`), toda change
@@ -8,7 +8,7 @@ Confere, na raiz do repositório:
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
 - as instalações do plugin `sdd` que podem valer no projeto, pela lista do Claude Code lida na
-  pasta dele: a do kit, ligada, na versão do trilha/CLAUDE-comum.md e, se o .claude/settings.json
+  pasta dele: a do kit, ligada, na versão do trilha-ai/CLAUDE-comum.md e, se o .claude/settings.json
   a declara, instalada no projeto; só aviso, nunca falha, e
   nada sem o Claude Code (o CI), sem a resposta dele no prazo ou com --sem-plugin, que a trava do
   commit usa para não esperar a cada commit;
@@ -17,7 +17,7 @@ Confere, na raiz do repositório:
   o openspec, sem a configuração global dele (o CI), sem resposta no prazo ou com --sem-plugin,
   que pula tudo o que depende da máquina.
 
-Roda no check.sh (e, por ele, no CI) e na trava do commit (trilha/hooks/pre-commit): documento do
+Roda no check.sh (e, por ele, no CI) e na trava do commit (trilha-ai/hooks/pre-commit): documento do
 método fora do formato barra o commit e o merge; o que depende da máquina (o plugin e o OpenSpec)
 só avisa.
 Sem a pasta `sdd/`, avisa que ela falta; sem a decomposição ou o TDD (o repositório que ainda não
@@ -192,7 +192,7 @@ def _pode_valer(plugin: dict) -> bool:
 
 
 def _versao_do_comum() -> str:
-    comum = RAIZ / "trilha" / "CLAUDE-comum.md"
+    comum = RAIZ / "trilha-ai" / "CLAUDE-comum.md"
     texto = comum.read_text(encoding="utf-8") if comum.is_file() else ""
     achado = re.search(r"^Versão (\d+\.\d+),", texto, re.MULTILINE)
     return achado.group(1) if achado else ""
