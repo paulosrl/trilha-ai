@@ -22,7 +22,7 @@ Ver `proposal.md` (Why). A pasta entrou na 2.0, quando o `kit.py atualizar` pass
 Na ferramenta, o `ANTES_DA_2_0` passa a ter as chaves em `trilha-ai/`, e o `_caminhos` de um nome `trilha-ai/X` acrescenta o `modelo/trilha/X` das versões 2.0 a 2.18. Na conferência das regras, o `_conteudos_da_tag` lê a `modelo/trilha-ai/` da tag e, sem ela, a `modelo/trilha/`: um projeto já na `trilha-ai/` nunca está numa versão de antes da 2.19, mas a leitura das duas não custa nada e deixa a conferência ler qualquer tag.
 
 ### D3. A migração da pasta
-No `_migrar`, antes da cópia: se existe o `trilha/CLAUDE-comum.md`, a pasta é a do método (o comum proíbe arquivo próprio nela, e a conferência das regras o reprova). A ferramenta avisa cada arquivo dela que o kit não tem (pelo nome relativo, diante da lista do método) e apaga a pasta inteira. Como o `atualizar` recusa trabalho não commitado, tudo o que sai e o git versiona volta por ele; o cache do Python (`__pycache__/`, que o `.gitignore` do modelo ignora) sai sem aviso, como o `_do_metodo` o ignora. Sem o comum, a pasta é do projeto e fica.
+No `_migrar`, antes da cópia: se existe o `trilha/CLAUDE-comum.md`, a pasta é a do método (o comum proíbe arquivo próprio nela, e a conferência das regras o reprova). A ferramenta avisa cada arquivo dela que o kit não tem (pelo nome relativo, diante da lista do método) e apaga a pasta inteira. Como o `atualizar` recusa trabalho não commitado, tudo o que sai e o git versiona volta por ele; o cache do Python (`__pycache__/`, que o `.gitignore` do modelo ignora) sai sem aviso, como o `_do_metodo` o ignora. Sem o comum, a pasta é do projeto e fica. Antes de mudar o projeto, com as outras recusas, a `trilha/` do método que é um link simbólico, ou que tem arquivo que o git ignora (fora o cache do Python), recusa: o `rmtree` não apaga link, e o ignorado sairia sem volta.
 
 *Alternativa:* apagar só os arquivos que o kit tinha na versão do projeto. Recusada: deixaria uma `trilha/` com sobras que a regra do método já proíbe, e o aviso já nomeia o que não era do kit.
 
@@ -68,6 +68,8 @@ A linha "Versão 2.19, de 2026-10-24." no comum e o `plugin.json` na 2.19.0; a t
 - O `kit.py atualizar` terminou com 0: saiu a `trilha/`, entrou a `trilha-ai/`; o `CLAUDE.md` (a importação e as duas linhas de texto) e o `check.sh` (`bash trilha-ai/verifica.sh --vizinho outro`) passaram a citar a `trilha-ai/`; o `core.hooksPath` é `trilha-ai/hooks` e o `settings.json` liga a `trilha-ai/guarda.py`; os avisos citaram o `docs/como.md` e a sessão a reabrir; a sugestão foi "chore(metodo): cópia do kit Trilha AI, comum 2.18 → 2.19".
 - Depois, o `bash scripts/check.sh` terminou com 0; o commit da cópia passou pela trava em `trilha-ai/hooks`, e um commit com a importação antiga foi barrado por ela ("CLAUDE.md não importa o comum (falta a linha @trilha-ai/CLAUDE-comum.md)").
 
+**Depois das respostas ao verify e ao code review (tarefa 4.2), em 2026-10-24,** num projeto novo da 2.18, com `docs/decisões técnicas.md` citando `trilha/tempo.py`: o `kit.py atualizar` terminou com 0, o aviso trouxe o nome inteiro, a sugestão foi "comum 2.18 → 2.19", e o `bash scripts/check.sh` terminou com 0.
+
 ## Respostas à revisão
 
 ### Revisão dos artefatos
@@ -82,3 +84,17 @@ De 2026-10-24, por um agente sem o contexto da sessão. Os dois pontos de escolh
 - **A6 (o critério do `git grep` na 2.3 não se cumpria, e os Purpose de quatro specs citavam a pasta):** aplicado. O critério diz o que fica de fora e o que sobra de propósito; os Purpose foram trocados.
 - **A7 (o `ferramentas/validar-projeto.md` fora do escopo):** aplicado, na proposta e na 2.3.
 - **Menores, aplicados:** a leitura das duas pastas no `confere_regras.py` fica e tem teste (o `test_kit_mais_novo_compara_pela_tag_e_avisa` lê uma tag de antes da 2.19); o `_caminhos` ganhou o `test_migracao_le_as_versoes_da_pasta_trilha`; o `__pycache__` não entra no aviso do arquivo a mais, e o D3 diz que ele sai sem o git o guardar; o limite do D5 não troca `src/trilha/` nem `../trilha/` (o `test_migracao_nao_troca_o_caminho_do_projeto`); a proposta diz a troca de toda citação no `CLAUDE.md` e os avisos, que o usuário aprovou além da descrição curta; o `mapa-da-trilha.html`, que não cita a pasta, saiu do escopo; o cenário ADDED passou a "Pasta trilha que não é do método" (o MODIFIED não pode ser renomeado, o OpenSpec o recusa); os riscos da sessão do Claude Code aberta e dos outros clones entraram, com o aviso no `atualizar`; a 3.2 roda com o `TRILHA_AI` e confere o projeto da 2.18 antes da migração.
+
+### O verify e o code review
+
+Do `/opsx:verify` (V1 a V5) e do `/code-review` da branch, no nível high (R1 a R7), de 2026-10-24, cada um por um agente sem o contexto da sessão. Nenhum achado crítico; todos aplicados, com o teste escrito antes da correção quando o achado é de comportamento.
+
+- **R1 (com o kit ao lado ainda de antes da 2.19, a conferência de um projeto já na `trilha-ai/` reprovava, em vez de só avisar o kit atrás):** aplicado. O `confere_regras.py` acha a pasta do kit pela `modelo/trilha-ai/` e, sem ela, pela `modelo/trilha/`, na comparação e no `config.yaml`; o cenário "Kit atrás na pasta antiga" e o `test_kit_atras_na_pasta_antiga_so_avisa`, que falhou antes.
+- **V2 e R2 (o aviso das citações quebrava o nome com acento ou espaço):** aplicado. O `git grep` roda com `-z` e o `core.quotePath=false`; o `test_migracao_avisa_as_citacoes_da_trilha` confere `docs/decisões técnicas.md` inteiro, e falhou antes.
+- **R3 (um arquivo que o git ignora na `trilha/` saía sem volta, com o aviso dizendo que o git o guardava):** aplicado. A migração recusa antes de mudar o projeto (D3); o cenário "Arquivo ignorado na pasta trilha do método" e o `test_migracao_recusa_o_ignorado_na_trilha`, que falhou antes.
+- **V3 e R4 (a busca do git aceitava `\` antes de `trilha/`, e a do Python não):** aplicado. O padrão do grep não tem mais a barra no colchete; o `test_migracao_avisa_as_citacoes_da_trilha` confere o `src\trilha/`.
+- **V1 e R5 (a importação com espaço no fim ficava `@trilha-ai/CLAUDE-comum.md ` e reprovava):** aplicado. O padrão da importação aceita também a `trilha-ai/` com o espaço; o cenário "Importação com espaço no fim" e o `test_migracao_troca_a_importacao_com_espaco`, que falhou antes.
+- **R6 (a `trilha/` que é um link simbólico dava um traceback no `rmtree`):** aplicado. Recusa antes de mudar o projeto; o cenário "Pasta trilha do método que é um link simbólico" e o `test_migracao_recusa_a_trilha_que_e_link`, que falhou antes.
+- **V4 e R7 (a docstring do `_sem_guardas_antigas` sem a trava da `trilha/`):** aplicado.
+- **V5 e R7 (o README sem a migração da 2.0 à 2.18; a condição da pasta do método escrita duas vezes):** aplicados. O README diz a migração e os avisos; o `_trilha_do_metodo` serve ao `atualizar`, à recusa e à migração.
+- **Os achados que o code review descartou:** o `do_kit` diante da lista do método de agora (de uma versão para a outra, a lista só cresceu, então o aviso do arquivo a mais não erra); o `da_trilha` duplicado, que o V5 também viu e foi resolvido acima.

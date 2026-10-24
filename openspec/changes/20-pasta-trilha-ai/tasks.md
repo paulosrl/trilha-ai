@@ -18,6 +18,11 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 - [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
 - [x] 3.2 A execução manual, por último, só no scratchpad, com o `TRILHA_AI` apontando para o kit: um projeto feito pelo `kit.py` da tag `v2.18`, com um `--vizinho` no `check.sh` e um documento que cita `trilha/`, commitado; antes da atualização, o `bash scripts/check.sh` dele termina com 0 com o kit novo ao lado (o link de transição); o `kit.py atualizar` atual o leva à `trilha-ai/`, avisa o documento e a sessão a reabrir, sugere o commit da cópia, e o `bash scripts/check.sh` termina com 0 de novo; o resultado vai a "Verificação", no `design.md`
 
+## 4. As respostas ao verify e ao code review
+
+- [x] 4.1 Os testes dos achados, que falharam antes da correção: `test_kit_atras_na_pasta_antiga_so_avisa` ("Kit atrás na pasta antiga"), `test_migracao_troca_a_importacao_com_espaco` ("Importação com espaço no fim"), `test_migracao_recusa_o_ignorado_na_trilha` ("Arquivo ignorado na pasta trilha do método"), `test_migracao_recusa_a_trilha_que_e_link` ("Pasta trilha do método que é um link simbólico") e o `test_migracao_avisa_as_citacoes_da_trilha` com o nome acentuado e o `src\trilha/` ("Arquivo do projeto que ainda cita a pasta trilha") (`python3 -m unittest discover -s testes -k test_kit_atras_na_pasta_antiga -k test_migracao`)
+- [x] 4.2 O `confere_regras.py` com a pasta do kit pelas duas, o `kit.py` com a busca por `-z`, o padrão do grep, a importação com espaço, as recusas da `trilha/` ignorada e da que é link, a condição num lugar só e a docstring, e o README; o conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
+
 ## Os cenários e os testes
 
 Cada cenário dos deltas e o teste de `testes/test_kit.py` que o comprova. Dois são comprovados só em parte por testes de antes desta change, cujo comportamento ela não muda: "Bloco da stack apagado" (o teste apaga o bloco `# Node`, não o `# Python`) e "Linha curta que falta" e "Chamada com os vizinhos" (o teste confere a função `_presente`, não a saída do `atualizar`).
@@ -35,6 +40,7 @@ Cada cenário dos deltas e o teste de `testes/test_kit.py` que o comprova. Dois 
 | conferencias | Cópia idêntica da pasta do método | Kit sem as tags | `test_versao_sem_tag_no_kit_avisa_sem_comparar` |
 | conferencias | Cópia idêntica da pasta do método | Versão que o kit não tem | `test_versao_que_o_kit_nao_tem_reprova` |
 | conferencias | Cópia idêntica da pasta do método | Kit atrás do projeto | `test_kit_atras_do_projeto_avisa_sem_mandar_atualizar` |
+| conferencias | Cópia idêntica da pasta do método | Kit atrás na pasta antiga | `test_kit_atras_na_pasta_antiga_so_avisa` |
 | conferencias | Cópia idêntica da pasta do método | Comum sem a linha de versão | `test_comum_sem_versao_compara_com_a_copia_do_kit` |
 | conferencias | Verificação fixa do projeto | Projeto novo | `test_verifica_aprova_o_projeto_novo` |
 | conferencias | Verificação fixa do projeto | Vizinho repassado | `test_verifica_repassa_o_vizinho` |
@@ -97,6 +103,9 @@ Cada cenário dos deltas e o teste de `testes/test_kit.py` que o comprova. Dois 
 | ferramenta-do-kit | Migração da pasta trilha para trilha-ai | Arquivo a mais na pasta trilha do método | `test_migracao_avisa_o_arquivo_a_mais_da_trilha` |
 | ferramenta-do-kit | Migração da pasta trilha para trilha-ai | Pasta trilha que não é do método | `test_atualizar_deixa_a_pasta_trilha_do_projeto` |
 | ferramenta-do-kit | Migração da pasta trilha para trilha-ai | Arquivo do projeto que ainda cita a pasta trilha | `test_migracao_avisa_as_citacoes_da_trilha` |
+| ferramenta-do-kit | Migração da pasta trilha para trilha-ai | Importação com espaço no fim | `test_migracao_troca_a_importacao_com_espaco` |
+| ferramenta-do-kit | Migração da pasta trilha para trilha-ai | Arquivo ignorado na pasta trilha do método | `test_migracao_recusa_o_ignorado_na_trilha` |
+| ferramenta-do-kit | Migração da pasta trilha para trilha-ai | Pasta trilha do método que é um link simbólico | `test_migracao_recusa_a_trilha_que_e_link` |
 | ferramenta-do-kit | Migração da pasta trilha para trilha-ai | Caminho do projeto que cita trilha | `test_migracao_nao_troca_o_caminho_do_projeto` |
 | ferramenta-do-kit | Migração da pasta trilha para trilha-ai | Versão de antes lida pelo nome novo | `test_migracao_le_as_versoes_da_pasta_trilha` |
 | hooks-do-git | Envio pelo hook próprio do projeto | Hook próprio que aprova | `test_pre_push_repassa_ao_hook_proprio` |

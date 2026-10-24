@@ -203,11 +203,18 @@ def _diferencas(deles: Conteudos, nossos: Conteudos) -> list[str]:
     return falhas
 
 
+def _pasta_do_kit(fonte: Path) -> Path:
+    """A pasta do método no kit ao lado: a modelo/trilha-ai/ ou, num kit de antes da 2.19, a
+    modelo/trilha/."""
+    nova = fonte / "modelo" / "trilha-ai"
+    return nova if (nova / "CLAUDE-comum.md").is_file() else fonte / "modelo" / "trilha"
+
+
 def comparar_com_o_kit(raiz: Path, fonte: Path) -> tuple[list[str], list[str]]:
     """As falhas e os avisos da pasta trilha-ai/ comparada com a da versão do projeto: a cópia de
     trabalho do kit, na mesma versão (ou sem a linha de versão no projeto); a tag vX.Y do kit,
     noutra, só com aviso. A versão que o kit não tem, num kit com as tags, reprova."""
-    original = fonte / "modelo" / "trilha-ai"
+    original = _pasta_do_kit(fonte)
     if not (original / "CLAUDE-comum.md").is_file():
         return [f"a fonte {original} não existe ou não é a pasta do kit"], []
     nossa = _versao(raiz / "trilha-ai" / "CLAUDE-comum.md")
@@ -386,7 +393,7 @@ def _config_do_kit(raiz: Path, fonte: Path) -> str | None:
     """O modelo do config.yaml na versão do projeto, escolhida como a da pasta trilha-ai/: a cópia
     de trabalho do kit, na mesma versão; a tag vX.Y, noutra. None se não se lê."""
     nossa = _versao(raiz / "trilha-ai" / "CLAUDE-comum.md")
-    do_kit = _versao(fonte / "modelo" / "trilha-ai" / "CLAUDE-comum.md")
+    do_kit = _versao(_pasta_do_kit(fonte) / "CLAUDE-comum.md")
     modelo = fonte / "modelo" / "openspec" / "config.yaml"
     if not nossa or not do_kit or nossa == do_kit:
         return modelo.read_text(encoding="utf-8") if modelo.is_file() else None

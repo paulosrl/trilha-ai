@@ -54,6 +54,11 @@ Com a pasta do kit indicada, a conferência das regras SHALL comparar a pasta `t
 - **THEN** a conferência das regras não reprova pela cópia
 - **AND** avisa para atualizar o kit ao lado, sem mandar rodar o `kit.py atualizar`
 
+#### Scenario: Kit atrás na pasta antiga
+- **WHEN** o projeto já está na `trilha-ai/`, e a cópia de trabalho do kit ao lado ainda é de antes da 2.19, com a `modelo/trilha/` e a tag da versão do projeto
+- **THEN** a conferência das regras não reprova pela cópia
+- **AND** avisa para atualizar o kit ao lado
+
 #### Scenario: Comum sem a linha de versão
 - **WHEN** o `trilha-ai/CLAUDE-comum.md` do projeto não tem a linha "Versão X.Y" e o `trilha-ai/guarda.py` difere do kit
 - **THEN** a conferência das regras compara com a cópia de trabalho do kit e reprova, citando `trilha-ai/guarda.py`

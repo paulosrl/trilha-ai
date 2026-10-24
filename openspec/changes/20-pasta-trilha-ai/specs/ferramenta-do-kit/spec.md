@@ -238,6 +238,19 @@ Num projeto com a pasta `trilha/` do método (com o `trilha/CLAUDE-comum.md`), o
 - **WHEN** um arquivo versionado do projeto fora da `trilha-ai/`, do `CLAUDE.md` e do `scripts/check.sh` (por exemplo, um `docs/` qualquer) cita `trilha/`
 - **THEN** a saída do `kit.py atualizar` traz um aviso que cita esse arquivo, para a troca à mão
 - **AND** o aviso não cita um arquivo em que `trilha/` só aparece dentro de outro nome ou caminho (`minhatrilha/`, `trilha-ai/`, `src/trilha/`, `../trilha/`), nem o `.claude/settings.json`, cuja trava já foi trocada
+- **AND** o aviso traz inteiro o nome do arquivo com acento ou espaço (`docs/decisões técnicas.md`)
+
+#### Scenario: Importação com espaço no fim
+- **WHEN** o `CLAUDE.md` do projeto da 2.18 importa `@trilha/CLAUDE-comum.md` com um espaço no fim da linha
+- **THEN** depois do `kit.py atualizar` a linha é `@trilha-ai/CLAUDE-comum.md`, e a conferência das regras passa
+
+#### Scenario: Arquivo ignorado na pasta trilha do método
+- **WHEN** a pasta `trilha/` do método tem um arquivo que o git ignora (por exemplo, `trilha/notas.log`)
+- **THEN** o `kit.py atualizar` recusa, citando o arquivo, sem mudar nada no projeto
+
+#### Scenario: Pasta trilha do método que é um link simbólico
+- **WHEN** a `trilha/` do projeto é um link simbólico para uma pasta com o comum
+- **THEN** o `kit.py atualizar` recusa, com o motivo, sem mudar nada no projeto
 
 #### Scenario: Caminho do projeto que cita trilha
 - **WHEN** o `scripts/check.sh` do projeto da 2.18 também cita `src/trilha/` e `../trilha/x`

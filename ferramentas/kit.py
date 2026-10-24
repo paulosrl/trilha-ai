@@ -236,6 +236,7 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
             "a pasta trilha-ai/ já existe e não é a do método (não tem o CLAUDE-comum.md); "
             "renomeie-a antes de atualizar"
         )
+    _conferir_a_trilha(pasta)
     _ler_settings(pasta)  # o settings.json que a soma não entende recusa antes de mudar algo
 
     # A versão de antes: a da trilha-ai/, a da trilha/ (da 2.0 à 2.18) ou a da raiz (antes da 2.0).
@@ -256,7 +257,7 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
             "aviso: o --openspec não roda: o scripts/check.sh ainda chama os scripts/confere_*, "
             "que a migração não sabe trocar"
         )
-    da_trilha = (pasta / "trilha" / "CLAUDE-comum.md").is_file()
+    da_trilha = _trilha_do_metodo(pasta)
     migrou = _migrar(pasta)
     _copiar_trilha(pasta)
     for nome, origem in A_PREENCHER.items():
@@ -520,7 +521,7 @@ def _migrar(pasta: Path) -> bool:
     claude = pasta / "CLAUDE.md"
     if claude.is_file():
         texto = claude.read_text(encoding="utf-8")
-        importacao = re.compile(r"^@(trilha/)?CLAUDE-comum\.md[ \t]*$", re.MULTILINE)
+        importacao = re.compile(r"^@(trilha(-ai)?/)?CLAUDE-comum\.md[ \t]*$", re.MULTILINE)
         migrado = importacao.sub("@trilha-ai/CLAUDE-comum.md", texto)
         if migrado != texto:
             claude.write_text(migrado, encoding="utf-8")
@@ -533,7 +534,37 @@ def _migrar(pasta: Path) -> bool:
 # um parêntese, de @, = ou :, com ./ ou sem: nem parte de outro nome (minhatrilha/, trilha-ai/),
 # nem dentro de outro caminho (src/trilha/, ../trilha/). O git grep usa o mesmo limite.
 NA_TRILHA = re.compile(r"(?m)(?:^|(?<=[\s`\"'(@=:]))(\./)?trilha/")
-NA_TRILHA_DO_GREP = r"(^|[[:space:]`\"'(@=:])(\./)?trilha/"
+NA_TRILHA_DO_GREP = "(^|[[:space:]`\"'(@=:])(\\./)?trilha/"
+
+
+def _trilha_do_metodo(pasta: Path) -> bool:
+    """A pasta trilha/ é a do método, da 2.0 à 2.18: tem o comum."""
+    return (pasta / "trilha" / "CLAUDE-comum.md").is_file()
+
+
+def _conferir_a_trilha(pasta: Path) -> None:
+    """A trilha/ do método que a migração não pode apagar recusa, antes de mudar o projeto: a que é
+    um link simbólico e a que tem arquivo que o git ignora (o rmtree o apagaria sem volta; o
+    cache do Python não conta)."""
+    if not _trilha_do_metodo(pasta):
+        return
+    if (pasta / "trilha").is_symlink():
+        raise Recusa(
+            "a pasta trilha/ é um link simbólico; troque-a por uma pasta antes de atualizar"
+        )
+    saida = subprocess.run(
+        ["git", "-C", str(pasta), "-c", "core.quotePath=false", "ls-files", "-o", "-i"]
+        + ["--exclude-standard", "-z", "--", "trilha/"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    ignorados = [n for n in saida.stdout.split("\0") if n and "__pycache__" not in n.split("/")]
+    if ignorados:
+        raise Recusa(
+            f"a pasta trilha/ tem arquivos que o git ignora ({', '.join(ignorados)}), que a "
+            "migração para a trilha-ai/ apagaria sem volta; tire-os de lá antes"
+        )
 
 
 def _migrar_a_trilha(pasta: Path) -> bool:
@@ -541,7 +572,7 @@ def _migrar_a_trilha(pasta: Path) -> bool:
     CLAUDE.md e o scripts/check.sh passam a citar a trilha-ai/; sem o comum, a pasta é do projeto
     e fica. Devolve se migrou."""
     velha = pasta / "trilha"
-    if not (velha / "CLAUDE-comum.md").is_file():
+    if not _trilha_do_metodo(pasta):
         return False
     do_kit = {nome.removeprefix("trilha-ai/") for nome in SEM_MUDAR}
     for arquivo in sorted(velha.rglob("*")):
@@ -562,13 +593,14 @@ def _migrar_a_trilha(pasta: Path) -> bool:
 def _avisar_as_citacoes(pasta: Path) -> None:
     """Os arquivos versionados do projeto que ainda citam a trilha/, para a troca à mão."""
     saida = subprocess.run(
-        ["git", "-C", str(pasta), "grep", "-l", "-E", NA_TRILHA_DO_GREP, "--", "."]
+        ["git", "-C", str(pasta), "-c", "core.quotePath=false", "grep", "-l", "-z", "-E"]
+        + [NA_TRILHA_DO_GREP, "--", "."]
         + [":!trilha/", ":!trilha-ai/"],
         capture_output=True,
         text=True,
         check=False,
     )
-    arquivos = saida.stdout.split() if saida.returncode == 0 else []
+    arquivos = [nome for nome in saida.stdout.split("\0") if nome] if saida.returncode == 0 else []
     if arquivos:
         print(f"aviso: ainda citam trilha/, que passou a trilha-ai/: {', '.join(arquivos)}")
 
@@ -696,8 +728,9 @@ def _ligar_travas(pasta: Path) -> None:
 
 
 def _sem_guardas_antigas(atual: dict, modelo: dict) -> None:
-    """Sai a trava do Claude Code de outra versão do kit (a de scripts/, de antes da 2.0, ou a de
-    trilha-ai/ chamada de outro jeito), e o grupo que só a tinha; a soma põe a do modelo."""
+    """Sai a trava do Claude Code de outra versão do kit (a de scripts/, de antes da 2.0, a de
+    trilha/, da 2.0 à 2.18, ou a de trilha-ai/ chamada de outro jeito), e o grupo que só a tinha;
+    a soma põe a do modelo."""
     do_modelo = [gancho for grupo in modelo["hooks"]["PreToolUse"] for gancho in grupo["hooks"]]
 
     def antiga(gancho: object) -> bool:
