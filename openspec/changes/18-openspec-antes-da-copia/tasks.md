@@ -10,7 +10,7 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 2. O código e o texto
 
-- [ ] 2.1 No `kit.py`: a troca do `check.sh` numa função pura, usada pelo `_migrar_check` e pela previsão (D2); a preparação do OpenSpec antes da migração e da cópia, com a pasta `openspec/`, as falhas como `Recusa` e a mensagem dos apagados (D1, D3, D4); e a opção `--aceitar-apagados` no `main`, com o `parser.error` sem o `--openspec`, e o aviso dos apagados aceitos (D5). Os testes das tarefas 1.1 a 1.3 e os do `atualizar` passam (`python3 -m unittest discover -s testes -k test_atualizar -k test_aceitar_apagados`)
+- [x] 2.1 No `kit.py`: a troca do `check.sh` numa função pura, usada pelo `_migrar_check` e pela previsão (D2); a preparação do OpenSpec antes da migração e da cópia, com a pasta `openspec/`, as falhas como `Recusa` e a mensagem dos apagados (D1, D3, D4); e a opção `--aceitar-apagados` no `main`, com o `parser.error` sem o `--openspec`, e o aviso dos apagados aceitos (D5). Os testes das tarefas 1.1 a 1.3 e os do `atualizar` passam (`python3 -m unittest discover -s testes -k test_atualizar -k test_aceitar_apagados`)
 - [ ] 2.2 O uso no docstring do `kit.py`, o `help` das opções e a atualização de um projeto no `README.md` citam a opção nova, a recusa antes da cópia e a máquina que muda de versão mesmo com o projeto recusado; o `python3 ferramentas/kit.py --help` mostra as duas opções
 
 ## 3. Integração
