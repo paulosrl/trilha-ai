@@ -149,7 +149,7 @@ a { color: var(--pinho); }
   <header class="topo">
     <span class="rotulo">Método Trilha AI · PRD → TDD → OpenSpec</span>
     <h1>Mapa da Trilha AI</h1>
-    <p>O percurso inteiro de um projeto, da pasta vazia à change entregue, com o que acontece no seu computador e no GitHub em cada estação. Clique numa estação ou aperte <strong>Percorrer</strong>.</p>
+    <p>O percurso inteiro de um projeto, da pasta vazia à change entregue, com o que acontece no seu computador e no GitHub em cada estação. Clique numa estação ou aperte <strong>Percorrer</strong>. Palavras como pull request, branch e merge são novas para você? Comece por <a href="#palavras">o que é um pull request</a>.</p>
   </header>
 
   <section class="secao" aria-label="O mapa">
@@ -166,9 +166,37 @@ a { color: var(--pinho); }
 
   <section class="painel" id="painel" aria-live="polite"></section>
 
+  <section class="secao" id="palavras">
+    <h2>O que é um pull request (PR)</h2>
+    <p><strong>PR</strong> é a sigla de <em>pull request</em>, que se traduz como "pedido de incorporação". É o jeito de propor uma mudança antes de ela entrar na versão oficial do projeto.</p>
+    <p>Pense num livro escrito a várias mãos. A versão oficial fica guardada, e ninguém escreve direto nela. Quem quer mudar um capítulo:</p>
+    <ol class="lista">
+      <li><div><strong>Tira uma cópia e escreve nela.</strong><p>O livro oficial continua intacto enquanto a mudança é feita.</p></div></li>
+      <li><div><strong>Leva a cópia ao responsável.</strong><p>"Mudei isto, por este motivo; pode pôr no livro?" Esse pedido é o pull request.</p></div></li>
+      <li><div><strong>O responsável compara a cópia com o original, linha por linha.</strong><p>Vê o que mudou, comenta e pede ajustes, se for o caso.</p></div></li>
+      <li><div><strong>Aprovada, a mudança entra no livro oficial.</strong><p>Essa entrada é o merge.</p></div></li>
+    </ol>
+    <p>No mapa, cada palavra tem o seu lugar no livro:</p>
+    <div class="tabela">
+      <table class="quem">
+        <thead><tr><th>Palavra</th><th>No livro</th><th>No Trilha AI</th></tr></thead>
+        <tbody>
+          <tr><td>main</td><td>O livro oficial.</td><td>A branch principal do repositório, onde fica a versão que vale.</td></tr>
+          <tr><td>branch</td><td>A cópia de trabalho.</td><td>A branch de cada change (<code>change/NN-nome</code>), aberta a partir da main atualizada.</td></tr>
+          <tr><td>commit</td><td>Uma página salva da cópia.</td><td>Cada ponto salvo do trabalho, com uma mensagem que diz o que mudou. É também onde o trabalho recomeça se a sessão cair.</td></tr>
+          <tr><td>envio</td><td>Levar a cópia para um cofre fora de casa.</td><td>Mandar os commits ao GitHub (o <code>git push</code>), sempre com o seu "sim". Protege o trabalho da perda da máquina.</td></tr>
+          <tr><td>pull request</td><td>O pedido ao responsável.</td><td>A página no GitHub que mostra tudo o que a change mudou. Nasce em rascunho no propose, para mostrar o plano antes do código, e sai do rascunho no archive.</td></tr>
+          <tr><td>verificação</td><td>Um revisor que confere sozinho.</td><td>Os testes que o GitHub roda a cada envio (o CI), que marcam o pull request com ✓ quando passam.</td></tr>
+          <tr><td>merge</td><td>A mudança entra no livro.</td><td>A change entra na main, só com a verificação verde e o seu "sim". A change fecha aqui.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p><strong>Por que o método usa o pull request:</strong> nada entra na versão oficial sem ser visto, revisado e testado antes. E, se algo der errado depois, o pull request fica como o registro do que mudou, quando e por quê.</p>
+  </section>
+
   <section class="secao">
     <h2>Quem faz o commit?</h2>
-    <p>O OpenSpec só lê e escreve arquivos em <code>openspec/</code>. A documentação oficial é direta: ele <em>nunca faz commit, branch, push ou pull</em> no seu projeto. No Trilha AI, quem decide quando fazer commit é o método, quem faz é o Claude e quem libera o envio é você.</p>
+    <p>O OpenSpec só lê e escreve arquivos: os da pasta <code>openspec/</code> e, no <code>openspec init</code> e no <code>openspec update</code>, as skills e os comandos que ele gera para o Claude Code. A documentação oficial é direta: ele <em>nunca faz commit, branch, push ou pull</em> no seu projeto. No Trilha AI, quem decide quando fazer commit é o método, quem faz é o Claude e quem libera o envio é você.</p>
     <div class="tabela">
       <table class="quem">
         <thead><tr><th>Quem</th><th>O que faz com o git</th><th>Onde está escrito</th></tr></thead>
@@ -177,6 +205,7 @@ a { color: var(--pinho); }
           <tr><td>O método</td><td>Diz quando fazer commit: em cada passo do ciclo da change, a cada parada do apply e ao fechar cada etapa.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change" e "Trabalho interrompível"</td></tr>
           <tr><td>Claude</td><td>Escreve a mensagem (Conventional Commits, em português, com coautoria) e faz o commit no momento certo.</td><td><code>CLAUDE-comum.md</code>, "Convenções"</td></tr>
           <tr><td>Você</td><td>Autoriza os envios com um "sim": um por etapa e um só para toda a branch de cada change. Autoriza também o merge, que só é pedido com a verificação verde.</td><td><code>CLAUDE-comum.md</code>, "Como trabalhar com o usuário"</td></tr>
+          <tr><td>As travas do kit</td><td>Não fazem commit: conferem. Antes de cada commit, conferem as regras e o método; barram o envio forçado, o <code>--no-verify</code>, o desligamento da trava do commit e o merge sem a verificação verde.</td><td><code>trilha-ai/hooks/</code> e <code>trilha-ai/guarda.py</code>; <code>CLAUDE-comum.md</code>, "Armadilhas"</td></tr>
           <tr><td>GitHub</td><td>Guarda a cópia fora da máquina, mostra o plano e o código no pull request e roda a verificação (CI) a cada envio. Não faz commit: recebe o que o Claude envia.</td><td><code>CLAUDE-comum.md</code>, "O ciclo de cada change", e <code>.github/workflows/verificacao.yml</code></td></tr>
         </tbody>
       </table>
@@ -265,7 +294,7 @@ a { color: var(--pinho); }
       cmd: "/opsx:verify\n/code-review high <número do PR>\ngit commit -m \"fix(...): sugestões do verify e da revisão\"\ngit push" },
     { id: "archive", nome: "Archive", titulo: "O arquivamento (archive)", gate: "", ciclo: true,
       voce: "Confirma o archive.",
-      claude: "Roda /opsx:archive: o delta entra em openspec/specs/ e a change vai para archive/. Depois valida os specs, atualiza o Ciclo e gera de novo sdd/documentacao.html.",
+      claude: "Roda /opsx:archive: o delta entra em openspec/specs/ e a change vai para archive/. Depois valida os specs, confere o diff de openspec/specs/, atualiza a tabela Ciclo com o número do pull request e gera de novo sdd/documentacao.html.",
       git: "Commit do archive, na branch. O ANDAMENTO.md aponta o próximo passo: o merge.",
       gh: "Envio da branch e o PR sai do rascunho. Código, specs e página chegam juntos à main.",
       cmd: "/opsx:archive\ngit commit -m \"docs(openspec): archive da change NN\"\ngit push\ngh pr ready" },
