@@ -248,7 +248,7 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
             "atualizar sem --openspec, faça o commit e rode de novo com --openspec"
         )
     preparado = openspec and _check_migra(pasta)
-    planejou = preparado and _preparar_o_openspec(pasta, aceitar_apagados)
+    previstos = _preparar_o_openspec(pasta, aceitar_apagados) if preparado else set()
     if openspec and not preparado:
         print(
             "aviso: o --openspec não roda: o scripts/check.sh ainda chama os scripts/confere_*, "
@@ -267,7 +267,7 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
     # A página nasce ao fechar uma etapa (o comum); aqui, só a que já existe ganha o modelo novo.
     if (pasta / "sdd" / "documentacao.html").is_file():
         _rodar(pasta, [sys.executable, "-I", "trilha/gerar_pagina_sdd.py"])
-    copiou = bool(_git(pasta, "status", "--short"))  # o que a cópia mudou, antes do update
+    copiados = _mudados(pasta)  # o que a cópia mudou, antes do update
     falha_do_openspec = _rodar_o_update(pasta) if preparado else ""
     if not openspec:
         _avisar_o_openspec()
@@ -291,15 +291,14 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
         print("FALHA: a conferência reprovou; os arquivos ficaram copiados, sem commit")
         return 1
     if mudou:
-        partes = (
-            [f"cópia do kit Trilha AI, comum {antes} → {depois}"]
-            if copiou or antes != depois
-            else []
-        )
-        if planejou:
+        # O OpenSpec entra pelo que o commit leva dele: o que o dry-run previu e mudou, ou o que
+        # mudou além da cópia (só o update roda depois dela).
+        mudados = _mudados(pasta)
+        copia = f"cópia do kit Trilha AI, comum {antes} → {depois}"
+        partes = [copia] if copiados or antes != depois else []
+        if preparado and (mudados & previstos or mudados - copiados):
             partes.append(f"os arquivos gerados pelo OpenSpec {_openspec_do_kit()}")
-        sugestao = ", e ".join(partes) or f"cópia do kit Trilha AI, comum {antes} → {depois}"
-        print(f"commit sugerido: chore(metodo): {sugestao}")
+        print(f"commit sugerido: chore(metodo): {', e '.join(partes) or copia}")
     return 0
 
 
@@ -368,11 +367,11 @@ def _no_projeto(pasta: Path, nome: str) -> bool:
     return not nome.startswith("~") and Path(os.path.normpath(raiz / nome)).is_relative_to(raiz)
 
 
-def _preparar_o_openspec(pasta: Path, aceitar_apagados: bool) -> bool:
+def _preparar_o_openspec(pasta: Path, aceitar_apagados: bool) -> set[str]:
     """O OpenSpec da máquina na versão do kit (o npm, só quando ela é outra ou falta) e o dry-run
     do update no projeto, antes de mudar qualquer arquivo dele: recusa o que falha e o update que
     apagaria arquivos do projeto, salvo com o aceite deles. A pasta openspec/ já foi conferida.
-    Devolve se o dry-run previu alguma mudança dentro do projeto."""
+    Devolve os caminhos do projeto que o dry-run prevê mudar."""
     alvo = _openspec_do_kit()
     if not alvo:
         raise Recusa("o CI do modelo do kit não fixa a versão do OpenSpec")
@@ -396,13 +395,8 @@ def _preparar_o_openspec(pasta: Path, aceitar_apagados: bool) -> bool:
         for linha in ((saida.stdout + saida.stderr) if saida else "").splitlines():
             print(f"  {linha}")
         raise Recusa("o openspec update --dry-run --json falhou no projeto (a saída está acima)")
-    apagados = sorted(
-        mudanca["path"]
-        for mudanca in mudancas
-        if isinstance(mudanca, dict)
-        and mudanca.get("action") == "delete"
-        and isinstance(mudanca.get("path"), str)
-    )
+    validas = [m for m in mudancas if isinstance(m, dict) and isinstance(m.get("path"), str)]
+    apagados = sorted(m["path"] for m in validas if m.get("action") == "delete")
     fora = [nome for nome in apagados if not _no_projeto(pasta, nome)]
     if fora:
         print(f"aviso: o openspec update vai apagar, fora do projeto: {', '.join(fora)}")
@@ -415,12 +409,18 @@ def _preparar_o_openspec(pasta: Path, aceitar_apagados: bool) -> bool:
         )
     if dentro:
         print(f"aviso: o openspec update vai apagar, no projeto: {', '.join(dentro)}")
-    return any(
-        isinstance(mudanca, dict)
-        and isinstance(mudanca.get("path"), str)
-        and _no_projeto(pasta, mudanca["path"])
-        for mudanca in mudancas
+    return {os.path.normpath(m["path"]) for m in validas if _no_projeto(pasta, m["path"])}
+
+
+def _mudados(pasta: Path) -> set[str]:
+    """Os caminhos que o git status do projeto mostra, um por arquivo, também os novos."""
+    saida = subprocess.run(
+        ["git", "-C", str(pasta), "status", "--porcelain", "-z", "--untracked-files=all"],
+        capture_output=True,
+        text=True,
+        check=False,
     )
+    return {os.path.normpath(linha[3:]) for linha in saida.stdout.split("\0") if len(linha) > 3}
 
 
 def _rodar_o_update(pasta: Path) -> str:
@@ -557,7 +557,7 @@ def _check_migra(pasta: Path) -> bool:
 
 
 def _migrado_por_inteiro(migrado: str | None) -> bool:
-    """O check.sh migrado existe e não chama mais os scripts/confere_*."""
+    """O texto migrado (o vazio, sem check.sh) não chama mais os scripts/confere_*."""
     return migrado is not None and "scripts/confere_" not in migrado
 
 

@@ -15,6 +15,11 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 - [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
 - [x] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade, só num projeto descartável no scratchpad, com o `XDG_CONFIG_HOME` e o `HOME` no scratchpad: com a `trilha/` editada e uma skill gerada alterada, o `kit.py atualizar --openspec` sugere a mensagem com as duas partes; o resultado vai a "Verificação", no `design.md`
 
+## 4. As respostas ao verify e ao code review
+
+- [x] 4.1 Os testes dos achados: `test_atualizar_openspec_commit_previsto_e_nao_feito` ("O dry-run previu, e o update não mudou") e `test_atualizar_openspec_commit_feito_sem_previsao` ("O update mudou sem o dry-run prever"), que falharam antes da correção; `test_atualizar_openspec_commit_de_outra_versao` e `test_atualizar_openspec_commit_sem_os_de_fora`, que passaram antes e protegem o que já valia (`python3 -m unittest discover -s testes -k test_atualizar_openspec_commit -k test_atualizar_commit`)
+- [x] 4.2 O `kit.py` com a regra do D2 pelo que o commit leva, a docstring do `_migrado_por_inteiro` e as repetições tiradas; o conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam, e a execução manual da 3.2 é refeita
+
 ## Workflow follow-up
 
 - A revisão dos artefatos, o `/opsx:verify` e o code review, por um agente sem o contexto da sessão; as respostas vão a "Respostas à revisão", no `design.md`.
