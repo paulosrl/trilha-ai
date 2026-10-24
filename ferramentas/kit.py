@@ -248,9 +248,8 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
             "atualizar sem --openspec, faça o commit e rode de novo com --openspec"
         )
     preparado = openspec and _check_migra(pasta)
-    if preparado:
-        _preparar_o_openspec(pasta, aceitar_apagados)
-    elif openspec:
+    planejou = preparado and _preparar_o_openspec(pasta, aceitar_apagados)
+    if openspec and not preparado:
         print(
             "aviso: o --openspec não roda: o scripts/check.sh ainda chama os scripts/confere_*, "
             "que a migração não sabe trocar"
@@ -268,6 +267,7 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
     # A página nasce ao fechar uma etapa (o comum); aqui, só a que já existe ganha o modelo novo.
     if (pasta / "sdd" / "documentacao.html").is_file():
         _rodar(pasta, [sys.executable, "-I", "trilha/gerar_pagina_sdd.py"])
+    copiou = bool(_git(pasta, "status", "--short"))  # o que a cópia mudou, antes do update
     falha_do_openspec = _rodar_o_update(pasta) if preparado else ""
     if not openspec:
         _avisar_o_openspec()
@@ -290,11 +290,16 @@ def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = Fals
     if not ok:
         print("FALHA: a conferência reprovou; os arquivos ficaram copiados, sem commit")
         return 1
-    if mudou and openspec and antes == depois:
-        alvo = _openspec_do_kit()
-        print(f"commit sugerido: chore(metodo): os arquivos gerados pelo OpenSpec {alvo}")
-    elif mudou:
-        print(f"commit sugerido: chore(metodo): cópia do kit Trilha AI, comum {antes} → {depois}")
+    if mudou:
+        partes = (
+            [f"cópia do kit Trilha AI, comum {antes} → {depois}"]
+            if copiou or antes != depois
+            else []
+        )
+        if planejou:
+            partes.append(f"os arquivos gerados pelo OpenSpec {_openspec_do_kit()}")
+        sugestao = ", e ".join(partes) or f"cópia do kit Trilha AI, comum {antes} → {depois}"
+        print(f"commit sugerido: chore(metodo): {sugestao}")
     return 0
 
 
@@ -363,10 +368,11 @@ def _no_projeto(pasta: Path, nome: str) -> bool:
     return not nome.startswith("~") and Path(os.path.normpath(raiz / nome)).is_relative_to(raiz)
 
 
-def _preparar_o_openspec(pasta: Path, aceitar_apagados: bool) -> None:
+def _preparar_o_openspec(pasta: Path, aceitar_apagados: bool) -> bool:
     """O OpenSpec da máquina na versão do kit (o npm, só quando ela é outra ou falta) e o dry-run
     do update no projeto, antes de mudar qualquer arquivo dele: recusa o que falha e o update que
-    apagaria arquivos do projeto, salvo com o aceite deles. A pasta openspec/ já foi conferida."""
+    apagaria arquivos do projeto, salvo com o aceite deles. A pasta openspec/ já foi conferida.
+    Devolve se o dry-run previu alguma mudança dentro do projeto."""
     alvo = _openspec_do_kit()
     if not alvo:
         raise Recusa("o CI do modelo do kit não fixa a versão do OpenSpec")
@@ -409,6 +415,12 @@ def _preparar_o_openspec(pasta: Path, aceitar_apagados: bool) -> None:
         )
     if dentro:
         print(f"aviso: o openspec update vai apagar, no projeto: {', '.join(dentro)}")
+    return any(
+        isinstance(mudanca, dict)
+        and isinstance(mudanca.get("path"), str)
+        and _no_projeto(pasta, mudanca["path"])
+        for mudanca in mudancas
+    )
 
 
 def _rodar_o_update(pasta: Path) -> str:
@@ -541,7 +553,11 @@ def _texto_do_check(pasta: Path) -> str:
 
 def _check_migra(pasta: Path) -> bool:
     """A migração do check.sh vai dar certo: a previsão do _migrar_check, sem escrever."""
-    migrado = _check_migrado(_texto_do_check(pasta))
+    return _migrado_por_inteiro(_check_migrado(_texto_do_check(pasta)))
+
+
+def _migrado_por_inteiro(migrado: str | None) -> bool:
+    """O check.sh migrado existe e não chama mais os scripts/confere_*."""
     return migrado is not None and "scripts/confere_" not in migrado
 
 
@@ -553,7 +569,7 @@ def _migrar_check(pasta: Path) -> bool:
         if migrado != texto:
             (pasta / "scripts" / "check.sh").write_text(migrado, encoding="utf-8")
             print("scripts/check.sh: a parte fixa passou a `bash trilha/verifica.sh`")
-        return "scripts/confere_" not in migrado
+        return _migrado_por_inteiro(migrado)
     print(
         "aviso: a parte fixa do scripts/check.sh não é a do kit; troque à mão a chamada aos "
         "scripts/confere_*.py por `bash trilha/verifica.sh` (com os --vizinho que houver)"
