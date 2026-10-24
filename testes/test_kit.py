@@ -2659,6 +2659,47 @@ class Kit(unittest.TestCase):
             erro = self._regras_com_settings(tmp)
         self.assertNotIn("trava", erro)
 
+    def _regras_com_trilha(self, tmp: str, link: bool, ganchos: str | None = None) -> str:
+        """A conferência das regras num projeto novo com o link trilha → trilha-ai ou uma pasta
+        trilha/ própria, e o core.hooksPath indicado; devolve a saída de erro."""
+        pasta = self._projeto_novo(tmp)
+        if link:
+            (pasta / "trilha").symlink_to("trilha-ai")
+        else:
+            (pasta / "trilha").mkdir()
+            (pasta / "trilha/__init__.py").write_text("# um pacote do projeto\n", encoding="utf-8")
+        if ganchos:
+            subprocess.run(["git", "config", "core.hooksPath", ganchos], cwd=pasta, check=True)
+        saida = self._regras(pasta)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        return saida.stderr
+
+    def test_regras_avisam_o_link_de_transicao(self) -> None:
+        """Change 21: o link de transição é aviso, com o que o tira."""
+        with tempfile.TemporaryDirectory() as tmp:
+            erro = self._regras_com_trilha(tmp, link=True)
+        aviso = next((l for l in erro.splitlines() if "link de transição" in l), "")
+        self.assertIn("kit.py atualizar", aviso, erro)
+        self.assertNotIn("trava", erro)
+
+    def test_regras_sem_link_na_pasta_trilha_propria(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            erro = self._regras_com_trilha(tmp, link=False)
+        self.assertNotIn("link de transição", erro)
+
+    def test_regras_trava_ligada_pelo_link(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            erro = self._regras_com_trilha(tmp, link=True, ganchos="trilha/hooks")
+        self.assertNotIn("trava do commit desligada", erro)
+        aviso = next((l for l in erro.splitlines() if "trava do commit" in l), "")
+        self.assertIn("ligada pelo link de transição", aviso, erro)
+        self.assertIn("git config core.hooksPath trilha-ai/hooks", aviso)
+
+    def test_regras_trava_antiga_sem_link_desligada(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            erro = self._regras_com_trilha(tmp, link=False, ganchos="trilha/hooks")
+        self.assertIn("trava do commit desligada", erro)
+
     def test_copia_reprova_arquivo_faltando_ou_a_mais(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
@@ -2883,6 +2924,9 @@ class Kit(unittest.TestCase):
             (pasta / "docs/outro.md").write_text("A minhatrilha/, a trilha-ai/, o src/trilha/, o src\\trilha/ e o "
                                                  "../trilha/ não contam.\n", encoding="utf-8")
             (pasta / "docs/decisões técnicas.md").write_text("Veja trilha/verifica.sh.\n", encoding="utf-8")
+            # Change 21, D2: as formas do Heimdall que a busca da 2.19 não achava.
+            (pasta / "docs/envio.sh").write_text('cp "$ROOT_DIR/trilha/hooks/pre-push" "$E"\n', encoding="utf-8")
+            (pasta / "docs/caminho.py").write_text('ganchos = Path(raiz) / "trilha" / "hooks"\n', encoding="utf-8")
             self._commit_tudo(pasta, "documentos")
             saida = self._ferramenta("atualizar", str(pasta))
             aviso = next((l for l in saida.stdout.splitlines() if l.startswith("aviso") and "docs/como.md" in l), "")
@@ -2891,6 +2935,8 @@ class Kit(unittest.TestCase):
             self.assertNotIn("CLAUDE.md", aviso)
             self.assertNotIn("settings.json", aviso)  # revisão dos artefatos, A3: a trava já trocada
             self.assertIn("docs/decisões técnicas.md", aviso)  # revisão da change 20, R2: o nome inteiro
+            self.assertIn("docs/envio.sh", aviso)
+            self.assertIn("docs/caminho.py", aviso)
 
     def test_migracao_troca_a_importacao_com_espaco(self) -> None:
         """Revisão da change 20, R5: a importação antiga com espaço no fim também se acerta."""
@@ -2927,6 +2973,61 @@ class Kit(unittest.TestCase):
             self.assertIn("recusado:", saida.stderr)
             self.assertNotIn("Traceback", saida.stderr)
             self.assertTrue((pasta / "trilha").is_symlink())
+
+    def _migrado_com_citacao(self, tmp: str) -> tuple[Path, subprocess.CompletedProcess]:
+        """Um projeto da 2.18 com um documento que cita trilha/, levado à trilha-ai/ e commitado."""
+        pasta = self._projeto_da_2_18(tmp)
+        (pasta / "docs").mkdir()
+        (pasta / "docs/como.md").write_text("Rode `python3 trilha/tempo.py`.\n", encoding="utf-8")
+        self._commit_tudo(pasta, "um documento")
+        saida = self._ferramenta("atualizar", str(pasta))
+        self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+        return pasta, saida
+
+    def test_migracao_cria_o_link_com_citacao(self) -> None:
+        """Change 21: o que o projeto chama pela pasta antiga continua funcionando, pelo link."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, saida = self._migrado_com_citacao(tmp)
+            link = pasta / "trilha"
+            self.assertTrue(link.is_symlink())
+            self.assertEqual(os.readlink(link), "trilha-ai")
+            self.assertTrue((pasta / "trilha/tempo.py").is_file())
+            self.assertIn("criado o link de transição trilha → trilha-ai", saida.stdout)
+            aviso = next((l for l in saida.stdout.splitlines() if l.startswith("aviso") and "docs/como.md" in l), "")
+            self.assertTrue(aviso, saida.stdout)
+            self.assertEqual(self._regras(pasta).returncode, 0)
+            self.assertEqual(self._confere_metodo(pasta).returncode, 0)
+            mudou = subprocess.run(["git", "status", "--porcelain"], cwd=pasta, capture_output=True, text=True)
+            self.assertIn("?? trilha\n", mudou.stdout)
+
+    def test_migracao_sem_citacao_nao_cria_o_link(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertFalse(os.path.lexists(pasta / "trilha"))
+            self.assertNotIn("link de transição", saida.stdout)
+
+    def test_atualizar_mantem_o_link_com_citacao(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, _ = self._migrado_com_citacao(tmp)
+            self._commit_tudo(pasta, "a cópia, com o link")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertEqual(os.readlink(pasta / "trilha"), "trilha-ai")
+            fica = next((l for l in saida.stdout.splitlines() if "link de transição" in l and "fica" in l), "")
+            self.assertIn("docs/como.md", fica, saida.stdout)
+
+    def test_atualizar_tira_o_link_sem_citacao(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta, _ = self._migrado_com_citacao(tmp)
+            (pasta / "docs/como.md").write_text("Rode `python3 trilha-ai/tempo.py`.\n", encoding="utf-8")
+            self._commit_tudo(pasta, "a cópia, com a citação trocada")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertFalse(os.path.lexists(pasta / "trilha"))
+            self.assertIn("saiu o link de transição trilha → trilha-ai", saida.stdout)
+            self.assertIn("git config core.hooksPath trilha-ai/hooks", saida.stdout)
 
     def test_migracao_nao_troca_o_caminho_do_projeto(self) -> None:
         """Revisão dos artefatos, A-menor: um src/trilha/ do projeto no check.sh não vira trilha-ai/."""
