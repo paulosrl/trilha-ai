@@ -16,6 +16,13 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 - [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --strict --no-interactive` passam
 - [x] 3.2 A execução manual, por último: num repositório de teste, com uma pasta dos dados à parte (`XDG_DATA_HOME`) que tem um `<nome>-0123abcd.json` que não é JSON, o `python3 -I trilha/tempo.py` do kit termina com 0, avisa citando o arquivo nas duas execuções seguidas, e o arquivo fica igual; o resultado vai ao `notas.md` da pasta da change
 
+## 4. As respostas ao verify e ao code review
+
+Do `/opsx:verify` e do `/code-review high 18`, de 2026-10-24; a decisão de cada ponto fica em "Respostas à revisão", no `notas.md`.
+
+- [x] 4.1 O `test_tempo_resumo_de_mesmo_nome_sem_raiz` passa a cobrir o objeto sem a raiz, a raiz vazia, a de outro nome ("Resumo de mesmo nome com a raiz de outro nome"), o aninhado fundo demais e o próprio resumo com a raiz que não é texto ("Próprio resumo com a raiz que não é texto"), e o novo `test_tempo_resumo_aninhado_fundo_demais` o próprio resumo aninhado; os dois falharam antes do código (`python3 -m unittest discover -s testes -k test_tempo_resumo_de_mesmo_nome_sem_raiz -k test_tempo_resumo_aninhado_fundo_demais`)
+- [x] 4.2 O `_ler_json`, a raiz de outro nome no aviso, a mensagem e o comentário do `main`; o conjunto dos testes, o ruff e a execução manual passam, e o resultado vai ao `notas.md`
+
 ## Workflow follow-up
 
 - O `/opsx:verify` e o `/code-review` do pull request, por um agente sem o contexto da sessão; as respostas vão ao `notas.md` da pasta da change, porque esta change não tem `design.md`.

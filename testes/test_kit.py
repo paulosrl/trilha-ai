@@ -3883,22 +3883,42 @@ class HorasDeTrabalho(unittest.TestCase):
         self.assertNotIn("2026-10-02", self._dias())
 
     def test_tempo_resumo_de_mesmo_nome_sem_raiz(self) -> None:
-        """Change 17: o resumo de mesmo nome que nem deixa ler a raiz avisa, sem falhar nem mudar."""
+        """Change 17: o resumo de mesmo nome que não diz de que pasta veio avisa, sem falhar nem
+        mudar; a revisão dela acrescentou a raiz vazia, a de outro nome e o aninhado fundo demais."""
         pasta = self._pasta_tempo()
         pasta.mkdir(parents=True, exist_ok=True)
-        for conteudo in ("isto não é json", "[]", json.dumps({"versao": 2, "raiz": 7})):
-            with self.subTest(conteudo=conteudo):
+        conteudos = ("isto não é json", "[]", json.dumps({"versao": 2}), json.dumps({"versao": 2, "raiz": 7}),
+                     json.dumps({"versao": 2, "raiz": ""}), json.dumps({"versao": 2, "raiz": "/a/outro"}),
+                     "[" * 200000 + "]" * 200000)
+        for conteudo in conteudos:
+            with self.subTest(conteudo=conteudo[:40]):
                 antigo = pasta / "proj-0123abcd.json"
                 antigo.write_text(conteudo, encoding="utf-8")
                 for _ in range(2):  # em toda execução
                     saida = self._ok()
-                    aviso = next((l for l in saida.stderr.splitlines() if antigo.name in l), "")
-                    self.assertIn("corrija-o ou mova-o", aviso, saida.stderr)
+                    aviso = next((linha for linha in saida.stderr.splitlines() if antigo.name in linha), "")
+                    self.assertIn("não diz de que pasta dele veio", aviso, saida.stderr)
+                    self.assertIn("corrija-o ou mova-o", aviso)
                 self.assertEqual(antigo.read_text(encoding="utf-8"), conteudo)
                 antigo.unlink()
         vizinho = pasta / "proj-antigo-0123abcd.json"
         vizinho.write_text("isto não é json", encoding="utf-8")
         self.assertNotIn(vizinho.name, self._ok().stderr)
+        # O próprio resumo, que se lê com a raiz fora do formato, não é o de uma pasta antiga.
+        proprio = pasta / f"proj-{hashlib.sha1(str(self.raiz).encode('utf-8')).hexdigest()[:8]}.json"
+        proprio.write_text(json.dumps({"versao": 2, "raiz": 7, "conversas": {}, "ignorados": {}}), encoding="utf-8")
+        self.assertNotIn("não diz de que pasta", self._ok().stderr)
+
+    def test_tempo_resumo_aninhado_fundo_demais(self) -> None:
+        """Revisão da change 17, V1: o próprio resumo aninhado fundo demais não se lê, sem rastro."""
+        pasta = self._pasta_tempo()
+        pasta.mkdir(parents=True, exist_ok=True)
+        proprio = pasta / f"proj-{hashlib.sha1(str(self.raiz).encode('utf-8')).hexdigest()[:8]}.json"
+        proprio.write_text("[" * 200000 + "]" * 200000, encoding="utf-8")
+        saida = self._rodar()
+        self.assertEqual(saida.returncode, 1, saida.stderr)
+        self.assertIn("corrija-o ou mova-o", saida.stderr)
+        self.assertNotIn("Traceback", saida.stderr)
 
     def test_tempo_pasta_antiga_com_git_que_falha(self) -> None:
         antiga = Path(self._tmp.name) / "a" / "proj"
