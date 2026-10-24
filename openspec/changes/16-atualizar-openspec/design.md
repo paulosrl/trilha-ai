@@ -38,3 +38,12 @@ Sem `--openspec`, o `atualizar` pergunta só o `openspec --version`; com a vers�
 - [A instalação global muda a máquina inteira, e outros projetos dela ficam na versão nova] → Só com a opção, que é a escolha do usuário; a conferência de cada outro projeto avisa a versão diferente da do CI dele.
 - [O `npm install -g` pede permissão de administrador em algumas máquinas] → A falha mostra a saída do `npm` e o comando, para o usuário rodá-lo do jeito da máquina dele.
 - [O dry-run evita o pior caso, mas não o update que troca arquivos] → Trocar é o que o update faz; o `git status` do fim mostra cada arquivo, e nada é commitado.
+
+## Verificação
+
+**Os testes antes do código (tarefa 1.1):** seis dos oito falharam antes do código. Os dois que passaram, `test_atualizar_sem_a_opcao_nao_mexe_no_openspec` e `test_atualizar_versao_igual_sem_aviso_da_opcao`, conferem o que não acontece (nem `npm`, nem update, nem o aviso), e o código de antes nunca fazia nada disso.
+
+**Execução manual (tarefa 3.2), em 2026-10-24,** com o OpenSpec 1.15.0, num projeto de teste feito pelo `kit.py novo` e inicializado com `openspec init --tools claude`, com o `verify.md` alterado e commitado:
+- o `kit.py atualizar --openspec` terminou com 0, sem chamar o `npm` (a máquina já estava na 1.15.0), rodou o `openspec update`, e o `verify.md` voltou ao que o OpenSpec gera (o `git status` o mostrou, e o commit sugerido apareceu);
+- com o PATH sem o `npm` e um `openspec` falso que responde 1.14.1, terminou com 1: "npm: No such file or directory" e "FALHA: o OpenSpec da máquina não ficou na 1.15.0: rode npm install -g @fission-ai/openspec@1.15.0", sem o commit sugerido;
+- no mesmo PATH, sem a opção, avisou "o OpenSpec da máquina está na 1.14.1 e o kit usa a 1.15.0: rode de novo com --openspec".

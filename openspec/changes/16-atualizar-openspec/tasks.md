@@ -13,8 +13,8 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 3. Integração
 
-- [ ] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
-- [ ] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade: num projeto de teste feito pelo `kit.py novo` e inicializado com `openspec init --tools claude`, com um comando gerado alterado e commitado, o `kit.py atualizar --openspec` não chama o `npm` (a versão é a do kit), roda o update, e o comando volta ao que o OpenSpec gera; com o `npm` fora do PATH e um `openspec` falso que responde outra versão, a falha cita o `npm install`; o resultado vai a "Verificação", no `design.md`
+- [x] 3.1 O conjunto dos testes, o ruff e o `openspec validate --all --no-interactive` passam
+- [x] 3.2 A execução manual, por último, com o OpenSpec 1.15.0 de verdade: num projeto de teste feito pelo `kit.py novo` e inicializado com `openspec init --tools claude`, com um comando gerado alterado e commitado, o `kit.py atualizar --openspec` não chama o `npm` (a versão é a do kit), roda o update, e o comando volta ao que o OpenSpec gera; com o `npm` fora do PATH e um `openspec` falso que responde outra versão, a falha cita o `npm install`; o resultado vai a "Verificação", no `design.md`
 
 ## Workflow follow-up
 
