@@ -9,13 +9,13 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 
 ## 2. O código e o texto
 
-- [ ] 2.1 No `kit.py`: a busca mais larga (D2), o link reconhecido (D3), criado na migração com citação (D1) e mantido ou tirado no atualizar seguinte (D4); a recusa do link continua para o que não aponta para a `trilha-ai/`. Os testes da tarefa 1.1, o `test_migracao_recusa_a_trilha_que_e_link` e o `test_migra_a_pasta_trilha_da_2_18` passam (`python3 -m unittest discover -s testes -k link -k test_migra`)
-- [ ] 2.2 No `confere_regras.py`, os avisos do link e da trava ligada pelo link (D5), com a docstring; os testes da tarefa 1.2 e o `test_regras_aprovam_o_projeto_com_a_pasta_trilha` passam (`python3 -m unittest discover -s testes -k test_regras`)
-- [ ] 2.3 A versão 2.20 no `modelo/trilha-ai/CLAUDE-comum.md` e o `plugins/sdd/.claude-plugin/plugin.json` na 2.20.0 (D6), e o `ferramentas/validar-projeto.md` com o link de transição, que não é migração pela metade; o teste da versão do plugin passa (`python3 -m unittest discover -s testes -k plugin`)
+- [x] 2.1 No `kit.py`: a busca mais larga (D2), o link reconhecido (D3), criado na migração com citação (D1) e mantido ou tirado no atualizar seguinte (D4); a recusa do link continua para o que não aponta para a `trilha-ai/`. Os testes da tarefa 1.1, o `test_migracao_recusa_a_trilha_que_e_link` e o `test_migra_a_pasta_trilha_da_2_18` passam (`python3 -m unittest discover -s testes -k link -k test_migra`)
+- [x] 2.2 No `confere_regras.py`, os avisos do link e da trava ligada pelo link (D5), com a docstring; os testes da tarefa 1.2 e o `test_regras_aprovam_o_projeto_com_a_pasta_trilha` passam (`python3 -m unittest discover -s testes -k test_regras`)
+- [x] 2.3 A versão 2.20 no `modelo/trilha-ai/CLAUDE-comum.md` e o `plugins/sdd/.claude-plugin/plugin.json` na 2.20.0 (D6), e o `ferramentas/validar-projeto.md` com o link de transição, que não é migração pela metade; o teste da versão do plugin passa (`python3 -m unittest discover -s testes -k plugin`)
 
 ## 3. Integração
 
-- [ ] 3.1 O conjunto dos testes, o ruff (`check` e `format --check`) e o `openspec validate --all --no-interactive` passam
+- [x] 3.1 O conjunto dos testes, o ruff (`check` e `format --check`) e o `openspec validate --all --no-interactive` passam
 - [ ] 3.2 A execução manual, por último, só no scratchpad: um clone descartável do Heimdall (2.15), com o `core.hooksPath` em `trilha/hooks`, levado pelo `kit.py atualizar --openspec` do kit desta change; a saída diz que criou o link; com a cópia commitada no clone, o `bash scripts/check.sh` e o `.githooks/pre-push` do Heimdall terminam com 0, e a trava do commit roda; o resultado vai a "Verificação", no `design.md`
 
 ## Os cenários e os testes

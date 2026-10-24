@@ -17,7 +17,8 @@ Confere, na raiz indicada:
   cada linha do operations do kit presente no do projeto (as linhas próprias a mais e as chaves
   próprias no topo passam); sem o config.yaml, ou sem ler o do kit, nada;
 - as travas desligadas (o core.hooksPath, o guarda.py no .claude/settings.json e o
-  disableAllHooks), como aviso;
+  disableAllHooks), como aviso; o core.hooksPath em trilha/hooks com o link de transição trilha →
+  trilha-ai conta como ligado, com aviso para trocar, e o link é avisado;
 - os campos < > dos modelos do kit ainda por preencher, como aviso (a stack só vem na etapa 2);
 - com o TDD escrito (sdd/tdd-*.md), os lugares da stack ainda como o modelo os deixou, como aviso
   (o check.sh e o CI, só depois do primeiro spec em openspec/specs/, que a change 01 cria).
@@ -308,9 +309,21 @@ def conferir(raiz: Path) -> list[str]:
     return falhas
 
 
+def _link_de_transicao(raiz: Path) -> bool:
+    """A trilha é o link de transição da pasta antiga: resolve para a trilha-ai/ do projeto."""
+    link = raiz / "trilha"
+    return link.is_symlink() and link.resolve() == (raiz / "trilha-ai").resolve()
+
+
 def avisos_das_travas(raiz: Path) -> list[str]:
     """As travas do kit desligadas: aviso, não falha, porque o core.hooksPath é de cada clone."""
     avisos = []
+    link = _link_de_transicao(raiz)
+    if link:
+        avisos.append(
+            "trilha é o link de transição para trilha-ai/, para o que o projeto ainda chama pela "
+            "pasta antiga; o kit.py atualizar o tira quando nenhum arquivo citar mais trilha/"
+        )
     if (raiz / ".git").exists():
         saida = subprocess.run(
             ["git", "-C", str(raiz), "config", "core.hooksPath"],
@@ -318,7 +331,13 @@ def avisos_das_travas(raiz: Path) -> list[str]:
             text=True,
             check=False,
         )
-        if saida.stdout.strip() != "trilha-ai/hooks":
+        ganchos = saida.stdout.strip()
+        if link and ganchos == "trilha/hooks":
+            avisos.append(
+                "trava do commit ligada pelo link de transição (trilha/hooks): rode git config "
+                "core.hooksPath trilha-ai/hooks"
+            )
+        elif ganchos != "trilha-ai/hooks":
             avisos.append(
                 "trava do commit desligada: rode git config core.hooksPath trilha-ai/hooks"
             )
