@@ -2461,7 +2461,7 @@ class Kit(unittest.TestCase):
         self.assertIn("trilha-ai/guarda.py difere do kit", saida.stderr)
         self.assertIn("kit.py atualizar", saida.stderr)  # nunca editar a pasta (C02)
 
-    def _kit_falso(self, tmp: str, com_tag: bool = True, versao: str = "9.9") -> Path:
+    def _kit_falso(self, tmp: str, com_tag: bool = True, versao: str = "9.9", pasta_antiga: bool = False) -> Path:
         """Um kit com a modelo/trilha-ai/ de agora, commitada e com a tag da versão dela (ou sem tag
         nenhuma), cuja cópia de trabalho já está noutra versão (a 9.9, à frente): o kit ao lado de
         um projeto atrasado (change 06). Sem os ganchos e a assinatura da configuração global."""
@@ -2478,7 +2478,9 @@ class Kit(unittest.TestCase):
         if com_tag:
             atual = FERRAMENTA._versao(MODELO / "trilha-ai/CLAUDE-comum.md")
             subprocess.run([*git, "tag", f"v{atual}"], check=True, env=env)
-        comum = kit / "modelo/trilha-ai/CLAUDE-comum.md"
+        if pasta_antiga:  # a cópia de trabalho de um kit de antes da 2.19, com a pasta trilha/
+            (kit / "modelo/trilha-ai").rename(kit / "modelo/trilha")
+        comum = kit / f"modelo/{'trilha' if pasta_antiga else 'trilha-ai'}/CLAUDE-comum.md"
         texto = re.sub(r"^Versão \d+\.\d+,", f"Versão {versao},", comum.read_text(encoding="utf-8"),
                        flags=re.M)
         comum.write_text(texto, encoding="utf-8")
@@ -2515,6 +2517,14 @@ class Kit(unittest.TestCase):
         aviso = next((l for l in saida.stderr.splitlines() if "1.0" in l), "")
         self.assertIn("atualize o kit ao lado", aviso, saida.stderr)
         self.assertNotIn("kit.py atualizar", aviso)  # o atualizar rebaixaria o projeto
+
+    def test_kit_atras_na_pasta_antiga_so_avisa(self) -> None:
+        """Revisão da change 20, R1: o kit ao lado ainda na trilha/ (atrás do projeto) só avisa."""
+        with tempfile.TemporaryDirectory() as tmp:
+            saida = self._regras_no_kit(self._projeto_novo(tmp), self._kit_falso(tmp, versao="2.18", pasta_antiga=True))
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next((l for l in saida.stderr.splitlines() if "2.18" in l), "")
+        self.assertIn("atualize o kit ao lado", aviso, saida.stderr)
 
     def test_versao_que_o_kit_nao_tem_reprova(self) -> None:
         """Revisão de código, ponto 1: a linha Versão trocada à mão não desliga a comparação."""
@@ -2870,8 +2880,9 @@ class Kit(unittest.TestCase):
             pasta = self._projeto_da_2_18(tmp)
             (pasta / "docs").mkdir()
             (pasta / "docs/como.md").write_text("Rode `python3 trilha/tempo.py`.\n", encoding="utf-8")
-            (pasta / "docs/outro.md").write_text("A minhatrilha/, a trilha-ai/, o src/trilha/ e o ../trilha/ não contam.\n",
-                                                 encoding="utf-8")
+            (pasta / "docs/outro.md").write_text("A minhatrilha/, a trilha-ai/, o src/trilha/, o src\\trilha/ e o "
+                                                 "../trilha/ não contam.\n", encoding="utf-8")
+            (pasta / "docs/decisões técnicas.md").write_text("Veja trilha/verifica.sh.\n", encoding="utf-8")
             self._commit_tudo(pasta, "documentos")
             saida = self._ferramenta("atualizar", str(pasta))
             aviso = next((l for l in saida.stdout.splitlines() if l.startswith("aviso") and "docs/como.md" in l), "")
@@ -2879,6 +2890,43 @@ class Kit(unittest.TestCase):
             self.assertNotIn("docs/outro.md", saida.stdout)
             self.assertNotIn("CLAUDE.md", aviso)
             self.assertNotIn("settings.json", aviso)  # revisão dos artefatos, A3: a trava já trocada
+            self.assertIn("docs/decisões técnicas.md", aviso)  # revisão da change 20, R2: o nome inteiro
+
+    def test_migracao_troca_a_importacao_com_espaco(self) -> None:
+        """Revisão da change 20, R5: a importação antiga com espaço no fim também se acerta."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            claude = pasta / "CLAUDE.md"
+            claude.write_text(claude.read_text(encoding="utf-8").replace("@trilha/CLAUDE-comum.md\n",
+                                                                         "@trilha/CLAUDE-comum.md \n"), encoding="utf-8")
+            self._commit_tudo(pasta, "importação com espaço")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 0, saida.stdout + saida.stderr)
+            self.assertIn("@trilha-ai/CLAUDE-comum.md", claude.read_text(encoding="utf-8").splitlines())
+
+    def test_migracao_recusa_o_ignorado_na_trilha(self) -> None:
+        """Revisão da change 20, R3: um arquivo que o git ignora na trilha/ sairia sem volta."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            (pasta / "trilha/notas.log").write_text("só aqui\n", encoding="utf-8")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
+            self.assertIn("trilha/notas.log", saida.stderr)
+            self.assertTrue((pasta / "trilha/notas.log").is_file())
+            self.assertFalse((pasta / "trilha-ai").exists())
+
+    def test_migracao_recusa_a_trilha_que_e_link(self) -> None:
+        """Revisão da change 20, R6: a trilha/ que é um link simbólico recusa, sem traceback."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = self._projeto_da_2_18(tmp)
+            (pasta / "trilha").rename(pasta / "outra")
+            (pasta / "trilha").symlink_to("outra")
+            self._commit_tudo(pasta, "a trilha como link")
+            saida = self._ferramenta("atualizar", str(pasta))
+            self.assertEqual(saida.returncode, 1, saida.stdout + saida.stderr)
+            self.assertIn("recusado:", saida.stderr)
+            self.assertNotIn("Traceback", saida.stderr)
+            self.assertTrue((pasta / "trilha").is_symlink())
 
     def test_migracao_nao_troca_o_caminho_do_projeto(self) -> None:
         """Revisão dos artefatos, A-menor: um src/trilha/ do projeto no check.sh não vira trilha-ai/."""
