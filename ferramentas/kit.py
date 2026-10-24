@@ -4,6 +4,10 @@ Uso (Python 3 puro, sem dependências), de qualquer pasta:
     python3 ferramentas/kit.py novo <pasta>        # a pasta, o git e os arquivos do kit
     python3 ferramentas/kit.py atualizar <pasta>   # a cópia nova do que se copia sem mudar
     python3 ferramentas/kit.py atualizar <pasta> --openspec   # e o OpenSpec na versão do kit
+    python3 ferramentas/kit.py atualizar <pasta> --openspec --aceitar-apagados
+        # e deixa o openspec update apagar os arquivos do projeto que o dry-run lista
+    O que falha no OpenSpec antes da cópia recusa com o projeto como estava; a máquina pode já
+    ter ficado na versão do kit.
 
 Nenhum dos dois faz commit nem envia: o commit segue o CLAUDE-comum.md (a mensagem, a coautoria)
 e o envio pede o "sim" do usuário. O que vai aos projetos está em modelo/; esta pasta,
@@ -210,7 +214,7 @@ def _aviso_do_perfil() -> str:
     )
 
 
-def atualizar(pasta: Path, openspec: bool = False) -> int:
+def atualizar(pasta: Path, openspec: bool = False, aceitar_apagados: bool = False) -> int:
     if not (pasta / ".git").exists():
         raise Recusa(f"{pasta} não é a raiz de um repositório git")
     if pasta.resolve() == KIT:
@@ -236,6 +240,21 @@ def atualizar(pasta: Path, openspec: bool = False) -> int:
     comum = pasta / "trilha" / "CLAUDE-comum.md"
     antes = _versao(comum if comum.is_file() else pasta / "CLAUDE-comum.md")
     _conferir_o_kit(antes)  # antes de mudar qualquer arquivo do projeto
+    # O que pode recusar o OpenSpec vem antes de mudar o projeto (a máquina já pode mudar); sem a
+    # migração do check.sh, a atualização falha, e o OpenSpec não muda a máquina à toa.
+    if openspec and not (pasta / "openspec").is_dir():
+        raise Recusa(
+            "o projeto não tem a pasta openspec/, sem a qual o openspec update não roda: rode o "
+            "atualizar sem --openspec, faça o commit e rode de novo com --openspec"
+        )
+    preparado = openspec and _check_migra(pasta)
+    if preparado:
+        _preparar_o_openspec(pasta, aceitar_apagados)
+    elif openspec:
+        print(
+            "aviso: o --openspec não roda: o scripts/check.sh ainda chama os scripts/confere_*, "
+            "que a migração não sabe trocar"
+        )
     migrou = _migrar(pasta)
     _copiar_trilha(pasta)
     for nome, origem in A_PREENCHER.items():
@@ -249,8 +268,7 @@ def atualizar(pasta: Path, openspec: bool = False) -> int:
     # A página nasce ao fechar uma etapa (o comum); aqui, só a que já existe ganha o modelo novo.
     if (pasta / "sdd" / "documentacao.html").is_file():
         _rodar(pasta, [sys.executable, "-I", "trilha/gerar_pagina_sdd.py"])
-    # Sem a migração do check.sh, a atualização falha: o OpenSpec não muda a máquina à toa.
-    falha_do_openspec = _atualizar_o_openspec(pasta) if openspec and migrou else ""
+    falha_do_openspec = _rodar_o_update(pasta) if preparado else ""
     if not openspec:
         _avisar_o_openspec()
     _avisar_o_ci_do_projeto(pasta)
@@ -345,20 +363,20 @@ def _no_projeto(pasta: Path, nome: str) -> bool:
     return not nome.startswith("~") and Path(os.path.normpath(raiz / nome)).is_relative_to(raiz)
 
 
-def _atualizar_o_openspec(pasta: Path) -> str:
-    """O OpenSpec da máquina na versão do kit (o npm, só quando ela é outra ou falta) e o openspec
-    update no projeto, depois do dry-run, que recusa o update que apagaria arquivos dele; devolve a
-    falha, ou vazio."""
+def _preparar_o_openspec(pasta: Path, aceitar_apagados: bool) -> None:
+    """O OpenSpec da máquina na versão do kit (o npm, só quando ela é outra ou falta) e o dry-run
+    do update no projeto, antes de mudar qualquer arquivo dele: recusa o que falha e o update que
+    apagaria arquivos do projeto, salvo com o aceite deles. A pasta openspec/ já foi conferida."""
     alvo = _openspec_do_kit()
     if not alvo:
-        return "o CI do modelo do kit não fixa a versão do OpenSpec"
+        raise Recusa("o CI do modelo do kit não fixa a versão do OpenSpec")
     instalar = f"npm install -g @fission-ai/openspec@{alvo}"
     if _versao_do_openspec() != alvo:
         if not _rodar(pasta, instalar.split(), SEM_CONSULTA, PRAZO_DA_INSTALACAO):
-            return f"o OpenSpec da máquina não ficou na {alvo}: rode {instalar}"
+            raise Recusa(f"o OpenSpec da máquina não ficou na {alvo}: rode {instalar}")
         agora = _versao_do_openspec()
         if agora != alvo:
-            return (
+            raise Recusa(
                 f"o {instalar} terminou, mas o openspec do PATH ({shutil.which('openspec')}) "
                 f"responde {agora or 'nada'}: outro openspec vem antes no PATH"
             )
@@ -371,7 +389,7 @@ def _atualizar_o_openspec(pasta: Path) -> str:
     if not isinstance(mudancas, list) or plano.get("failures"):
         for linha in ((saida.stdout + saida.stderr) if saida else "").splitlines():
             print(f"  {linha}")
-        return "o openspec update --dry-run --json falhou no projeto (a saída está acima)"
+        raise Recusa("o openspec update --dry-run --json falhou no projeto (a saída está acima)")
     apagados = sorted(
         mudanca["path"]
         for mudanca in mudancas
@@ -382,11 +400,19 @@ def _atualizar_o_openspec(pasta: Path) -> str:
     fora = [nome for nome in apagados if not _no_projeto(pasta, nome)]
     if fora:
         print(f"aviso: o openspec update vai apagar, fora do projeto: {', '.join(fora)}")
-    if dentro := [nome for nome in apagados if _no_projeto(pasta, nome)]:
-        return (
-            f"o openspec update apagaria {', '.join(dentro)}, e não rodou: confira o perfil com "
-            "openspec config list e ajuste-o com openspec config profile"
+    dentro = [nome for nome in apagados if _no_projeto(pasta, nome)]
+    if dentro and not aceitar_apagados:
+        raise Recusa(
+            f"o openspec update apagaria {', '.join(dentro)}: confira o perfil com openspec "
+            "config list e ajuste-o com openspec config profile, ou rode de novo com "
+            "--aceitar-apagados para deixá-los sair; o projeto não mudou"
         )
+    if dentro:
+        print(f"aviso: o openspec update vai apagar, no projeto: {', '.join(dentro)}")
+
+
+def _rodar_o_update(pasta: Path) -> str:
+    """O openspec update no projeto, depois da cópia; devolve a falha, ou vazio."""
     if not _rodar(pasta, ["openspec", "update"], SEM_CONSULTA, PRAZO_DA_INSTALACAO):
         return "o openspec update falhou no projeto (a saída está acima)"
     return ""
@@ -497,18 +523,37 @@ BLOCO_ANTIGO = (
 CHAMADA_ANTIGA = "python3 -I scripts/confere_metodo.py"
 
 
+def _check_migrado(texto: str) -> str | None:
+    """O check.sh com a parte fixa do kit trocada pelo trilha/verifica.sh (o mesmo texto, sem a
+    parte antiga); None quando a parte antiga não é a do kit, que a troca não sabe mudar."""
+    if "scripts/confere_" not in texto:
+        return texto
+    if BLOCO_ANTIGO not in texto or texto.count(CHAMADA_ANTIGA) != 1:
+        return None
+    texto = texto.replace(CHECK_ANTIGO, "# Parte fixa: as regras, o método e os specs.\n")
+    return texto.replace(BLOCO_ANTIGO, "").replace(CHAMADA_ANTIGA, "bash trilha/verifica.sh")
+
+
+def _texto_do_check(pasta: Path) -> str:
+    check = pasta / "scripts" / "check.sh"
+    return check.read_text(encoding="utf-8") if check.is_file() else ""
+
+
+def _check_migra(pasta: Path) -> bool:
+    """A migração do check.sh vai dar certo: a previsão do _migrar_check, sem escrever."""
+    migrado = _check_migrado(_texto_do_check(pasta))
+    return migrado is not None and "scripts/confere_" not in migrado
+
+
 def _migrar_check(pasta: Path) -> bool:
     """A parte fixa do check.sh, se for a do kit, vira o trilha/verifica.sh, com os --vizinho."""
-    check = pasta / "scripts" / "check.sh"
-    texto = check.read_text(encoding="utf-8") if check.is_file() else ""
-    if "scripts/confere_" not in texto:
-        return True
-    if BLOCO_ANTIGO in texto and texto.count(CHAMADA_ANTIGA) == 1:
-        texto = texto.replace(CHECK_ANTIGO, "# Parte fixa: as regras, o método e os specs.\n")
-        texto = texto.replace(BLOCO_ANTIGO, "").replace(CHAMADA_ANTIGA, "bash trilha/verifica.sh")
-        check.write_text(texto, encoding="utf-8")
-        print("scripts/check.sh: a parte fixa passou a `bash trilha/verifica.sh`")
-        return "scripts/confere_" not in texto
+    texto = _texto_do_check(pasta)
+    migrado = _check_migrado(texto)
+    if migrado is not None:
+        if migrado != texto:
+            (pasta / "scripts" / "check.sh").write_text(migrado, encoding="utf-8")
+            print("scripts/check.sh: a parte fixa passou a `bash trilha/verifica.sh`")
+        return "scripts/confere_" not in migrado
     print(
         "aviso: a parte fixa do scripts/check.sh não é a do kit; troque à mão a chamada aos "
         "scripts/confere_*.py por `bash trilha/verifica.sh` (com os --vizinho que houver)"
@@ -785,17 +830,29 @@ def main() -> int:
     parser.add_argument(
         "--openspec",
         action="store_true",
-        help="no atualizar: instala o OpenSpec na versão do kit e roda o openspec update",
+        help="no atualizar: instala o OpenSpec na versão do kit e roda o dry-run do openspec "
+        "update antes de mudar o projeto (o que falha ali recusa, com o projeto como estava); o "
+        "update roda depois da cópia, se o dry-run não apagar arquivo do projeto ou com o "
+        "--aceitar-apagados",
+    )
+    parser.add_argument(
+        "--aceitar-apagados",
+        action="store_true",
+        help="com o --openspec: deixa o openspec update apagar os arquivos do projeto que o "
+        "dry-run lista",
     )
     args = parser.parse_args()
     if args.openspec and args.acao != "atualizar":
         parser.error("o --openspec só vale no atualizar")
+    if args.aceitar_apagados and not args.openspec:
+        parser.error("o --aceitar-apagados só vale no atualizar, com o --openspec")
     try:
         if args.acao == "novo":
             novo(args.pasta)
             return 0
-        return atualizar(args.pasta, openspec=args.openspec)
+        return atualizar(args.pasta, openspec=args.openspec, aceitar_apagados=args.aceitar_apagados)
     except Recusa as recusa:
+        sys.stdout.flush()  # a recusa vem depois da saída que ela cita, mesmo com as duas juntas
         print(f"recusado: {recusa}", file=sys.stderr)
         return 1
 
