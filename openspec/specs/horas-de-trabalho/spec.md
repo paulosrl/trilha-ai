@@ -19,7 +19,7 @@ O `trilha/tempo.py` SHALL rodar só quando chamado, de dentro de um repositório
 - **AND** nenhum arquivo é criado na pasta de dados do usuário
 
 ### Requirement: Conversas do repositório
-O comando SHALL ler as conversas do Claude Code da pasta `projects` da configuração do Claude Code (`CLAUDE_CONFIG_DIR`, ou `~/.claude` quando ela falta ou é vazia), inclusive as dos subagentes, e MUST considerar só as linhas cujo `cwd` é a raiz do repositório ou uma pasta dentro dela que não é de outro repositório git aninhado. Um worktree do próprio repositório dentro da raiz conta como dela. A subpasta cujo `.git` não se consegue conferir (sem permissão) MUST contar como da raiz, sem o comando falhar.
+O comando SHALL ler as conversas do Claude Code da pasta `projects` da configuração do Claude Code (`CLAUDE_CONFIG_DIR`, ou `~/.claude` quando ela falta ou é vazia), inclusive as dos subagentes, e MUST considerar só as linhas cujo `cwd` é a raiz do repositório ou uma pasta dentro dela que não é de outro repositório git aninhado. Um worktree do próprio repositório dentro da raiz conta como dela.
 
 #### Scenario: Conversa de outro repositório
 - **WHEN** uma conversa tem todas as linhas com `cwd` num repositório vizinho cujo nome começa com o nome deste
@@ -110,7 +110,7 @@ As horas SHALL ser contadas no fuso horário local da máquina, e um intervalo q
 - **THEN** a faixa do dia na página vai dos 1380 aos 1400 minutos, a posição pelo relógio
 
 ### Requirement: Estimativa pelos commits nos dias sem conversa
-O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas pelos commits do usuário (todas as branches e tags, cada commit uma vez, pela data de autor; com o e-mail de autor do git, que é o `GIT_AUTHOR_EMAIL`, o `author.email` ou o `user.email` de qualquer configuração do git, ou o `EMAIL` quando nenhum deles existe, só os commits dos e-mails do usuário): commits com até 2 horas de intervalo formam uma sessão, que começa 30 minutos antes do primeiro, sem passar da meia-noite do dia dele, e o dia com commit tem pelo menos 1 minuto. O dia com tempo das conversas MUST usar só as conversas.
+O dia sem nenhum tempo ativo apurado das conversas SHALL ter as horas estimadas pelos commits do usuário (as branches, as remotas e as tags, cada commit uma vez, pela data de autor): commits com até 2 horas de intervalo formam uma sessão, que começa 30 minutos antes do primeiro, sem passar da meia-noite do dia dele, e o dia com commit tem pelo menos 1 minuto. O dia com tempo das conversas MUST usar só as conversas.
 
 #### Scenario: Sessões de commits
 - **WHEN** um dia sem conversa tem commits às 10:00, 11:00 e 14:00
@@ -290,7 +290,7 @@ A página SHALL ter os dados da apuração só no bloco de dados, e o nome do re
 - **THEN** o bloco de dados da página não traz o texto `<!--`
 
 ### Requirement: Repositório que mudou de pasta
-Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz, e esse caminho já não tem um repositório git (a pasta `.git`), o comando SHALL juntar as conversas dele às deste resumo, renomear o arquivo dele e a página dele com o sufixo `.juntado`, sem apagá-los nem sobrescrever um `.juntado` anterior, e avisar, sem falhar, citando-o; quando o resumo dele não se lê, o comando SHALL avisar, citando-o e dizendo que se corrija ou mova o arquivo, sem juntá-lo nem renomeá-lo. Quando não se consegue conferir o `.git` desse caminho (sem permissão, um caminho inválido), o comando MUST NOT juntar nem renomear o resumo dele, MUST avisar em toda execução que não conseguiu conferir, citando o resumo, e MUST terminar com o código de saída 0. Quando esse caminho ainda tem um repositório e não há resumo para o caminho da raiz, o comando SHALL só avisar, citando o outro resumo. O comando MUST NOT tomar por ele o resumo de um repositório cujo nome só começa com o deste.
+Quando há outro resumo do mesmo nome de repositório com outro caminho de raiz, e esse caminho já não tem a pasta `.git`, o comando SHALL juntar as conversas dele às deste resumo, renomear o arquivo dele e a página dele com o sufixo `.juntado`, sem apagá-los nem sobrescrever um `.juntado` anterior, e avisar, sem falhar, citando-o, salvo quando o resumo dele não se lê ("Resumo antigo ilegível"). O comando MUST NOT tomar por ele o resumo de um repositório cujo nome só começa com o deste.
 
 #### Scenario: Pasta trocada
 - **WHEN** o comando já rodou com a raiz em `/a/proj`, `/a/proj` ainda tem um repositório, e ele roda agora com a raiz em `/b/proj`
@@ -347,3 +347,38 @@ O resumo da versão 1, gravado pela 2.8, SHALL ser lido: as conversas que ainda 
 #### Scenario: Conversa do repositório aninhado no resumo antigo
 - **WHEN** o resumo da versão 1 guarda 20 minutos de uma conversa que ainda existe e tem todas as linhas com `cwd` num repositório git aninhado na raiz
 - **THEN** o dia dela não traz esses minutos, e o resumo gravado não traz essa conversa
+
+### Requirement: Subpasta que não se confere
+A subpasta da raiz cujo `.git` não se consegue conferir (sem permissão) MUST contar como da raiz na apuração das conversas, sem o comando falhar.
+
+#### Scenario: Conversa sob uma pasta fechada
+- **WHEN** uma conversa tem `cwd` numa subpasta da raiz que fica sob uma pasta sem permissão de leitura
+- **THEN** o comando termina com o código de saída 0, e as horas dessa conversa entram na apuração da raiz
+
+### Requirement: Commits do usuário
+Os commits do usuário, na estimativa pelos commits, SHALL ser os dos e-mails de autor do git (o `GIT_AUTHOR_EMAIL`, o `author.email` e o `user.email` de qualquer configuração do git, ou o `EMAIL` quando nenhum deles existe) e os do `trilha.email` ("Outros e-mails do usuário"). Sem nenhum e-mail de autor, MUST contar os commits de qualquer autor, mesmo com o `trilha.email`.
+
+#### Scenario: Só os commits dos e-mails do usuário
+- **WHEN** o `user.email` é o do usuário, e um dia sem conversa só tem um commit de outro e-mail
+- **THEN** esse dia não aparece na apuração
+
+### Requirement: Resumo antigo ilegível
+Quando o resumo de mesmo nome aponta uma raiz que já não tem repositório e não se lê (de uma versão que o comando não conhece, por exemplo), o comando SHALL avisar, citando-o e dizendo que se corrija ou mova o arquivo, sem juntá-lo nem renomeá-lo.
+
+#### Scenario: Resumo antigo de versão desconhecida
+- **WHEN** a raiz antiga já não existe, e o resumo dela é de uma versão que o comando não conhece
+- **THEN** a saída traz um aviso que cita esse resumo e diz "corrija-o ou mova-o", o resumo continua com o nome de antes, e as horas dele não entram
+
+### Requirement: Raiz antiga que não se confere
+Quando não se consegue conferir o `.git` do caminho de raiz de outro resumo do mesmo nome (sem permissão, um caminho inválido), o comando MUST NOT juntar nem renomear o resumo dele, MUST avisar em toda execução que não conseguiu conferir, citando o resumo, e MUST terminar com o código de saída 0.
+
+#### Scenario: Raiz antiga sob uma pasta fechada
+- **WHEN** a pasta acima da raiz antiga não se abre, por falta de permissão
+- **THEN** o comando termina com o código de saída 0, o resumo antigo não é juntado nem renomeado, e a saída de cada execução traz o aviso de que não deu para conferir, citando o resumo
+
+### Requirement: Raiz antiga que ainda é repositório
+Quando o caminho de raiz de outro resumo do mesmo nome ainda tem a pasta `.git`, mesmo que o git a recuse, e não há resumo para o caminho da raiz, o comando SHALL só avisar, citando o outro resumo.
+
+#### Scenario: Repositório copiado para outra pasta
+- **WHEN** o comando já rodou numa raiz que ainda tem o repositório, e roda agora noutra pasta com o mesmo nome
+- **THEN** a saída traz um aviso que cita o resumo da outra raiz, e o comando termina com o código de saída 0
