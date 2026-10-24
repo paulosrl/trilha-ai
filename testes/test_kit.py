@@ -43,6 +43,13 @@ def _claude_falso(pasta: Path, corpo: str) -> None:
     falso.chmod(0o755)
 
 
+def _dry_run(*mudancas: tuple[str, str], failures: tuple[str, ...] = ()) -> str:
+    """O corpo do `openspec update` falso: imprime o JSON do `--dry-run --json` com as mudanças
+    dadas, cada uma como (ação, caminho)."""
+    changes = [{"path": caminho, "action": acao, "tool": "claude"} for acao, caminho in mudancas]
+    return "printf '%s\\n' " + shlex.quote(json.dumps({"changes": changes, "notes": [], "failures": list(failures)}))
+
+
 _SEM_CLAUDE = tempfile.TemporaryDirectory()
 _PATH_ORIGINAL = os.environ["PATH"]
 _XDG_ORIGINAL = os.environ.get("XDG_CONFIG_HOME")
@@ -1121,8 +1128,8 @@ class Kit(unittest.TestCase):
     def _openspec_falso(self, falsos: Path, versao: str = "1.15.0", config: bool = True,
                         update: str = "exit 0") -> Path:
         """Um `openspec` de mentira em falsos/, que grava cada chamada num registro e responde ao
-        `config path` (um arquivo que existe, ou não), ao `--version` e ao `update <pasta>` (o corpo
-        dado, com a pasta em $2). Devolve o registro."""
+        `config path` (um arquivo que existe, ou não), ao `--version` e ao `update` (o corpo dado;
+        o `_dry_run` monta a resposta do `--dry-run --json`). Devolve o registro."""
         registro = falsos / "registro"
         registro.touch()
         if config:  # a configuração global da máquina, em <falsos>/xdg, salvo outro XDG_CONFIG_HOME
@@ -1155,7 +1162,7 @@ class Kit(unittest.TestCase):
             )
             return saida, registro.read_text(encoding="utf-8")
 
-    APAGA_A_SKILL = 'rm -r "$2/.claude/skills/openspec-propose"'
+    APAGA_A_SKILL = _dry_run(("delete", ".claude/skills/openspec-propose/SKILL.md"))
 
     def test_openspec_avisa_as_skills_que_o_update_apagaria(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1182,33 +1189,46 @@ class Kit(unittest.TestCase):
         gerados = tuple(f".claude/skills/openspec-s{i}/SKILL.md" for i in range(7))
         with tempfile.TemporaryDirectory() as tmp:
             saida, _ = self._metodo_com_openspec(self._projeto_com_gerados(tmp, gerados=gerados),
-                                                 update='rm -r "$2/.claude/skills"')
+                                                 update=_dry_run(*(("delete", g) for g in gerados)))
         aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
         self.assertIn("openspec-s4/SKILL.md e mais 2", aviso, saida.stderr)
         self.assertNotIn("openspec-s5", aviso)
 
     def test_openspec_ensaio_nao_muda_a_configuracao_da_maquina(self) -> None:
-        """Revisão da change 09, achado 1: a migração do OpenSpec regrava a configuração global."""
-        regrava = 'echo migrado > "$configuracao"; ' + self.APAGA_A_SKILL
+        """Revisão da change 09, achado 1: a migração do OpenSpec regravaria a configuração global;
+        o dry-run a lista pelo caminho absoluto, e ela fica fora do aviso (change 14)."""
         with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as falsos:
             destino = self._projeto_com_gerados(tmp)
-            self._openspec_falso(Path(falsos), update=regrava)
+            global_ = f"{falsos}/xdg/openspec/config.json"
+            lista = _dry_run(("update", global_), ("delete", ".claude/skills/openspec-propose/SKILL.md"))
+            self._openspec_falso(Path(falsos), update=lista)
             saida = subprocess.run([sys.executable, "-I", str(destino / "trilha/confere_metodo.py")],
                                    capture_output=True, text=True, check=False, env={**os.environ, "PATH": falsos})
             maquina = (Path(falsos) / "xdg/openspec/config.json").read_text(encoding="utf-8")
         self.assertEqual(maquina, '{"profile": "custom"}')
-        self.assertIn("openspec update mudaria", saida.stderr)
+        aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
+        self.assertIn("apagaria: .claude/skills/openspec-propose/SKILL.md", aviso, saida.stderr)
+        self.assertNotIn("config.json", aviso)
 
     def test_openspec_avisa_o_que_criaria_e_trocaria(self) -> None:
         """Revisão da change 09, achado 5: os grupos "criaria" e "trocaria" do aviso."""
-        muda = ('mkdir -p "$2/.claude/skills/openspec-nova" && echo nova > "$2/.claude/skills/openspec-nova/SKILL.md"; '
-                'echo reescrito > "$2/.claude/commands/opsx/propose.md"')
+        muda = _dry_run(("add", ".claude/skills/openspec-nova/SKILL.md"),
+                        ("update", ".claude/commands/opsx/propose.md"))
         with tempfile.TemporaryDirectory() as tmp:
             saida, _ = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=muda)
         aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
         self.assertIn("criaria: .claude/skills/openspec-nova/SKILL.md", aviso, saida.stderr)
         self.assertIn("trocaria: .claude/commands/opsx/propose.md", aviso)
         self.assertNotIn("apagaria", aviso)
+        # Change 14: o item fora do formato do dry-run fica de fora, sem derrubar a conferência.
+        estranhos = [3, {"path": 4, "action": "add"}, {"path": "x", "action": ["add"]}, {"path": "y", "action": "move"}]
+        valido = {"path": ".claude/commands/opsx/propose.md", "action": "delete"}
+        lista = "printf '%s\\n' " + shlex.quote(json.dumps({"changes": [*estranhos, valido], "failures": []}))
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, _ = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=lista)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        aviso = next((l for l in saida.stderr.splitlines() if "openspec update mudaria" in l), "")
+        self.assertIn("(apagaria: .claude/commands/opsx/propose.md)", aviso, saida.stderr)
 
     def test_openspec_nome_fora_do_utf8_nao_derruba(self) -> None:
         """Revisão da change 09, achado 3: o aviso nunca vira falha, nem com um nome em Latin-1."""
@@ -1222,9 +1242,9 @@ class Kit(unittest.TestCase):
 
     def test_openspec_em_dia_nao_avisa(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
-            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp))
+            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=_dry_run())
         self.assertEqual(saida.returncode, 0, saida.stderr)
-        self.assertIn("update", registro)  # o ensaio rodou
+        self.assertIn("update --dry-run --json", registro)  # o dry-run rodou
         self.assertNotIn("openspec update mudaria", saida.stderr)
 
     def test_openspec_ensaio_nao_toca_o_projeto(self) -> None:
@@ -1280,6 +1300,27 @@ class Kit(unittest.TestCase):
                 os.environ["PATH"] = antes
         self.assertFalse([a for a in avisos if "openspec update mudaria" in a], avisos)
         self.assertLess(duracao, 4)
+
+    def test_openspec_dry_run_com_falhas_nao_avisa(self) -> None:
+        """Change 14: o dry-run com failures, a saída que não é JSON e o JSON sem a lista changes."""
+        com_falha = _dry_run(("delete", ".claude/skills/openspec-propose/SKILL.md"), failures=("claude",))
+        for resposta in (com_falha, "echo nada", "printf '%s\\n' '{\"changes\": 3}'", "printf '[]\\n'"):
+            with self.subTest(resposta=resposta), tempfile.TemporaryDirectory() as tmp:
+                saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp), update=resposta)
+                self.assertEqual(saida.returncode, 0, saida.stderr)
+                self.assertIn("update --dry-run --json", registro)
+                self.assertNotIn("openspec update mudaria", saida.stderr)
+
+    def test_openspec_sem_dry_run_nao_avisa(self) -> None:
+        """Change 14: o OpenSpec anterior à 1.15 recusa o --dry-run; fica o aviso da versão."""
+        recusa = "echo \"error: unknown option '--dry-run'\" >&2; exit 1"
+        with tempfile.TemporaryDirectory() as tmp:
+            saida, registro = self._metodo_com_openspec(self._projeto_com_gerados(tmp), versao="1.14.1",
+                                                        update=recusa)
+        self.assertEqual(saida.returncode, 0, saida.stderr)
+        self.assertIn("update --dry-run --json", registro)
+        self.assertNotIn("openspec update mudaria", saida.stderr)
+        self.assertIn("npm install -g @fission-ai/openspec@1.15.0", saida.stderr)
 
     def test_openspec_sem_arquivos_gerados_nao_ensaia(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

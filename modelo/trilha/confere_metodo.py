@@ -13,7 +13,7 @@ Confere, na raiz do repositório:
   nada sem o Claude Code (o CI), sem a resposta dele no prazo ou com --sem-plugin, que a trava do
   commit usa para não esperar a cada commit;
 - o OpenSpec da máquina: o que o `openspec update` mudaria nos arquivos gerados que o projeto
-  versiona, pelo ensaio dele numa pasta temporária, sem a rede, e a versão instalada diante da
+  versiona, pelo dry-run dele, sem a rede, e a versão instalada diante da
   fixada no CI do projeto; só aviso, e nada sem o openspec, sem a configuração global dele (o CI),
   sem resposta no prazo ou com --sem-plugin, que pula tudo o que depende da máquina.
 
@@ -30,10 +30,8 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -53,7 +51,7 @@ ESCOPOS_DO_PROJETO = ("local", "project")
 CONFIGURACOES = (("local", ".claude/settings.local.json"), ("project", ".claude/settings.json"))
 # Quanto esperar pela lista de plugins do Claude Code; sem resposta nele, segue sem aviso.
 PRAZO_DO_CLAUDE = 10
-# O OpenSpec: quanto esperar por ele (o ensaio do update leva menos de um segundo) e o ambiente
+# O OpenSpec: quanto esperar por ele (o dry-run do update leva menos de um segundo) e o ambiente
 # sem a rede, com a consulta da versão nova e a telemetria desligadas.
 PRAZO_DO_OPENSPEC = 60
 SEM_REDE = {"OPENSPEC_NO_UPDATE_CHECK": "1", "OPENSPEC_TELEMETRY": "0", "DO_NOT_TRACK": "1"}
@@ -61,8 +59,10 @@ SEM_REDE = {"OPENSPEC_NO_UPDATE_CHECK": "1", "OPENSPEC_TELEMETRY": "0", "DO_NOT_
 GERADO = re.compile(r"(^|/)(openspec-[^/]+/SKILL\.md|opsx[^/]*(/.*)?|\.openspec-target)$")
 # A versão fixada no CI, só quando é um número (o "latest" não se compara).
 PIN_DO_OPENSPEC = re.compile(r"@fission-ai/openspec@(\d+\.\d+\.\d+[^\s\"']*)")
-# Quantos nomes de cada grupo o aviso do ensaio mostra; o resto vira contagem.
+# Quantos nomes de cada grupo o aviso do dry-run mostra; o resto vira contagem.
 MOSTRADOS = 5
+# As ações do dry-run do update, no verbo do aviso.
+VERBOS = {"delete": "apagaria", "add": "criaria", "update": "trocaria"}
 NUMERO = re.compile(r"\d{2,3}")
 # Os títulos da decomposição, como o esqueleto da skill sdd:briefing os traz.
 TITULOS = ("## 1.", "## 2.", "## Ciclo")
@@ -260,7 +260,7 @@ def avisar_plugin() -> list[str]:
     return avisos
 
 
-def _saida(comando: list[str], ambiente: dict[str, str] | None = None) -> str | None:
+def _saida(comando: list[str]) -> str | None:
     """A saída de um comando na raiz do projeto, sem a rede; None se ele faltar, falhar ou não
     responder no prazo. O nome de arquivo fora do UTF-8 chega como o sistema o guarda."""
     try:
@@ -272,7 +272,7 @@ def _saida(comando: list[str], ambiente: dict[str, str] | None = None) -> str | 
             timeout=PRAZO_DO_OPENSPEC,
             check=False,
             cwd=RAIZ,
-            env={**os.environ, **SEM_REDE, **(ambiente or {})},
+            env={**os.environ, **SEM_REDE},
         )
     except (OSError, subprocess.TimeoutExpired):
         return None
@@ -301,53 +301,28 @@ def _nomes(nomes: list[str]) -> str:
 
 
 def _aviso_do_update() -> list[str]:
-    """O que o `openspec update` mudaria nos arquivos gerados que o projeto versiona, pelo ensaio
-    dele numa pasta temporária, com a cópia desses arquivos e do config.yaml, e com a cópia da
-    configuração global (a migração do OpenSpec a regrava); nem o projeto nem a máquina mudam."""
+    """O que o `openspec update` mudaria nos arquivos do projeto, pelo `--dry-run --json` dele, que
+    não escreve nada; só com a configuração global e com arquivos gerados no índice do git. O que
+    ele lista fora do projeto (a configuração global, pelo caminho absoluto) fica fora do aviso."""
     configuracao = _saida(["openspec", "config", "path"])
     if configuracao is None or not Path(configuracao.strip()).is_file():
         return []
     lista = _saida(["git", "ls-files", "-z"])
-    gerados = sorted(
-        nome
-        for nome in (lista or "").split("\0")
-        if GERADO.search(nome) and (RAIZ / nome).is_file()
-    )
-    config = "openspec/config.yaml"
-    if not gerados or not (RAIZ / config).is_file():
+    if not any(GERADO.search(nome) for nome in (lista or "").split("\0")):
         return []
-    with tempfile.TemporaryDirectory() as tmp:
-        ensaio, xdg = Path(tmp) / "projeto", Path(tmp) / "xdg"
-        for nome in (*gerados, config):
-            (ensaio / nome).parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(RAIZ / nome, ensaio / nome)
-        (xdg / "openspec").mkdir(parents=True)
-        shutil.copyfile(configuracao.strip(), xdg / "openspec" / "config.json")
-        if _saida(["openspec", "update", str(ensaio)], {"XDG_CONFIG_HOME": str(xdg)}) is None:
-            return []
-        apagaria = [nome for nome in gerados if not (ensaio / nome).is_file()]
-        trocaria = [
-            nome
-            for nome in gerados
-            if (ensaio / nome).is_file()
-            and (ensaio / nome).read_bytes() != (RAIZ / nome).read_bytes()
-        ]
-        novos = (
-            arquivo.relative_to(ensaio).as_posix()
-            for arquivo in ensaio.rglob("*")
-            if arquivo.is_file()
-        )
-        criaria = sorted(
-            nome
-            for nome in novos
-            if nome not in (*gerados, config)
-            and not (
-                (RAIZ / nome).is_file()
-                and (RAIZ / nome).read_bytes() == (ensaio / nome).read_bytes()
-            )
-        )
-    grupos = (("apagaria", apagaria), ("criaria", criaria), ("trocaria", trocaria))
-    partes = [f"{verbo}: {_nomes(nomes)}" for verbo, nomes in grupos if nomes]
+    try:
+        plano = json.loads(_saida(["openspec", "update", "--dry-run", "--json"]) or "")
+    except ValueError:
+        return []
+    mudancas = plano.get("changes") if isinstance(plano, dict) else None
+    if not isinstance(mudancas, list) or plano.get("failures"):
+        return []
+    grupos: dict[str, list[str]] = {verbo: [] for verbo in VERBOS.values()}
+    for mudanca in (item for item in mudancas if isinstance(item, dict)):
+        nome, acao = mudanca.get("path"), mudanca.get("action")
+        if isinstance(nome, str) and str(acao) in VERBOS and not Path(nome).is_absolute():
+            grupos[VERBOS[str(acao)]].append(nome)
+    partes = [f"{verbo}: {_nomes(sorted(nomes))}" for verbo, nomes in grupos.items() if nomes]
     if not partes:
         return []
     aviso = (
