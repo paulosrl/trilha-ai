@@ -7,8 +7,10 @@ Confere, na raiz do repositório:
   da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho, por palavra:
-  o nome, sozinho ou com .git, em qualquer parte de um caminho ou URL; não o que é parte de outro
-  nome, nem o arquivo com extensão só de letras, nem o caminho que começa na pasta trilha-ai/);
+  o nome, sozinho ou com .git, .wiki ou um final que não é só de letras, em qualquer parte de um
+  caminho ou URL, e o host da URL que começa por ele; não o que é parte de outro nome, nem o
+  arquivo com extensão só de letras, nem o caminho que começa na pasta trilha-ai/); o --vizinho é
+  o nome de um repositório, só com letras, números, _, . e -;
 - as instalações do plugin `sdd` que podem valer no projeto, pela lista do Claude Code lida na
   pasta dele: a do kit, ligada, na versão do trilha-ai/CLAUDE-comum.md e, se o .claude/settings.json
   a declara, instalada no projeto; só aviso, nunca falha, e
@@ -72,6 +74,9 @@ TITULO = re.compile(r"#{1,6} ")
 # A palavra do ANDAMENTO.md: o que cabe num caminho ou numa URL; o resto (espaço, crase, aspas,
 # parênteses, vírgula, travessão) separa.
 PALAVRA = re.compile(r"[\w.~/:@#?=&%+-]+")
+# O nome de um vizinho: letras, números, _, . e -; o resto da palavra separa as partes.
+NOME = re.compile(r"[\w.-]*")
+SEPARADOR = re.compile(r"[^\w.-]+")
 EXTENSAO = re.compile(r"[A-Za-z]+(?:\.[A-Za-z]+)*")
 # A pasta do método, onde este arquivo está: o trilha-ai/ dos projetos.
 PASTA_DO_METODO = Path(__file__).resolve().parent.name
@@ -159,31 +164,37 @@ def conferir_tdd(texto: str) -> list[str]:
     return falhas
 
 
-def _cita(parte: str, nome: str) -> bool:
+def _partes(palavra: str) -> list[tuple[str, bool]]:
+    """As partes da palavra que podem ser o nome de um vizinho, sem o _ das pontas (o itálico),
+    cada uma marcada se é o host de uma URL; sem a pasta do método no começo de um caminho
+    relativo (trilha-ai/verifica.sh, ./trilha-ai)."""
+    resto = palavra.removeprefix("./")
+    if resto.startswith(f"{PASTA_DO_METODO}/") or (resto != palavra and resto == PASTA_DO_METODO):
+        resto = resto[len(PASTA_DO_METODO) :]
+    host = 1 if "://" in resto else None
+    return [(parte.strip("_"), i == host) for i, parte in enumerate(SEPARADOR.split(resto))]
+
+
+def _cita(parte: str, nome: str, host: bool) -> bool:
     """O nome sozinho, ou com o .git, o .wiki ou um final que não é só de letras (trilha-ai.v2);
-    não o arquivo com extensão só de letras (heimdall.yaml, heimdall.config.yaml)."""
+    não o arquivo com extensão só de letras (heimdall.yaml), a não ser no host de uma URL."""
     if parte == nome:
         return True
     extensao = parte.removeprefix(f"{nome}.")
     if extensao == parte:
         return False
-    return extensao.split(".")[0] in ("git", "wiki") or not EXTENSAO.fullmatch(extensao)
+    git = extensao.split(".")[0] in ("git", "wiki")
+    return host or git or not EXTENSAO.fullmatch(extensao)
 
 
 def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
     """O "../" em qualquer lugar e cada vizinho por palavra: a palavra, sem a pontuação do fim da
-    frase, partida em /, :, # e ?, cita o vizinho por uma parte (_cita), menos a pasta do método
-    no começo de um caminho relativo (trilha-ai/verifica.sh, ./trilha-ai)."""
+    frase, cita o vizinho por uma das partes (_partes, _cita)."""
     citados = ["../"] if "../" in texto else []
-    palavras = [palavra.rstrip(".:?!") for palavra in PALAVRA.findall(texto)]
+    partes = {par for palavra in PALAVRA.findall(texto) for par in _partes(palavra.rstrip(".:?!"))}
     for nome in filter(None, vizinhos):
-        for palavra in palavras:
-            partes = re.split(r"[/:#?]", palavra.removeprefix("./"))
-            pasta = partes[0] == PASTA_DO_METODO and (palavra.startswith("./") or len(partes) > 1)
-            primeira = _cita(partes[0], nome) and not pasta
-            if primeira or any(_cita(parte, nome) for parte in partes[1:]):
-                citados.append(nome)
-                break
+        if any(_cita(parte, nome, host) for parte, host in partes):
+            citados.append(nome)
     return [f"ANDAMENTO.md cita outro repositório: {nome}" for nome in citados]
 
 
@@ -373,10 +384,12 @@ def avisar_openspec() -> list[str]:
 def main(argv: list[str]) -> int:
     sem_plugin = "--sem-plugin" in argv
     argv = [opcao for opcao in argv if opcao != "--sem-plugin"]
-    if len(argv) % 2 or any(opcao != "--vizinho" for opcao in argv[::2]):
+    vizinhos = argv[1::2]
+    # O vizinho com barra ou outro sinal nunca seria achado: recusado, como a opção errada.
+    opcoes = any(opcao != "--vizinho" for opcao in argv[::2])
+    if len(argv) % 2 or opcoes or not all(NOME.fullmatch(nome) for nome in vizinhos):
         print(__doc__, file=sys.stderr)
         return 2
-    vizinhos = argv[1::2]
     falhas: list[str] = []
     avisos: list[str] = []
     decomposicao, tdd = _unico("decomposicao-*.md"), _unico("tdd-*.md")

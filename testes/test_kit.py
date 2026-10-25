@@ -2758,6 +2758,31 @@ class Kit(unittest.TestCase):
         self.assertEqual(self._andamento("ajustar heimdall/scripts/check.sh", "heimdall"),
                          ["ANDAMENTO.md cita outro repositório: heimdall"])
 
+    def test_andamento_reprova_o_nome_colado_a_um_sinal(self) -> None:
+        """Revisão da change 23, R1 e R5: o sinal que não cabe num nome separa, e o _ das pontas
+        (o itálico do Markdown) não conta; R2: só a barra abre a pasta do método."""
+        for texto, nome in (("trilha-ai@2.21", "trilha-ai"), ("pip install trilha-ai==2.21", "trilha-ai"),
+                            ("ver trilha-ai#24", "trilha-ai"), ("trilha-ai:main", "trilha-ai"),
+                            ("./trilha-ai:x", "trilha-ai"), ("ssh pl@heimdall", "heimdall"),
+                            ("@heimdall revisar", "heimdall"), ("?repo=heimdall", "heimdall"),
+                            ("heimdall+x", "heimdall"), ("o _heimdall_ mudou", "heimdall")):
+            with self.subTest(texto=texto):
+                self.assertEqual(self._andamento(texto, nome),
+                                 [f"ANDAMENTO.md cita outro repositório: {nome}"])
+
+    def test_andamento_reprova_o_host_da_url(self) -> None:
+        """Revisão da change 23, R4: na URL, o host que começa pelo vizinho e um ponto."""
+        self.assertEqual(self._andamento("https://heimdall.vercel.app/x", "heimdall"),
+                         ["ANDAMENTO.md cita outro repositório: heimdall"])
+        self.assertEqual(self._andamento("https://exemplo.com/docs/heimdall.yaml", "heimdall"), [])
+
+    def test_metodo_recusa_o_vizinho_com_separador(self) -> None:
+        """Revisão da change 23, R3: o vizinho é o nome de um repositório, sem barra nem sinal."""
+        for nome in ("paulosrl/trilha-ai", "trilha-ai:main", "trilha ai"):
+            with self.subTest(nome=nome), contextlib.redirect_stderr(io.StringIO()) as erro:
+                self.assertEqual(METODO.main(["--sem-plugin", "--vizinho", nome]), 2)
+            self.assertIn("Uso:", erro.getvalue())
+
     def test_andamento_aceita_o_nome_dentro_de_outro(self) -> None:
         texto = "a change `hooks-pela-trilha-ai`, com outros ajustes, e o `heimdall.yaml`"
         self.assertEqual(self._andamento(texto, "trilha-ai", "outro", "heimdall"), [])
