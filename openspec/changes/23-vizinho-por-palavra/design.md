@@ -33,3 +33,13 @@ O método vai à 2.22: o comum, o `plugin.json` na 2.22.0 e a tag `v2.22`.
 - [Uma extensão de arquivo com número (`heimdall.mp4`) reprova] → O erro fica do lado seguro: reprova, e quem escreveu troca o texto; o `trilha-ai.v2` que a revisão achou é a mesma forma.
 - [O nome no meio de um caminho relativo do próprio projeto (`docs/heimdall/x`) reprova] → Já reprovava desde a change 22, pelo "de fora"; um projeto não tem pasta com o nome do vizinho.
 - [Um separador que o D1 não lista, colado ao nome, esconde o vizinho] → A lista inclui o que aparece em caminho e URL; o resto separa, e o nome solto reprova.
+
+## Revisão dos artefatos
+
+Feita antes do apply, em 2026-10-25, pela coerência entre a proposta, o delta, o design e as tarefas, e diante do `conferir_andamento`: sem defeito. Os sete cenários têm teste nomeado; o "Caminho para fora do projeto" e o "Vizinho vazio" descrevem o comportamento de hoje, que a change preserva, e os testes deles passam antes do código.
+
+## Verificação
+
+**No apply, em 2026-10-25,** uma sonda à mão achou o `trilha-ai.git/x` isento pela pasta do método, porque a isenção olhava o vizinho e não a primeira parte. A isenção passou a exigir a primeira parte igual ao nome da pasta (D2), e o `trilha-ai.git/x` entrou no `test_andamento_reprova_o_vizinho_pelo_nome`.
+
+**Execução manual (tarefa 3.2), em 2026-10-25,** no scratchpad, num projeto novo criado pelo `python3 ferramentas/kit.py novo`, com o `bash trilha-ai/verifica.sh --vizinho trilha-ai --vizinho heimdall`. Com o `ANDAMENTO.md` citando `./trilha-ai`, `bash trilha-ai/verifica.sh`, a change `hooks-pela-trilha-ai` e o `heimdall.yaml`, terminou com 0 ("ok: decomposição, TDD e ANDAMENTO.md conferidos"). Com a linha "clonar trilha-ai.git ao lado", terminou com 1, com "FALHA: ANDAMENTO.md cita outro repositório: trilha-ai"; com a linha "ajustar heimdall/scripts/check.sh", no lugar dela, terminou com 1, com "FALHA: ANDAMENTO.md cita outro repositório: heimdall".
