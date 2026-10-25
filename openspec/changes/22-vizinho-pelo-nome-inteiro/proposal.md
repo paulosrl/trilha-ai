@@ -8,7 +8,7 @@ A descrição curta foi aprovada pelo usuário.
 
 ## What Changes
 
-- A conferência do método conta o vizinho no `ANDAMENTO.md` só pelo nome inteiro e solto: não quando ele é parte de outro nome (`hooks-pela-trilha-ai`, `outros`) nem quando vem seguido de barra, como a pasta `trilha-ai/` do método. O `../` continua contando onde estiver.
+- A conferência do método conta o vizinho no `ANDAMENTO.md` pelo nome inteiro e solto, ou pelo caminho que chega a ele de fora (a URL, com o `.git` ou sem, o caminho absoluto, o `~/`): não quando ele é parte de outro nome (`hooks-pela-trilha-ai`, `outros`), nem num arquivo com extensão (`heimdall.yaml`), nem no caminho que começa no próprio projeto, como a pasta `trilha-ai/` do método (com o `./` ou sem). O `../` continua contando onde estiver.
 - O método vai à 2.21: a versão do comum, o plugin `sdd` 2.21.0 e a tag `v2.21`.
 
 **Fora desta change:**

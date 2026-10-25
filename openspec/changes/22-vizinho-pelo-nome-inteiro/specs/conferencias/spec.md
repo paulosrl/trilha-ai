@@ -8,11 +8,11 @@ A conferência do método SHALL reprovar o `ANDAMENTO.md` que cita um vizinho (`
 - **THEN** ela reprova, citando `trilha-ai`
 
 #### Scenario: Caminho que chega ao vizinho de fora
-- **WHEN** o `ANDAMENTO.md` cita `https://github.com/paulosrl/trilha-ai/pull/22` ou `/home/pl/projetos/trilha-ai/x` e a conferência roda com `--vizinho trilha-ai`
+- **WHEN** o `ANDAMENTO.md` cita `https://github.com/paulosrl/trilha-ai/pull/22`, `/home/pl/projetos/trilha-ai/x` ou `git@github.com:paulosrl/trilha-ai.git` e a conferência roda com `--vizinho trilha-ai`
 - **THEN** ela reprova, citando `trilha-ai`
 
 #### Scenario: Pasta do método
-- **WHEN** o `ANDAMENTO.md` cita `trilha-ai/verifica.sh` e a conferência roda com `--vizinho trilha-ai`
+- **WHEN** o `ANDAMENTO.md` cita `trilha-ai/verifica.sh` ou `./trilha-ai/verifica.sh` e a conferência roda com `--vizinho trilha-ai`
 - **THEN** ela não reprova pelo vizinho
 
 #### Scenario: Nome dentro de outro nome

@@ -2737,13 +2737,17 @@ class Kit(unittest.TestCase):
         for texto in ("o kit trilha-ai está na 2.21", "o kit trilha-ai.", "`trilha-ai`",
                       # Revisão da change 22, R1: a URL e o caminho absoluto chegam ao vizinho de fora.
                       "https://github.com/paulosrl/trilha-ai/pull/22", "/home/pl/projetos/trilha-ai/x",
-                      "~/projetos/trilha-ai/"):
+                      "~/projetos/trilha-ai/",
+                      # Verify da change 22, V2: a URL do repositório, com o .git.
+                      "https://github.com/paulosrl/trilha-ai.git", "git@github.com:paulosrl/trilha-ai.git"):
             with self.subTest(texto=texto):
                 self.assertEqual(self._andamento(texto, "trilha-ai"),
                                  ["ANDAMENTO.md cita outro repositório: trilha-ai"])
 
     def test_andamento_aceita_a_pasta_do_metodo(self) -> None:
-        self.assertEqual(self._andamento("rode `bash trilha-ai/verifica.sh`", "trilha-ai"), [])
+        for texto in ("rode `bash trilha-ai/verifica.sh`", "rode ./trilha-ai/verifica.sh"):  # V1: o ./
+            with self.subTest(texto=texto):
+                self.assertEqual(self._andamento(texto, "trilha-ai"), [])
 
     def test_andamento_aceita_o_nome_dentro_de_outro(self) -> None:
         texto = "a change `hooks-pela-trilha-ai`, com outros ajustes, e o `heimdall.yaml`"

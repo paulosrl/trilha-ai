@@ -157,11 +157,12 @@ def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
     """O "../" em qualquer lugar e cada vizinho pelo nome inteiro e solto: não o que é parte de
     outro nome (hooks-pela-trilha-ai, outros), nem o arquivo com extensão (heimdall.yaml), nem o
     caminho que começa no próprio projeto (a pasta trilha-ai/ do método); conta o ponto final da
-    frase e o caminho que chega ao vizinho de fora (a URL, o caminho absoluto, o ~/)."""
+    frase e o caminho que chega ao vizinho de fora (a URL, com o .git ou sem, o caminho absoluto,
+    o ~/), mas não o ./ do próprio projeto."""
     citados = ["../"] if "../" in texto else []
     for nome in filter(None, vizinhos):
         solto = rf"(?<![\w.-]){re.escape(nome)}(?![\w/-]|\.\w)"
-        de_fora = rf"(?<=[/~:]){re.escape(nome)}/"
+        de_fora = rf"(?<=[/~:])(?<!\./){re.escape(nome)}(?=/|\.git(?![\w.-]))"
         if re.search(solto, texto) or re.search(de_fora, texto):
             citados.append(nome)
     return [f"ANDAMENTO.md cita outro repositório: {nome}" for nome in citados]
