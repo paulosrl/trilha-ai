@@ -30,6 +30,9 @@ _spec.loader.exec_module(FERRAMENTA)
 _spec = importlib.util.spec_from_file_location("regras", MODELO / "trilha-ai" / "confere_regras.py")
 REGRAS = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(REGRAS)
+_spec = importlib.util.spec_from_file_location("metodo_do_modelo", MODELO / "trilha-ai" / "confere_metodo.py")
+METODO = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(METODO)
 DO_KIT = (*FERRAMENTA.SEM_MUDAR, *FERRAMENTA.A_PREENCHER)
 ORIGEM = dict(FERRAMENTA.A_PREENCHER)  # destino no projeto → origem no kit
 GIT_TESTE = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t",
@@ -2727,14 +2730,14 @@ class Kit(unittest.TestCase):
 
     def _andamento(self, texto: str, *vizinhos: str) -> list[str]:
         """O conferir_andamento do confere_metodo.py do modelo, sobre um texto."""
-        spec = importlib.util.spec_from_file_location("metodo_andamento", MODELO / "trilha-ai/confere_metodo.py")
-        metodo = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(metodo)
-        return metodo.conferir_andamento(texto, list(vizinhos))
+        return METODO.conferir_andamento(texto, list(vizinhos))
 
     def test_andamento_reprova_o_vizinho_pelo_nome(self) -> None:
         """Change 22: o vizinho inteiro e solto é citação de outro repositório."""
-        for texto in ("o kit trilha-ai está na 2.21", "o kit trilha-ai.", "`trilha-ai`"):
+        for texto in ("o kit trilha-ai está na 2.21", "o kit trilha-ai.", "`trilha-ai`",
+                      # Revisão da change 22, R1: a URL e o caminho absoluto chegam ao vizinho de fora.
+                      "https://github.com/paulosrl/trilha-ai/pull/22", "/home/pl/projetos/trilha-ai/x",
+                      "~/projetos/trilha-ai/"):
             with self.subTest(texto=texto):
                 self.assertEqual(self._andamento(texto, "trilha-ai"),
                                  ["ANDAMENTO.md cita outro repositório: trilha-ai"])
@@ -2743,8 +2746,12 @@ class Kit(unittest.TestCase):
         self.assertEqual(self._andamento("rode `bash trilha-ai/verifica.sh`", "trilha-ai"), [])
 
     def test_andamento_aceita_o_nome_dentro_de_outro(self) -> None:
-        texto = "a change `hooks-pela-trilha-ai`, com outros ajustes"
-        self.assertEqual(self._andamento(texto, "trilha-ai", "outro"), [])
+        texto = "a change `hooks-pela-trilha-ai`, com outros ajustes, e o `heimdall.yaml`"
+        self.assertEqual(self._andamento(texto, "trilha-ai", "outro", "heimdall"), [])
+
+    def test_andamento_ignora_o_vizinho_vazio(self) -> None:
+        """Revisão da change 22, R4: um --vizinho vazio não reprova todo texto."""
+        self.assertEqual(self._andamento("nada aqui", ""), [])
 
     def test_andamento_reprova_o_caminho_para_fora(self) -> None:
         self.assertEqual(self._andamento("veja ../qualquer/coisa"), ["ANDAMENTO.md cita outro repositório: ../"])

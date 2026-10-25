@@ -15,7 +15,7 @@ Ver `proposal.md` (Why). O `conferir_andamento` do `confere_metodo.py` reprova c
 ## Decisions
 
 ### D1. O nome inteiro
-Para cada vizinho, a conferência procura o nome com `re.escape` entre duas fronteiras: antes, nem letra, número, `_`, `-` nem `.`; depois, nem letra, número, `_`, `-` nem `/`. O `.` depois continua contando (o fim de uma frase: "o kit trilha-ai."). O `../` continua por substring.
+Para cada vizinho não vazio, a conferência procura o nome com `re.escape` de dois jeitos. Solto: antes, nem letra, número, `_`, `-` nem `.`; depois, nem letra, número, `_`, `-`, `/` nem um `.` seguido de letra ou número (a extensão de um arquivo, `heimdall.yaml`); o ponto final de frase conta ("o kit trilha-ai."). De fora: o nome seguido de `/` logo depois de `/`, `~` ou `:` (a URL, o caminho absoluto, o `~/`). O `../` continua por substring.
 
 *Alternativa:* tirar `trilha-ai` da lista de vizinhos dos projetos. Recusada: o vizinho existe para impedir o `ANDAMENTO.md` de descrever o trabalho do kit, e a troca seria em cada projeto, à mão.
 

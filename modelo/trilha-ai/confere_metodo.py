@@ -7,7 +7,8 @@ Confere, na raiz do repositório:
   da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
 - o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho, pelo nome
-  inteiro: não o que é parte de outro nome nem o seguido de barra, como a pasta trilha-ai/);
+  inteiro: não o que é parte de outro nome, nem o arquivo com extensão, nem o caminho do próprio
+  projeto, como a pasta trilha-ai/; a URL e o caminho absoluto até o vizinho contam);
 - as instalações do plugin `sdd` que podem valer no projeto, pela lista do Claude Code lida na
   pasta dele: a do kit, ligada, na versão do trilha-ai/CLAUDE-comum.md e, se o .claude/settings.json
   a declara, instalada no projeto; só aviso, nunca falha, e
@@ -154,11 +155,14 @@ def conferir_tdd(texto: str) -> list[str]:
 
 def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
     """O "../" em qualquer lugar e cada vizinho pelo nome inteiro e solto: não o que é parte de
-    outro nome (hooks-pela-trilha-ai, outros) nem o seguido de barra, que é um caminho do próprio
-    projeto (a pasta trilha-ai/ do método)."""
+    outro nome (hooks-pela-trilha-ai, outros), nem o arquivo com extensão (heimdall.yaml), nem o
+    caminho que começa no próprio projeto (a pasta trilha-ai/ do método); conta o ponto final da
+    frase e o caminho que chega ao vizinho de fora (a URL, o caminho absoluto, o ~/)."""
     citados = ["../"] if "../" in texto else []
-    for nome in vizinhos:
-        if re.search(rf"(?<![\w.-]){re.escape(nome)}(?![\w/-])", texto):
+    for nome in filter(None, vizinhos):
+        solto = rf"(?<![\w.-]){re.escape(nome)}(?![\w/-]|\.\w)"
+        de_fora = rf"(?<=[/~:]){re.escape(nome)}/"
+        if re.search(solto, texto) or re.search(de_fora, texto):
             citados.append(nome)
     return [f"ANDAMENTO.md cita outro repositório: {nome}" for nome in citados]
 

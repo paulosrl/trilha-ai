@@ -1,10 +1,14 @@
 ## ADDED Requirements
 
 ### Requirement: Vizinho citado pelo nome inteiro no ANDAMENTO
-A conferência do método SHALL reprovar o `ANDAMENTO.md` que cita um vizinho (`--vizinho`) pelo nome inteiro e solto, e MUST NOT reprovar o nome que é parte de outro nome (com letra, número, `_`, `-` ou `.` encostado) nem o nome seguido de barra, que é um caminho do próprio projeto, como a pasta `trilha-ai/` do método. O `../` MUST continuar reprovando onde estiver.
+A conferência do método SHALL reprovar o `ANDAMENTO.md` que cita um vizinho (`--vizinho`) pelo nome inteiro e solto, ou por um caminho que chega a ele de fora (depois de `/`, `~` ou `:`). MUST NOT reprovar o nome que é parte de outro nome, o arquivo com extensão nem o caminho que começa no próprio projeto, como a pasta `trilha-ai/` do método. O `../` MUST continuar reprovando onde estiver.
 
 #### Scenario: Vizinho pelo nome
-- **WHEN** o `ANDAMENTO.md` diz "o kit trilha-ai está na 2.21" e a conferência roda com `--vizinho trilha-ai`
+- **WHEN** o `ANDAMENTO.md` diz "o kit trilha-ai está na 2.21", ou termina a frase com "o kit trilha-ai.", e a conferência roda com `--vizinho trilha-ai`
+- **THEN** ela reprova, citando `trilha-ai`
+
+#### Scenario: Caminho que chega ao vizinho de fora
+- **WHEN** o `ANDAMENTO.md` cita `https://github.com/paulosrl/trilha-ai/pull/22` ou `/home/pl/projetos/trilha-ai/x` e a conferência roda com `--vizinho trilha-ai`
 - **THEN** ela reprova, citando `trilha-ai`
 
 #### Scenario: Pasta do método
@@ -12,9 +16,13 @@ A conferência do método SHALL reprovar o `ANDAMENTO.md` que cita um vizinho (`
 - **THEN** ela não reprova pelo vizinho
 
 #### Scenario: Nome dentro de outro nome
-- **WHEN** o `ANDAMENTO.md` cita a change `hooks-pela-trilha-ai` e a palavra `outros`, e a conferência roda com `--vizinho trilha-ai --vizinho outro`
+- **WHEN** o `ANDAMENTO.md` cita a change `hooks-pela-trilha-ai`, a palavra `outros` e o arquivo `heimdall.yaml`, e a conferência roda com `--vizinho trilha-ai --vizinho outro --vizinho heimdall`
 - **THEN** ela não reprova pelo vizinho
 
 #### Scenario: Caminho para fora do projeto
 - **WHEN** o `ANDAMENTO.md` cita `../qualquer/coisa`
 - **THEN** ela reprova, citando `../`
+
+#### Scenario: Vizinho vazio
+- **WHEN** a conferência roda com `--vizinho ""`
+- **THEN** ela não reprova pelo vizinho

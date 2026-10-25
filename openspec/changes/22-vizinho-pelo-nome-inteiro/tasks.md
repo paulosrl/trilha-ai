@@ -20,6 +20,8 @@ Os testes rodam com `python3 -m unittest discover -s testes -k <nome do teste>`,
 | Capacidade | Requisito | Cenário | Teste |
 | --- | --- | --- | --- |
 | conferencias | Vizinho citado pelo nome inteiro no ANDAMENTO | Vizinho pelo nome | `test_andamento_reprova_o_vizinho_pelo_nome` |
+| conferencias | Vizinho citado pelo nome inteiro no ANDAMENTO | Caminho que chega ao vizinho de fora | `test_andamento_reprova_o_vizinho_pelo_nome` |
 | conferencias | Vizinho citado pelo nome inteiro no ANDAMENTO | Pasta do método | `test_andamento_aceita_a_pasta_do_metodo` |
 | conferencias | Vizinho citado pelo nome inteiro no ANDAMENTO | Nome dentro de outro nome | `test_andamento_aceita_o_nome_dentro_de_outro` |
 | conferencias | Vizinho citado pelo nome inteiro no ANDAMENTO | Caminho para fora do projeto | `test_andamento_reprova_o_caminho_para_fora` |
+| conferencias | Vizinho citado pelo nome inteiro no ANDAMENTO | Vizinho vazio | `test_andamento_ignora_o_vizinho_vazio` |
