@@ -6,9 +6,9 @@ Confere, na raiz do repositório:
 - a decomposição tem os títulos do esqueleto da skill (`## 1.`, `## 2.`, `## Ciclo`), toda change
   da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
-- o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho, pelo nome
-  inteiro: não o que é parte de outro nome, nem o arquivo com extensão, nem o caminho do próprio
-  projeto, como a pasta trilha-ai/; a URL e o caminho absoluto até o vizinho contam);
+- o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho, por palavra:
+  o nome, sozinho ou com .git, em qualquer parte de um caminho ou URL; não o que é parte de outro
+  nome, nem o arquivo com extensão só de letras, nem o caminho que começa na pasta trilha-ai/);
 - as instalações do plugin `sdd` que podem valer no projeto, pela lista do Claude Code lida na
   pasta dele: a do kit, ligada, na versão do trilha-ai/CLAUDE-comum.md e, se o .claude/settings.json
   a declara, instalada no projeto; só aviso, nunca falha, e
@@ -69,6 +69,12 @@ NUMERO = re.compile(r"\d{2,3}")
 # Os títulos da decomposição, como o esqueleto da skill sdd:briefing os traz.
 TITULOS = ("## 1.", "## 2.", "## Ciclo")
 TITULO = re.compile(r"#{1,6} ")
+# A palavra do ANDAMENTO.md: o que cabe num caminho ou numa URL; o resto (espaço, crase, aspas,
+# parênteses, vírgula, travessão) separa.
+PALAVRA = re.compile(r"[\w.~/:@#?=&%+-]+")
+EXTENSAO = re.compile(r"[A-Za-z]+(?:\.[A-Za-z]+)*")
+# A pasta do método, onde este arquivo está: o trilha-ai/ dos projetos.
+PASTA_DO_METODO = Path(__file__).resolve().parent.name
 
 
 def _unico(padrao: str) -> Path | None:
@@ -153,18 +159,31 @@ def conferir_tdd(texto: str) -> list[str]:
     return falhas
 
 
+def _cita(parte: str, nome: str) -> bool:
+    """O nome sozinho, ou com o .git, o .wiki ou um final que não é só de letras (trilha-ai.v2);
+    não o arquivo com extensão só de letras (heimdall.yaml, heimdall.config.yaml)."""
+    if parte == nome:
+        return True
+    extensao = parte.removeprefix(f"{nome}.")
+    if extensao == parte:
+        return False
+    return extensao.split(".")[0] in ("git", "wiki") or not EXTENSAO.fullmatch(extensao)
+
+
 def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
-    """O "../" em qualquer lugar e cada vizinho pelo nome inteiro e solto: não o que é parte de
-    outro nome (hooks-pela-trilha-ai, outros), nem o arquivo com extensão (heimdall.yaml), nem o
-    caminho que começa no próprio projeto (a pasta trilha-ai/ do método); conta o ponto final da
-    frase e o caminho que chega ao vizinho de fora (a URL, com o .git ou sem, o caminho absoluto,
-    o ~/), mas não o ./ do próprio projeto."""
+    """O "../" em qualquer lugar e cada vizinho por palavra: a palavra, sem a pontuação do fim da
+    frase, partida em /, :, # e ?, cita o vizinho por uma parte (_cita), menos a pasta do método
+    no começo de um caminho relativo (trilha-ai/verifica.sh, ./trilha-ai)."""
     citados = ["../"] if "../" in texto else []
+    palavras = [palavra.rstrip(".:?!") for palavra in PALAVRA.findall(texto)]
     for nome in filter(None, vizinhos):
-        solto = rf"(?<![\w.-]){re.escape(nome)}(?![\w/-]|\.\w)"
-        de_fora = rf"(?<=[/~:])(?<!\./){re.escape(nome)}(?=/|\.git(?![\w.-]))"
-        if re.search(solto, texto) or re.search(de_fora, texto):
-            citados.append(nome)
+        for palavra in palavras:
+            partes = re.split(r"[/:#?]", palavra.removeprefix("./"))
+            pasta = partes[0] == PASTA_DO_METODO and (palavra.startswith("./") or len(partes) > 1)
+            primeira = _cita(partes[0], nome) and not pasta
+            if primeira or any(_cita(parte, nome) for parte in partes[1:]):
+                citados.append(nome)
+                break
     return [f"ANDAMENTO.md cita outro repositório: {nome}" for nome in citados]
 
 

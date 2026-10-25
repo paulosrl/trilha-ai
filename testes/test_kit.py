@@ -2739,15 +2739,24 @@ class Kit(unittest.TestCase):
                       "https://github.com/paulosrl/trilha-ai/pull/22", "/home/pl/projetos/trilha-ai/x",
                       "~/projetos/trilha-ai/",
                       # Verify da change 22, V2: a URL do repositório, com o .git.
-                      "https://github.com/paulosrl/trilha-ai.git", "git@github.com:paulosrl/trilha-ai.git"):
+                      "https://github.com/paulosrl/trilha-ai.git", "git@github.com:paulosrl/trilha-ai.git",
+                      # Change 23: o .git solto e no fim da frase, o .wiki e o final que não é só de letras.
+                      "clonar trilha-ai.git ao lado", "o kit fica em https://github.com/paulosrl/trilha-ai.git.",
+                      "https://github.com/paulosrl/trilha-ai.wiki", "versão trilha-ai.v2", "trilha-ai.git/x"):
             with self.subTest(texto=texto):
                 self.assertEqual(self._andamento(texto, "trilha-ai"),
                                  ["ANDAMENTO.md cita outro repositório: trilha-ai"])
 
     def test_andamento_aceita_a_pasta_do_metodo(self) -> None:
-        for texto in ("rode `bash trilha-ai/verifica.sh`", "rode ./trilha-ai/verifica.sh"):  # V1: o ./
+        for texto in ("rode `bash trilha-ai/verifica.sh`", "rode ./trilha-ai/verifica.sh",  # V1: o ./
+                      "rode `./trilha-ai`", "rode ./trilha-ai e veja", "a pasta trilha-ai/"):  # change 23
             with self.subTest(texto=texto):
                 self.assertEqual(self._andamento(texto, "trilha-ai"), [])
+
+    def test_andamento_reprova_o_caminho_relativo_ate_outro_vizinho(self) -> None:
+        """Change 23: só a pasta do método abre um caminho relativo do próprio projeto."""
+        self.assertEqual(self._andamento("ajustar heimdall/scripts/check.sh", "heimdall"),
+                         ["ANDAMENTO.md cita outro repositório: heimdall"])
 
     def test_andamento_aceita_o_nome_dentro_de_outro(self) -> None:
         texto = "a change `hooks-pela-trilha-ai`, com outros ajustes, e o `heimdall.yaml`"
