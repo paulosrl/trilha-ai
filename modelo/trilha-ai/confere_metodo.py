@@ -6,7 +6,9 @@ Confere, na raiz do repositório:
 - a decomposição tem os títulos do esqueleto da skill (`## 1.`, `## 2.`, `## Ciclo`), toda change
   da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
-- o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
+- o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho, pelo nome
+  inteiro: não o que é parte de outro nome, nem o arquivo com extensão, nem o caminho do próprio
+  projeto, como a pasta trilha-ai/; a URL e o caminho absoluto até o vizinho contam);
 - as instalações do plugin `sdd` que podem valer no projeto, pela lista do Claude Code lida na
   pasta dele: a do kit, ligada, na versão do trilha-ai/CLAUDE-comum.md e, se o .claude/settings.json
   a declara, instalada no projeto; só aviso, nunca falha, e
@@ -152,11 +154,18 @@ def conferir_tdd(texto: str) -> list[str]:
 
 
 def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
-    return [
-        f"ANDAMENTO.md cita outro repositório: {nome}"
-        for nome in ["../", *vizinhos]
-        if nome in texto
-    ]
+    """O "../" em qualquer lugar e cada vizinho pelo nome inteiro e solto: não o que é parte de
+    outro nome (hooks-pela-trilha-ai, outros), nem o arquivo com extensão (heimdall.yaml), nem o
+    caminho que começa no próprio projeto (a pasta trilha-ai/ do método); conta o ponto final da
+    frase e o caminho que chega ao vizinho de fora (a URL, com o .git ou sem, o caminho absoluto,
+    o ~/), mas não o ./ do próprio projeto."""
+    citados = ["../"] if "../" in texto else []
+    for nome in filter(None, vizinhos):
+        solto = rf"(?<![\w.-]){re.escape(nome)}(?![\w/-]|\.\w)"
+        de_fora = rf"(?<=[/~:])(?<!\./){re.escape(nome)}(?=/|\.git(?![\w.-]))"
+        if re.search(solto, texto) or re.search(de_fora, texto):
+            citados.append(nome)
+    return [f"ANDAMENTO.md cita outro repositório: {nome}" for nome in citados]
 
 
 def _instalacoes_do_sdd() -> list[dict] | None:
