@@ -6,7 +6,8 @@ Confere, na raiz do repositório:
 - a decomposição tem os títulos do esqueleto da skill (`## 1.`, `## 2.`, `## Ciclo`), toda change
   da seção 1 na tabela "Ciclo", e a retirada aparece como retirada;
 - as evidências do TDD não têm número de linha e citam arquivos que existem;
-- o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho);
+- o ANDAMENTO.md não descreve trabalho de outro repositório ("../" e cada --vizinho, pelo nome
+  inteiro: não o que é parte de outro nome nem o seguido de barra, como a pasta trilha-ai/);
 - as instalações do plugin `sdd` que podem valer no projeto, pela lista do Claude Code lida na
   pasta dele: a do kit, ligada, na versão do trilha-ai/CLAUDE-comum.md e, se o .claude/settings.json
   a declara, instalada no projeto; só aviso, nunca falha, e
@@ -152,11 +153,14 @@ def conferir_tdd(texto: str) -> list[str]:
 
 
 def conferir_andamento(texto: str, vizinhos: list[str]) -> list[str]:
-    return [
-        f"ANDAMENTO.md cita outro repositório: {nome}"
-        for nome in ["../", *vizinhos]
-        if nome in texto
-    ]
+    """O "../" em qualquer lugar e cada vizinho pelo nome inteiro e solto: não o que é parte de
+    outro nome (hooks-pela-trilha-ai, outros) nem o seguido de barra, que é um caminho do próprio
+    projeto (a pasta trilha-ai/ do método)."""
+    citados = ["../"] if "../" in texto else []
+    for nome in vizinhos:
+        if re.search(rf"(?<![\w.-]){re.escape(nome)}(?![\w/-])", texto):
+            citados.append(nome)
+    return [f"ANDAMENTO.md cita outro repositório: {nome}" for nome in citados]
 
 
 def _instalacoes_do_sdd() -> list[dict] | None:

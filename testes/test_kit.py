@@ -2725,6 +2725,30 @@ class Kit(unittest.TestCase):
         self.assertIn("ok: CLAUDE.md, trilha-ai/ e ANDAMENTO.md conferidos", saida.stdout)
         self.assertIn("ok: decomposição, TDD e ANDAMENTO.md conferidos", saida.stdout)
 
+    def _andamento(self, texto: str, *vizinhos: str) -> list[str]:
+        """O conferir_andamento do confere_metodo.py do modelo, sobre um texto."""
+        spec = importlib.util.spec_from_file_location("metodo_andamento", MODELO / "trilha-ai/confere_metodo.py")
+        metodo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(metodo)
+        return metodo.conferir_andamento(texto, list(vizinhos))
+
+    def test_andamento_reprova_o_vizinho_pelo_nome(self) -> None:
+        """Change 22: o vizinho inteiro e solto é citação de outro repositório."""
+        for texto in ("o kit trilha-ai está na 2.21", "o kit trilha-ai.", "`trilha-ai`"):
+            with self.subTest(texto=texto):
+                self.assertEqual(self._andamento(texto, "trilha-ai"),
+                                 ["ANDAMENTO.md cita outro repositório: trilha-ai"])
+
+    def test_andamento_aceita_a_pasta_do_metodo(self) -> None:
+        self.assertEqual(self._andamento("rode `bash trilha-ai/verifica.sh`", "trilha-ai"), [])
+
+    def test_andamento_aceita_o_nome_dentro_de_outro(self) -> None:
+        texto = "a change `hooks-pela-trilha-ai`, com outros ajustes"
+        self.assertEqual(self._andamento(texto, "trilha-ai", "outro"), [])
+
+    def test_andamento_reprova_o_caminho_para_fora(self) -> None:
+        self.assertEqual(self._andamento("veja ../qualquer/coisa"), ["ANDAMENTO.md cita outro repositório: ../"])
+
     def test_verifica_repassa_o_vizinho(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             pasta = self._projeto_novo(tmp)
